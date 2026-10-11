@@ -1,0 +1,22 @@
+# Keep credentials, local/remote personal data, images and generated evidence out.
+.env
+.env.*
+!.env.example
+work/
+reports/
+public/
+native/
+node_modules/
+__pycache__/
+*.py[cod]
+*.sqlite*
+*.db
+*.log
+*.zip
+*.pem
+*.p12
+*.pfx
+*adc*.json
+*credential*.json
+*service-account*.json
+*service_account*.json
