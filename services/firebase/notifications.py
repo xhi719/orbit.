@@ -1,0 +1,196 @@
+"""Bounded Spark FCM dispatcher. No task reminders and no invented schedules.
+
+Provider acceptance is not device display/receipt. Ambiguous interrupted sends are
+quarantined rather than retried automatically, avoiding known transport duplicates.
+"""
+from __future__ import annotations
+from datetime import datetime, timedelta, timezone
+import argparse
+import json
+from pathlib import Path
+import uuid
+from zoneinfo import ZoneInfo
+from collector import digest
+from store import FirestoreStore, MemoryStore, SafetyError, timestamp
+
+UTC=timezone.utc
+OFFSETS={"7d":10080,"1d":1440,"1h":60,"start":0}
+TEXT={"ko":("푸시 알림 테스트","이 알림이 보이면 앱에서 수신 확인을 눌러 주세요."),
+      "en":("Push notification test","If this notification appears, confirm receipt in the app."),
+      "ja":("プッシュ通知テスト","この通知が表示されたら、アプリで受信を確認してください。")}
+
+
+def quiet(settings,now):
+    start,end=settings.get("quietStart"),settings.get("quietEnd")
+    if not start or not end:return False
+    local=now.astimezone(ZoneInfo(settings.get("timezone") or "UTC")).strftime("%H:%M")
+    if start==end:return True
+    return start<=local<end if start<end else local>=start or local<end
+
+
+def eligible(store,uid,event,kind,now):
+    profile=store.get("users/"+uid)
+    if not profile or profile.get("deletionRequestedAt"):return False
+    if kind in ["TASK_REMINDER","task_reminder","reminder"]:return False
+    if kind=="push_test":return True  # explicit owner's self test, never arbitrary payload
+    if profile.get("notificationsEnabled") is False:return False
+    if quiet({"quietStart":profile.get("dndStart"),"quietEnd":profile.get("dndEnd"),"timezone":profile.get("timezone","UTC")},now):return False
+    if kind not in {anchor+":"+stage for anchor in ["event","reservation"] for stage in OFFSETS}:return False
+    if not event or event.get("verificationStatus")!="verified" or event.get("status") in ["cancelled","canceled","postponed","ended"]:return False
+    region=event.get("serverRegion")
+    if not region or region=="UNSPECIFIED":return False
+    global_settings=store.get(f"users/{uid}/notificationSettings/global") or {"enabled":True,"regions":profile.get("regions",[]),"timezone":profile.get("timezone","UTC")}
+    if global_settings.get("enabled") is False or quiet(global_settings,now):return False
+    anchor_kind,stage=kind.split(":",1)
+    if "types" in global_settings and anchor_kind not in global_settings["types"]:return False
+    for game_id in event.get("gameIds",[]):
+        selected=store.get(f"users/{uid}/userGames/{game_id}")
+        if not selected or not selected.get("enabled",True):continue
+        settings=store.get(f"users/{uid}/notificationSettings/{game_id}") or global_settings
+        if not settings.get("enabled",True) or quiet(settings,now):continue
+        if "types" in settings and anchor_kind not in settings["types"]:continue
+        if stage not in settings.get("stages",list(OFFSETS)) or OFFSETS.get(stage) not in settings.get("offsets",list(OFFSETS.values())):continue
+        categories=settings.get("eventCategories",["all"])
+        if "all" not in categories and event.get("category") not in categories:continue
+        regions=settings.get("regions",profile.get("regions",[]))
+        if region not in regions:continue  # GLOBAL must be explicitly chosen; unknown is never GLOBAL
+        if kind.startswith("reservation") and settings.get("reservationEnabled") is False:continue
+        if kind.startswith("event") and settings.get("eventEnabled") is False:continue
+        return True
+    return False
+
+
+def plan_user(store,uid,events,now):
+    planned=0
+    for event in events:
+        for anchor_kind,field in [("event","startsAt"),("reservation","reservationStartsAt")]:
+            if not event.get(field):continue
+            anchor=timestamp(event[field])
+            for stage,minutes in OFFSETS.items():
+                due=anchor-timedelta(minutes=minutes)
+                # Frequent cron with 30-minute catchup; outage older than this is explicit missed.
+                if not now-timedelta(minutes=30)<=due<=now+timedelta(minutes=15):continue
+                kind=anchor_kind+":"+stage
+                if not eligible(store,uid,event,kind,now):continue
+                selected_settings=[]
+                for game_id in event.get("gameIds",[]):
+                    if store.get(f"users/{uid}/userGames/{game_id}"):
+                        settings=store.get(f"users/{uid}/notificationSettings/{game_id}") or store.get(f"users/{uid}/notificationSettings/global") or {}
+                        if stage in settings.get("stages",list(OFFSETS)) and minutes in settings.get("offsets",list(OFFSETS.values())):
+                            selected_settings.append(game_id)
+                if not selected_settings:continue
+                key=digest([uid,event["id"],event.get("revision",1),kind,anchor.isoformat()])
+                row={"uid":uid,"kind":kind,"eventId":event["id"],"eventRevision":event.get("revision",1),
+                     "status":"requested","dueAt":due,"createdAt":now,"updatedAt":now,"dedupeKey":key,"attempts":0}
+                created=store.mutate(f"users/{uid}/notificationJobs/{key}",lambda old:(None,False) if old else (row,True))
+                planned+=int(created)
+    return planned
+
+
+def fixed_payload(store,uid,job,event=None,now=None):
+    profile=store.get("users/"+uid) or {}
+    lang=job.get("language",profile.get("language","en"))
+    if job["kind"]=="push_test":
+        title,body=TEXT.get(lang,TEXT["en"])
+        return {"title":title,"body":body,"url":"/settings","jobId":job["id"],"tag":"orbit-test-"+job["id"],
+                "kind":"push_test","gameId":"","gameIds":[],"category":"","eventId":"","recipientUid":uid}
+    now=now or datetime.now(UTC)
+    eligible_games=[game_id for game_id in event.get("gameIds",[])
+                    if eligible(store,uid,{**event,"gameIds":[game_id]},job["kind"],now)]
+    return {"title":event.get("originalTitle",event.get("title","Official event"))[:200],
+            "body":event.get("originalDescription",event.get("description",""))[:500],
+            "url":"/events/"+event["id"],"jobId":job["id"],"tag":"orbit-event-"+job.get("dedupeKey",job["id"]),
+            "kind":job["kind"],"gameId":eligible_games[0] if eligible_games else "",
+            "gameIds":eligible_games,"category":event.get("category",""),"eventId":event["id"],"recipientUid":uid}
+
+
+def dispatch(store,uid,job_id,sender,now=None):
+    now=now or datetime.now(UTC);path=f"users/{uid}/notificationJobs/{job_id}"
+    token=uuid.uuid4().hex
+    def claim(old):
+        if not old or old.get("status")!="requested" or old.get("dueAt") and timestamp(old["dueAt"])>now:return None,None
+        if old.get("kind") in ["TASK_REMINDER","task_reminder","reminder"]:
+            return {**old,"status":"cancelled","reasonCode":"TASK_REMINDERS_DISABLED","updatedAt":now},None
+        return {**old,"id":job_id,"status":"sending","leaseToken":token,"attempts":old.get("attempts",0)+1,"updatedAt":now},old
+    job=store.mutate(path,claim)
+    if not job:return "skipped"
+    job={**job,"id":job_id}
+    event=store.get("gameEvents/"+job["eventId"]) if job.get("eventId") else None
+    if event and job.get("eventRevision")!=event.get("revision",1) or not eligible(store,uid,event,job["kind"],now):
+        store.put(path,{**store.get(path),"status":"cancelled","reasonCode":"INELIGIBLE_AT_SEND","updatedAt":now});return "cancelled"
+    payload=fixed_payload(store,uid,job,event,now)
+    devices=[]
+    for device_id,sub in store.list(f"users/{uid}/notificationSubscriptions",20):
+        if sub.get("uid")!=uid or not sub.get("enabled") or sub.get("transport")!="fcm":continue
+        if job.get("deviceId") and job["deviceId"]!=device_id:continue
+        if sub.get("expiresAt") and timestamp(sub["expiresAt"])<=now:continue
+        if sub.get("platform") not in ["android","web"]:continue  # Native Windows FCM SDK unsupported
+        devices.append((device_id,sub))
+    accepted,failed,ambiguous=0,0,0
+    for device_id,sub in devices:
+        try:
+            provider_id=sender(sub["token"],payload)
+            accepted+=1
+            store.put("notificationLogs/"+digest([uid,job_id,device_id]),{"uid":uid,"jobId":job_id,"deviceId":device_id,
+                      "status":"provider_accepted","providerMessageId":provider_id,"createdAt":now})
+        except Exception as error:
+            failed+=1;ambiguous+=1
+            # Never log token or provider exception bodies, which may contain credentials.
+            store.put("notificationLogs/"+digest([uid,job_id,device_id]),{"uid":uid,"jobId":job_id,"deviceId":device_id,
+                      "status":"delivery_unconfirmed","reasonCode":type(error).__name__,"createdAt":now})
+    status="partially_accepted" if accepted and failed else "provider_accepted" if accepted else "delivery_unconfirmed" if ambiguous else "in_app_only"
+    final={**store.get(path),"status":status,"leaseToken":None,"acceptedDeviceCount":accepted,"failedDeviceCount":failed,"updatedAt":now,"humanConfirmedAt":None}
+    store.put(path,final)
+    store.put(f"users/{uid}/notifications/{job_id}",{"uid":uid,"title":payload["title"],"body":payload["body"],"url":payload["url"],"status":status,"readAt":None,"createdAt":now})
+    return status
+
+
+def run(store,sender,now=None,max_users=50):
+    now=now or datetime.now(UTC);events=[value for _,value in store.list("gameEvents",200)]
+    stats={"users":0,"planned":0,"providerAcceptedJobs":0,"inAppOnly":0,"cancelled":0}
+    for uid,profile in store.list("users",max_users):
+        if profile.get("deletionRequestedAt"):continue
+        stats["users"]+=1;stats["planned"]+=plan_user(store,uid,events,now)
+        for job_id,job in store.list(f"users/{uid}/notificationJobs",100):
+            if job.get("status")=="sending" and timestamp(job["updatedAt"])<now-timedelta(minutes=12):
+                store.put(f"users/{uid}/notificationJobs/{job_id}",{**job,"status":"delivery_unconfirmed","reasonCode":"INTERRUPTED_SEND_NO_AUTORETRY","updatedAt":now});continue
+            if job.get("status")!="requested":continue
+            status=dispatch(store,uid,job_id,sender,now)
+            if status in ["provider_accepted","partially_accepted"]:stats["providerAcceptedJobs"]+=1
+            if status=="in_app_only":stats["inAppOnly"]+=1
+            if status=="cancelled":stats["cancelled"]+=1
+    return stats
+
+
+def fcm_message(messaging,token,payload):
+    # Data-only payload: the web worker and Android receiver display it themselves.
+    # A notification payload would let the SDK bypass our same-origin click handling.
+    recipient_uid=payload.get("recipientUid")
+    if not isinstance(recipient_uid,str) or not 1<=len(recipient_uid)<=128:raise SafetyError("fcm_recipient_uid_required")
+    data={"recipientUid":recipient_uid,"title":payload["title"],"body":payload["body"],"url":payload["url"],
+          "jobId":payload["jobId"],"dedupeKey":payload["tag"],"kind":payload.get("kind",""),
+          "gameId":payload.get("gameId",""),"gameIds":json.dumps(payload.get("gameIds",[]),ensure_ascii=False),
+          "category":payload.get("category",""),"eventId":payload.get("eventId","")}
+    # FCM data payloads have a 4096-byte ceiling. Preserve routing/filter fields,
+    # then shorten only text; never reinterpret an omitted game as a global event.
+    if len(json.dumps(data,ensure_ascii=False).encode())>3500:
+        data["gameIds"]=json.dumps([data["gameId"]] if data["gameId"] else [])
+        data["body"]=data["body"].encode()[:1000].decode("utf-8",errors="ignore")
+        data["title"]=data["title"].encode()[:600].decode("utf-8",errors="ignore")
+    if len(json.dumps(data,ensure_ascii=False).encode())>3500:raise SafetyError("fcm_payload_too_large")
+    return messaging.Message(token=token,data=data,
+        android=messaging.AndroidConfig(collapse_key=payload["tag"],priority="high"))
+
+
+def main():
+    import os
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument("--apply",action="store_true");args=parser.parse_args()
+    if not args.apply or os.environ.get("ORBIT_FIREBASE_NOTIFICATIONS_ENABLED")!="true":
+        print(json.dumps({"status":"DISABLED","fcmSends":0,"remoteWrites":0}));return
+    store=FirestoreStore()
+    from firebase_admin import messaging
+    def send(token,payload):
+        return messaging.send(fcm_message(messaging,token,payload),app=store.app)
+    result=run(store,send);store.finish_usage();print(json.dumps(result))
+
+if __name__=="__main__":main()
