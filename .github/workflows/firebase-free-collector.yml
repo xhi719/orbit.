@@ -1,0 +1,56 @@
+name: Firebase Spark official collector (disabled until configured)
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Collection scope
+        type: choice
+        options: [incremental, backfill, reverify]
+        default: backfill
+      seed:
+        description: Seed candidate catalogue and disabled reviewed sources
+        type: boolean
+        default: false
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+    - cron: '53 4 * * *'
+permissions:
+  contents: read
+concurrency:
+  group: orbit-firebase-spark-collector
+  cancel-in-progress: false
+jobs:
+  collector:
+    # Standard public-repository runners are free. Private repositories are
+    # deliberately excluded to avoid exceeding their monthly free minutes.
+    if: ${{ !github.event.repository.private && vars.ORBIT_FIREBASE_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+      FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+      ORBIT_FIREBASE_APPLY: 'true'
+      ORBIT_FIREBASE_SPARK_CONFIRMED: ${{ vars.ORBIT_FIREBASE_SPARK_CONFIRMED }}
+      ORBIT_FIREBASE_NOTIFICATIONS_ENABLED: ${{ vars.ORBIT_FIREBASE_NOTIFICATIONS_ENABLED }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -r services/firebase/requirements.txt
+      - name: Seed only when explicitly requested
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.seed }}
+        run: python services/firebase/collector.py --seed --apply
+      - name: Apply approved requests and process queued account deletion
+        run: python services/firebase/admin.py --apply
+      - name: Fetch bounded publisher announcements
+        shell: bash
+        run: |
+          MODE=incremental
+          if [[ "${{ github.event.schedule }}" == '53 4 * * *' ]]; then MODE=reverify; fi
+          if [[ "${{ github.event_name }}" == 'workflow_dispatch' ]]; then MODE='${{ inputs.mode }}'; fi
+          python services/firebase/collector.py --mode "$MODE" --hours 72 --live --apply
+      - name: Dispatch enabled FCM notifications
+        run: python services/firebase/notifications.py --apply
+    # No artifact upload/cache/billing attachment, Functions, Cloud Run, Cloud
+    # Scheduler, App Hosting or Cloud Storage is created by this workflow.
