@@ -1,7 +1,9 @@
 {
   "schemaVersion": 1,
-  "recordedAt": "2026-10-11T13:58:09.416339+00:00",
-  "scope": "REVIEW_ONLY_EXPLICIT_ALLOWLIST",
+  "recordedAt": "2026-10-11T21:03:04.879Z",
+  "scope": "AUTHORIZED_PUBLIC_WORKER",
+  "sourceArchiveSha256": "fb3b4dd4f34dedb22119cc0bd7d48e79cef8e03217992d56b8436221bde4c0da",
+  "normalization": "GitHub web editor converted CRLF to LF; all approved payload text content verified equivalent.",
   "files": [
     {
       "path": ".github/workflows/firebase-free-collector.yml",
@@ -20,18 +22,18 @@
     },
     {
       "path": "data/game-candidates.json",
-      "sha256": "1d9593237bf57b8b2b968f55f1f32b54036a56032ac3c4d3a522543289b3fdfc",
-      "bytes": 409048
+      "sha256": "da70457c3e5a928565b4a93eec757ae30b3fc8ac37820f0f123818bd5adb084c",
+      "bytes": 398106
     },
     {
       "path": "data/official-sources.json",
-      "sha256": "4d0a66c4311ea69032a5ee15f32987479bdef81523ead6f8d0d6282044d44e48",
-      "bytes": 191531
+      "sha256": "b8c4b70c4157e6e8688b1f10470a37800df8470f904c6390f0307c3bc0d1daae",
+      "bytes": 186800
     },
     {
       "path": "docs/github-free-runner-plan.md",
-      "sha256": "3640598f0c2670afd6e2b5b84a672d2d54464a0d2c3893383fe5dbf2d3c954dc",
-      "bytes": 14146
+      "sha256": "02ac87b1ba1efe6c3ecb27ba52b0a269066c05a66a90b45ac38e62b63eabdc10",
+      "bytes": 14046
     },
     {
       "path": "services/collector/backfill.py",
@@ -60,18 +62,18 @@
     },
     {
       "path": "services/firebase/collector.py",
-      "sha256": "aa26806895571bd483652c009fb2e95cb9716d15aa63b76854355ede5aca1fe1",
-      "bytes": 20705
+      "sha256": "11b1f715b80ed6170461bdc44a1e8a14e293c5513852162adad28dacf679a9ee",
+      "bytes": 20378
     },
     {
       "path": "services/firebase/iam/orbit-free-fcm-sender-role.json",
-      "sha256": "376275f5a399d80e6b0acd6be1f9e350587cfe2d4e4f101cdb4ef6e2704fc8ed",
-      "bytes": 288
+      "sha256": "703ba74b54249b4f6835fa8aa9f96c7a94ec798655130fb3a999aecdb46c46b6",
+      "bytes": 280
     },
     {
       "path": "services/firebase/iam/orbit-free-worker-role.json",
-      "sha256": "e334b5bffd84cb0fae378f4bbbcf6d81ae9668db0d8cb72959cfcf2607b56795",
-      "bytes": 602
+      "sha256": "7b13bcd84690895de03cdb7f412f10177445dd8f9ddf722cf12ae991ad51d12a",
+      "bytes": 585
     },
     {
       "path": "services/firebase/import_pending_pickups.py",
@@ -80,8 +82,8 @@
     },
     {
       "path": "services/firebase/notifications.py",
-      "sha256": "ab99f408c4557a43754c3f3e478b6eefdfee8f8775d4c93dcf39149491e648c6",
-      "bytes": 12802
+      "sha256": "3e74dddc403037df39853208db26db9ef8551e32eb975e11ef8eb48492475c0c",
+      "bytes": 12606
     },
     {
       "path": "services/firebase/requirements.txt",
@@ -95,19 +97,8 @@
     },
     {
       "path": "services/firebase/tests/test_firebase.py",
-      "sha256": "705695f629c0392356135f9e3fec67b7ee11b2a9f13bc4aa6d72b86ccf864a55",
-      "bytes": 31409
+      "sha256": "419cbc4a72a7461396d3181b8c00e6510731657799db25d5ed12ff5f84652d84",
+      "bytes": 31160
     }
-  ],
-  "payloadBytes": 757281,
-  "excluded": [
-    "images",
-    "work",
-    "ADC",
-    "credentials",
-    "private user/device data",
-    "raw collection evidence",
-    "UI",
-    "native binaries"
   ]
 }
