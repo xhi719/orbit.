@@ -1,0 +1,17 @@
+{
+  "title": "Orbit free worker data/auth",
+  "description": "Review-only least-privilege permission proposal for existing Spark database, user erasure and billing-status read. No resource/billing/IAM creation.",
+  "stage": "GA",
+  "includedPermissions": [
+    "datastore.databases.get",
+    "datastore.entities.get",
+    "datastore.entities.list",
+    "datastore.entities.create",
+    "datastore.entities.update",
+    "datastore.entities.delete",
+    "firebaseauth.users.get",
+    "firebaseauth.users.update",
+    "firebaseauth.users.delete",
+    "resourcemanager.projects.get"
+  ]
+}
