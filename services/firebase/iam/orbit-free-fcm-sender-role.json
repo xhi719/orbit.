@@ -1,0 +1,8 @@
+{
+  "title": "Orbit free FCM sender",
+  "description": "Optional review-only messages-send permission; do not grant/enable before an explicit registered test target and receipt verification.",
+  "stage": "GA",
+  "includedPermissions": [
+    "cloudmessaging.messages.create"
+  ]
+}
