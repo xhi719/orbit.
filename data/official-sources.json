@@ -1,0 +1,4731 @@
+{
+  "schemaVersion": 1,
+  "label": "STAGING ONLY",
+  "operatingDatabaseConnected": false,
+  "reviewedAt": "2026-10-10T08:40:00Z",
+  "window": {
+    "startsAt": "2026-10-07T08:40:00Z",
+    "endsAt": "2026-10-10T08:40:00Z",
+    "hours": 72
+  },
+  "statusDefinitions": {
+    "success": "Reviewed source fetched and bounded publication window traversed; does not certify event dates or all publisher channels.",
+    "NO_SOURCE": "No reviewed automated source registered; an official website may exist.",
+    "ACCESS_RESTRICTED": "Explicit restriction or unavailable game identity prevents this source being used.",
+    "DATE_UNCONFIRMED": "Publication timestamp or pagination boundary cannot establish complete window coverage.",
+    "FETCH_FAILED": "Actual source fetch/parse failed or source was deferred after host rate limit."
+  },
+  "games": [
+    {
+      "gameId": "blue-archive",
+      "gameUuid": "918cf236-e04c-553b-84c9-c634a5e0df72",
+      "names": {
+        "ko": "블루 아카이브",
+        "en": "Blue Archive",
+        "ja": "ブルーアーカイブ"
+      },
+      "officialWebsite": "https://bluearchive.nexon.com/home",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "nikke",
+      "gameUuid": "e2cec48f-81f6-5ae9-8be4-ceb1dae4c2d9",
+      "names": {
+        "ko": "승리의 여신: 니케",
+        "en": "GODDESS OF VICTORY: NIKKE",
+        "ja": "勝利の女神：NIKKE"
+      },
+      "officialWebsite": "https://nikke-en.com/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "girls-frontline",
+      "gameUuid": "045ecde0-7eb3-53cf-9561-f22eb7ff9074",
+      "names": {
+        "ko": "소녀전선",
+        "en": "Girls' Frontline",
+        "ja": "ドールズフロントライン"
+      },
+      "officialWebsite": "https://gf.sunborngame.com/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "girls-frontline-2",
+      "gameUuid": "d8330cbb-9541-551a-b0e0-6c20cfa401d9",
+      "names": {
+        "ko": "소녀전선 2: 망명",
+        "en": "GIRLS' FRONTLINE 2: EXILIUM",
+        "ja": "ドールズフロントライン2：エクシリウム"
+      },
+      "officialWebsite": "https://gf2.haoplay.com/kr/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "genshin-impact",
+      "gameUuid": "b71f45c5-08e8-5018-a362-46e76957f90b",
+      "names": {
+        "ko": "원신",
+        "en": "Genshin Impact",
+        "ja": "原神"
+      },
+      "officialWebsite": "https://genshin.hoyoverse.com/en/home",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "honkai-star-rail",
+      "gameUuid": "80734257-c014-5389-b4c5-ba2b00d0ee9c",
+      "names": {
+        "ko": "붕괴: 스타레일",
+        "en": "Honkai: Star Rail",
+        "ja": "崩壊：スターレイル"
+      },
+      "officialWebsite": "https://hsr.hoyoverse.com/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "honkai-impact-3rd",
+      "gameUuid": "23234761-95cc-566e-8edb-4e31b35e03a8",
+      "names": {
+        "ko": "붕괴3rd",
+        "en": "Honkai Impact 3",
+        "ja": "崩壊 3rd"
+      },
+      "officialWebsite": "https://honkaiimpact3.hoyoverse.com/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "wuthering-waves",
+      "gameUuid": "216d2b7c-96a9-5a7d-9487-4bddb4fa989e",
+      "names": {
+        "ko": "명조: 워더링 웨이브",
+        "en": "Wuthering Waves",
+        "ja": "鳴潮"
+      },
+      "officialWebsite": "https://wutheringwaves.kurogames.com/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "zenless-zone-zero",
+      "gameUuid": "6a386c52-67fa-51fc-a624-5a4883402bb8",
+      "names": {
+        "ko": "젠레스 존 제로",
+        "en": "Zenless Zone Zero",
+        "ja": "ゼンレスゾーンゼロ"
+      },
+      "officialWebsite": "https://zenless.hoyoverse.com/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "arknights",
+      "gameUuid": "02996a84-873f-58f9-8ac0-cd07e4fb2f23",
+      "names": {
+        "ko": "명일방주",
+        "en": "Arknights",
+        "ja": "アークナイツ"
+      },
+      "officialWebsite": "https://www.arknights.global/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "reverse-1999",
+      "gameUuid": "766639d3-b9dc-5acd-928f-15b432791632",
+      "names": {
+        "ko": "리버스: 1999",
+        "en": "Reverse: 1999",
+        "ja": "リバース：1999"
+      },
+      "officialWebsite": "https://re1999.bluepoch.com/en/home/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "eversoul",
+      "gameUuid": "54404854-dc7e-5aff-9764-d224886e0568",
+      "names": {
+        "ko": "에버소울",
+        "en": "Eversoul",
+        "ja": null
+      },
+      "officialWebsite": null,
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "trickcal-revive",
+      "gameUuid": "17beff0f-4acf-5aff-b32a-d3151eaabee0",
+      "names": {
+        "ko": "트릭컬 리바이브",
+        "en": null,
+        "ja": null
+      },
+      "officialWebsite": "https://trickcal.com/revive/intro/vivi_ui",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "punishing-gray-raven",
+      "gameUuid": "99f88675-1c7b-5387-8916-5ae9790777ca",
+      "names": {
+        "ko": "퍼니싱: 그레이 레이븐",
+        "en": "Punishing: Gray Raven",
+        "ja": null
+      },
+      "officialWebsite": "https://pgr.kurogame.net/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "neverness-to-everness",
+      "gameUuid": "e8c70544-f864-5cc3-8188-55ebc2df27c8",
+      "names": {
+        "ko": "이환",
+        "en": "Neverness to Everness",
+        "ja": "NTE: Neverness to Everness"
+      },
+      "officialWebsite": "https://nte.perfectworld.com/medium/ntekr/index.html",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "arknights-endfield",
+      "gameUuid": "3367debe-6fce-5d74-b9b8-d7b42a814497",
+      "names": {
+        "ko": "명일방주: 엔드필드",
+        "en": "Arknights: Endfield",
+        "ja": "アークナイツ：エンドフィールド"
+      },
+      "officialWebsite": "https://endfield.gryphline.com/ko-kr",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "azur-lane",
+      "gameUuid": "d5d6cfe5-a848-5cbe-951d-296bb79f2399",
+      "names": {
+        "ko": "벽람항로",
+        "en": "Azur Lane",
+        "ja": "アズールレーン"
+      },
+      "officialWebsite": "https://azurlane.xdg.com/gg",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "brown-dust-2",
+      "gameUuid": "1248b046-407e-5411-ab98-f36a0001f0ba",
+      "names": {
+        "ko": "브라운더스트2",
+        "en": "BrownDust2",
+        "ja": "ブラウンダスト2"
+      },
+      "officialWebsite": "https://www.browndust2.com/kr/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "aether-gazer",
+      "gameUuid": "b552be61-b6d6-5212-adc3-a7f1e7211baa",
+      "names": {
+        "ko": "에테르 게이저",
+        "en": "Aether Gazer",
+        "ja": "エーテルゲイザー"
+      },
+      "officialWebsite": "https://www.aethergazer.com/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "snowbreak-containment-zone",
+      "gameUuid": "7385def7-d216-567b-a924-242abb9b5a28",
+      "names": {
+        "ko": "스노우 브레이크: 포비든 존",
+        "en": "Snowbreak: Containment Zone",
+        "ja": "スノウブレイク：禁域降臨"
+      },
+      "officialWebsite": "https://snowbreak.amazingseasun.com/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "umamusume-pretty-derby",
+      "gameUuid": "e22cbd60-f57e-5301-b864-e200935d1a62",
+      "names": {
+        "ko": "우마무스메 프리티 더비",
+        "en": "Umamusume: Pretty Derby",
+        "ja": "ウマ娘 プリティーダービー"
+      },
+      "officialWebsite": "https://umamusume.kakaogames.com/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "f1d6c6cd-eb23-57c1-a997-8317e6f4167e",
+          "game_id": "e22cbd60-f57e-5301-b864-e200935d1a62",
+          "game_slug": "umamusume-pretty-derby",
+          "steam_appid": 3224770,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=3224770",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/3224770/Umamusume_Pretty_Derby/",
+            "locale": "en",
+            "verifiedFields": [
+              "names.en"
+            ],
+            "observedAt": "2026-10-10",
+            "notes": "공식 홈페이지 또는 공식 배포사 스토어에서 표시 명칭과 URL을 확인. 국가별 현재 서비스 상태, 초기화 규칙, 공식 완료 API 및 자동 접근 허가는 확인되지 않음."
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "fate-grand-order",
+      "gameUuid": "cd3c32b6-8ed2-59d1-8119-a99a22b4b2cd",
+      "names": {
+        "ko": "페이트/그랜드 오더",
+        "en": "Fate/Grand Order",
+        "ja": "Fate/Grand Order"
+      },
+      "officialWebsite": "https://fgo.netmarble.com/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "path-to-nowhere",
+      "gameUuid": "ed6d8976-35c7-5cdf-b88a-624c8d2bebcf",
+      "names": {
+        "ko": "무기미도",
+        "en": "Path to Nowhere",
+        "ja": "無期迷途：Path to Nowhere"
+      },
+      "officialWebsite": "https://ptn.aisnogames.com/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "limbus-company",
+      "gameUuid": "eb32e46a-2421-57d5-9c62-df26612953d7",
+      "names": {
+        "ko": "림버스 컴퍼니",
+        "en": "Limbus Company",
+        "ja": null
+      },
+      "officialWebsite": "https://limbuscompany.com/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "63569706-da34-5b72-acb5-1e6503021b56",
+          "game_id": "eb32e46a-2421-57d5-9c62-df26612953d7",
+          "game_slug": "limbus-company",
+          "steam_appid": 1973530,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=1973530",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/1973530/limbus_company?l=koreana",
+            "locale": "ko",
+            "verifiedFields": [
+              "names.ko"
+            ],
+            "observedAt": "2026-10-10",
+            "notes": "공식 홈페이지 또는 공식 배포사 스토어에서 표시 명칭과 URL을 확인. 국가별 현재 서비스 상태, 초기화 규칙, 공식 완료 API 및 자동 접근 허가는 확인되지 않음."
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "guardian-tales",
+      "gameUuid": "7f248db7-96c6-5939-a2f9-0e4833f75ad7",
+      "names": {
+        "ko": "가디언 테일즈",
+        "en": "Guardian Tales",
+        "ja": "ガーディアンテイルズ"
+      },
+      "officialWebsite": "https://guardiantales.kakaogames.com/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "princess-connect-redive",
+      "gameUuid": "3234ca63-7edd-5bd7-a568-839d7a31cc0b",
+      "names": {
+        "ko": "프린세스 커넥트 : 리다이브",
+        "en": null,
+        "ja": "プリンセスコネクト！Re:Dive"
+      },
+      "officialWebsite": "https://priconne.kakaogames.com/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "heaven-burns-red",
+      "gameUuid": "934e35a9-4317-5cf3-b088-79f4b4bd4800",
+      "names": {
+        "ko": "헤븐 번즈 레드",
+        "en": "HEAVEN BURNS RED",
+        "ja": "ヘブンバーンズレッド"
+      },
+      "officialWebsite": "https://kr.heaven-burns-red.com/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "epic-seven",
+      "gameUuid": "42bf6c08-f4bb-5853-af6c-f06399b2347a",
+      "names": {
+        "ko": "에픽세븐",
+        "en": "Epic Seven",
+        "ja": "エピックセブン"
+      },
+      "officialWebsite": "https://epic7.onstove.com/ko/brand",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "sword-of-convallaria",
+      "gameUuid": "c761c560-06ac-57c3-8c21-701a9fc69d99",
+      "names": {
+        "ko": "소드 오브 콘발라리아",
+        "en": "Sword of Convallaria",
+        "ja": "鈴蘭の剣"
+      },
+      "officialWebsite": "https://soc.xd.com/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "silver-and-blood",
+      "gameUuid": "44383da2-5beb-56d9-840d-3b254b6be22c",
+      "names": {
+        "ko": "실버 앤 블러드",
+        "en": "SILVER AND BLOOD",
+        "ja": "シルバー・アンド・ブラッド"
+      },
+      "officialWebsite": "https://silverandblood.moonton.com/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "star-savior",
+      "gameUuid": "5788dda6-74f8-5224-aab2-25878ab20ad4",
+      "names": {
+        "ko": "스타세이비어",
+        "en": "StarSavior",
+        "ja": "スターセイヴァー"
+      },
+      "officialWebsite": "https://www.starsavior.com/kr",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "ananta",
+      "gameUuid": "3b0926ee-0b07-511f-a063-983abd299694",
+      "names": {
+        "ko": "무한대",
+        "en": "ANANTA",
+        "ja": "ANANTA"
+      },
+      "officialWebsite": "https://www.anantagame.com/kr/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "tower-of-fantasy",
+      "gameUuid": "5f32f892-b77f-5120-b0ea-075a482004dc",
+      "names": {
+        "ko": "Tower of Fantasy",
+        "en": "Tower of Fantasy",
+        "ja": "Tower of Fantasy"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/2064650/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "50e604b7-3d9f-51c6-9e3d-e49ff153db8f",
+          "game_id": "5f32f892-b77f-5120-b0ea-075a482004dc",
+          "game_slug": "tower-of-fantasy",
+          "steam_appid": 2064650,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=2064650",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/2064650/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "counterside",
+      "gameUuid": "3e9432db-48a9-5194-a4de-ba75db91375d",
+      "names": {
+        "ko": "CounterSide",
+        "en": "CounterSide",
+        "ja": "CounterSide"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/1976440/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "a72940d2-8735-5e4b-89f5-95bf53778f0d",
+          "game_id": "3e9432db-48a9-5194-a4de-ba75db91375d",
+          "game_slug": "counterside",
+          "steam_appid": 1976440,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=1976440",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/1976440/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "soulworker",
+      "gameUuid": "cc7be8a8-d48b-59f4-8ad0-f95a9de5be04",
+      "names": {
+        "ko": "Soulworker",
+        "en": "Soulworker",
+        "ja": "Soulworker"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/1377580/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "36ad1c11-c288-5aa9-9d6e-d81878b1387c",
+          "game_id": "cc7be8a8-d48b-59f4-8ad0-f95a9de5be04",
+          "game_slug": "soulworker",
+          "steam_appid": 1377580,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=1377580",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/1377580/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "closers",
+      "gameUuid": "f898f070-81e1-5219-b7c7-b4c2add72919",
+      "names": {
+        "ko": "Closers",
+        "en": "Closers",
+        "ja": "Closers"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/215830/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "7f1bb0b0-c976-58cd-a554-04f9607a1fbb",
+          "game_id": "f898f070-81e1-5219-b7c7-b4c2add72919",
+          "game_slug": "closers",
+          "steam_appid": 215830,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=215830",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/215830/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "elsword",
+      "gameUuid": "578e67a6-8c54-532a-ad56-96c89cd82950",
+      "names": {
+        "ko": "Elsword",
+        "en": "Elsword",
+        "ja": "Elsword"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/237310/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "9309f931-7068-57f3-a95a-d2c2ef888849",
+          "game_id": "578e67a6-8c54-532a-ad56-96c89cd82950",
+          "game_slug": "elsword",
+          "steam_appid": 237310,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=237310",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/237310/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "granblue-fantasy",
+      "gameUuid": "1a95cc07-30e6-5cb5-90c5-f8177bd760ac",
+      "names": {
+        "ko": "Granblue Fantasy",
+        "en": "Granblue Fantasy",
+        "ja": "グランブルーファンタジー"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/767320/",
+      "baselineStatus": "ACCESS_RESTRICTED",
+      "reasonCode": "STEAM_IDENTITY_UNAVAILABLE_AND_SITE_REPRODUCTION_RESTRICTED",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED",
+      "accessEvidence": [
+        "https://store.steampowered.com/app/767320/",
+        "https://granbluefantasy.com/ja/"
+      ]
+    },
+    {
+      "gameId": "granblue-fantasy-relink",
+      "gameUuid": "1c00b5d2-1254-54b0-b8f7-1b68c4aee6de",
+      "names": {
+        "ko": "Granblue Fantasy: Relink",
+        "en": "Granblue Fantasy: Relink",
+        "ja": "GRANBLUE FANTASY: Relink"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/881020/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "8919e2ca-507f-5129-be72-04c31a3fb549",
+          "game_id": "1c00b5d2-1254-54b0-b8f7-1b68c4aee6de",
+          "game_slug": "granblue-fantasy-relink",
+          "steam_appid": 881020,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=881020",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/881020/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "granblue-fantasy-versus-rising",
+      "gameUuid": "69fbd565-f0ee-5dbb-bb50-4cdbb3352a16",
+      "names": {
+        "ko": "Granblue Fantasy Versus: Rising",
+        "en": "Granblue Fantasy Versus: Rising",
+        "ja": "Granblue Fantasy Versus: Rising"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/2157560/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "4ab30b2c-fa73-51c6-8bfa-5b3eb20b7671",
+          "game_id": "69fbd565-f0ee-5dbb-bb50-4cdbb3352a16",
+          "game_slug": "granblue-fantasy-versus-rising",
+          "steam_appid": 2157560,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=2157560",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/2157560/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "sword-art-online-integral-factor",
+      "gameUuid": "c5e050f7-ef61-5f0b-a553-9dd38da10dfa",
+      "names": {
+        "ko": "소드 아트 온라인 인테그럴 팩터",
+        "en": "Sword Art Online: Integral Factor",
+        "ja": "ソードアート・オンライン インテグラル・ファクター"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/2371630/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "f463fd32-3b6e-50e8-9f41-e33c223585bc",
+          "game_id": "c5e050f7-ef61-5f0b-a553-9dd38da10dfa",
+          "game_slug": "sword-art-online-integral-factor",
+          "steam_appid": 2371630,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=2371630",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/2371630/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "sword-art-online-fractured-daydream",
+      "gameUuid": "59652664-62ea-5539-ad2b-2502c503fbf5",
+      "names": {
+        "ko": "소드 아트 온라인 프랙처드 데이드림",
+        "en": "SWORD ART ONLINE Fractured Daydream",
+        "ja": "ソードアート・オンライン フラクチュアード デイドリーム"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/1858630/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "f44bff22-35a3-5d95-9b72-fccdc5dc5fef",
+          "game_id": "59652664-62ea-5539-ad2b-2502c503fbf5",
+          "game_slug": "sword-art-online-fractured-daydream",
+          "steam_appid": 1858630,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=1858630",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/1858630/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "sword-art-online-last-recollection",
+      "gameUuid": "b8d8e9d0-a15f-522a-bb09-931eb2cfbc1c",
+      "names": {
+        "ko": "소드 아트 온라인 라스트 리콜렉션",
+        "en": "SWORD ART ONLINE Last Recollection",
+        "ja": "ソードアート・オンライン ラスト リコレクション"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/1566880/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "f848a4aa-dd16-56ff-8151-56edf976c92d",
+          "game_id": "b8d8e9d0-a15f-522a-bb09-931eb2cfbc1c",
+          "game_slug": "sword-art-online-last-recollection",
+          "steam_appid": 1566880,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=1566880",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/1566880/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "atelier-resleriana",
+      "gameUuid": "764cc535-efdd-5735-98f8-c8f6a3d61a9b",
+      "names": {
+        "ko": "Atelier Resleriana: Forgotten Alchemy and the Polar Night Liberator",
+        "en": "Atelier Resleriana: Forgotten Alchemy and the Polar Night Liberator",
+        "ja": "Atelier Resleriana: Forgotten Alchemy and the Polar Night Liberator"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/2594920/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "b73d495d-f9f0-515a-8796-fef116ea3310",
+          "game_id": "764cc535-efdd-5735-98f8-c8f6a3d61a9b",
+          "game_slug": "atelier-resleriana",
+          "steam_appid": 2594920,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=2594920",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/2594920/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "atelier-resleriana-red-alchemist-white-guardian",
+      "gameUuid": "00d135ff-109f-5744-b0a3-cc0da5bd1ce0",
+      "names": {
+        "ko": "진홍의 연금술사와 순백의 수호자 ~레슬레리아나의 아틀리에~",
+        "en": "Atelier Resleriana: The Red Alchemist & the White Guardian",
+        "ja": "紅の錬金術士と白の守護者 ～レスレリアーナのアトリエ～"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/3259600/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "4c14b6cf-84c1-58e9-a7f9-478fb22ea304",
+          "game_id": "00d135ff-109f-5744-b0a3-cc0da5bd1ce0",
+          "game_slug": "atelier-resleriana-red-alchemist-white-guardian",
+          "steam_appid": 3259600,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=3259600",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/3259600/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "atelier-yumia",
+      "gameUuid": "00116c19-9ef3-5408-8a84-a1c586d68c0c",
+      "names": {
+        "ko": "유미아의 아틀리에 ~추억의 연금술사와 창환의 땅~",
+        "en": "Atelier Yumia: The Alchemist of Memories & the Envisioned Land",
+        "ja": "ユミアのアトリエ ～追憶の錬金術士と幻創の地～"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/3123410/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "a7485622-3407-5a83-9e56-df44c9bba3dd",
+          "game_id": "00116c19-9ef3-5408-8a84-a1c586d68c0c",
+          "game_slug": "atelier-yumia",
+          "steam_appid": 3123410,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=3123410",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/3123410/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "madoka-magica-magia-exedra",
+      "gameUuid": "dc810960-c765-5423-8d3c-5938809702f5",
+      "names": {
+        "ko": "Madoka Magica Magia Exedra",
+        "en": "Madoka Magica Magia Exedra",
+        "ja": "魔法少女まどか☆マギカ Magia Exedra"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/2987800/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "0db970a9-d40e-5e4e-be0a-ba6481dfaba3",
+          "game_id": "dc810960-c765-5423-8d3c-5938809702f5",
+          "game_slug": "madoka-magica-magia-exedra",
+          "steam_appid": 2987800,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=2987800",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/2987800/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "memento-mori",
+      "gameUuid": "df987869-f6f5-52fa-859a-848fb9840c92",
+      "names": {
+        "ko": "메멘토 모리: MementoMori",
+        "en": "MementoMori",
+        "ja": "メメントモリ"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/2302530/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "5b6f406a-d582-51a6-b386-64f335b771e4",
+          "game_id": "df987869-f6f5-52fa-859a-848fb9840c92",
+          "game_slug": "memento-mori",
+          "steam_appid": 2302530,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=2302530",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/2302530/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "brave-nine",
+      "gameUuid": "eb694b82-dd7d-528f-a5e9-ddfad776645f",
+      "names": {
+        "ko": "Brown Dust",
+        "en": "Brave Nine",
+        "ja": "Brown Dust (ブラウンダスト)"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/2442230/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "2128037e-479e-5a0c-bcad-8fe5a29fac7d",
+          "game_id": "eb694b82-dd7d-528f-a5e9-ddfad776645f",
+          "game_slug": "brave-nine",
+          "steam_appid": 2442230,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=2442230",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/2442230/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "afk-journey",
+      "gameUuid": "3df08114-38f3-5697-ad6d-8097a0190d80",
+      "names": {
+        "ko": "AFK Journey",
+        "en": "AFK Journey",
+        "ja": "AFK Journey"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/4195600/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "39f76b2c-b0f5-54fb-9093-711d9dcfbfb1",
+          "game_id": "3df08114-38f3-5697-ad6d-8097a0190d80",
+          "game_slug": "afk-journey",
+          "steam_appid": 4195600,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=4195600",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/4195600/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "seven-deadly-sins-origin",
+      "gameUuid": "784904ee-12bb-5423-bd45-85ce1df3eeac",
+      "names": {
+        "ko": "일곱 개의 대죄: Origin",
+        "en": "The Seven Deadly Sins: Origin",
+        "ja": "七つの大罪：Origin"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/3679080/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "92a8726c-aa20-51ef-95e9-fb6a3a83c1fa",
+          "game_id": "784904ee-12bb-5423-bd45-85ce1df3eeac",
+          "game_slug": "seven-deadly-sins-origin",
+          "steam_appid": 3679080,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=3679080",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/3679080/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "kings-raid-reverse",
+      "gameUuid": "16eef297-e9ea-513c-b4ec-079f10591028",
+      "names": {
+        "ko": "킹스레이드 리버스",
+        "en": "KING's RAID RE:VERSE",
+        "ja": "キングスレイド リバース"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/3689540/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "18566e76-dd68-562f-afd5-c443f38e6f5f",
+          "game_id": "16eef297-e9ea-513c-b4ec-079f10591028",
+          "game_slug": "kings-raid-reverse",
+          "steam_appid": 3689540,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=3689540",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/3689540/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "action-taimanin",
+      "gameUuid": "c3ba4eab-a6b9-5457-8144-2998a9201130",
+      "names": {
+        "ko": "액션 대마인",
+        "en": "Action Taimanin",
+        "ja": "アクション対魔忍"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/1335200/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "7962eafd-9d30-51a1-b18f-0f9a4091762a",
+          "game_id": "c3ba4eab-a6b9-5457-8144-2998a9201130",
+          "game_slug": "action-taimanin",
+          "steam_appid": 1335200,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=1335200",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/1335200/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "blue-reflection",
+      "gameUuid": "e8342151-f64a-5abc-8f3a-652390f9ce4f",
+      "names": {
+        "ko": "BLUE REFLECTION",
+        "en": "BLUE REFLECTION",
+        "ja": "BLUE REFLECTION　幻に舞う少女の剣"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/658260/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "66a19d4d-1a95-5e4f-949c-273c8debe0b3",
+          "game_id": "e8342151-f64a-5abc-8f3a-652390f9ce4f",
+          "game_slug": "blue-reflection",
+          "steam_appid": 658260,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=658260",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/658260/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "blue-reflection-second-light",
+      "gameUuid": "855ac4a4-2763-5394-be7c-c2e314351936",
+      "names": {
+        "ko": "BLUE REFLECTION: Second Light",
+        "en": "BLUE REFLECTION: Second Light",
+        "ja": "BLUE REFLECTION TIE/帝"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/1423600/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "3637b87a-a848-562a-8cd6-a1e9212f2a20",
+          "game_id": "855ac4a4-2763-5394-be7c-c2e314351936",
+          "game_slug": "blue-reflection-second-light",
+          "steam_appid": 1423600,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=1423600",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/1423600/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "gran-saga",
+      "gameUuid": "3bcb8f9c-d4fd-5494-876d-853e51d6d7cd",
+      "names": {
+        "ko": null,
+        "en": "Gran Saga",
+        "ja": "グランサガ"
+      },
+      "officialWebsite": "https://gransaga.jp/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "fire-emblem-heroes",
+      "gameUuid": "2e8706fb-4ffc-529d-9bc6-6e6127034d45",
+      "names": {
+        "ko": null,
+        "en": "Fire Emblem Heroes",
+        "ja": "ファイアーエムブレム ヒーローズ"
+      },
+      "officialWebsite": "https://fire-emblem-heroes.com/en/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "magia-record",
+      "gameUuid": "f13a5d88-46f8-59f3-984b-0b8f03b0604a",
+      "names": {
+        "ko": null,
+        "en": null,
+        "ja": "マギアレコード 魔法少女まどか☆マギカ外伝"
+      },
+      "officialWebsite": "https://magireco.com/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "assault-lily-last-bullet",
+      "gameUuid": "a27fb1c6-4379-5cad-86e0-a124fc89092d",
+      "names": {
+        "ko": null,
+        "en": null,
+        "ja": "アサルトリリィ Last Bullet"
+      },
+      "officialWebsite": "https://assaultlily.jp/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "idoly-pride",
+      "gameUuid": "26203b6f-4097-513f-b1cc-bc9f657d1b11",
+      "names": {
+        "ko": null,
+        "en": "IDOLY PRIDE",
+        "ja": "IDOLY PRIDE"
+      },
+      "officialWebsite": "https://idolypride.jp/game/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "d4dj-groovy-mix",
+      "gameUuid": "ba0c6d13-4b9a-5d7b-8fcd-5349c13b5704",
+      "names": {
+        "ko": null,
+        "en": "D4DJ Groovy Mix",
+        "ja": "D4DJ Groovy Mix"
+      },
+      "officialWebsite": "https://d4dj-groovymix.jp/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "bang-dream-girls-band-party",
+      "gameUuid": "35dca05c-07f4-556b-92ab-fe582bd0d442",
+      "names": {
+        "ko": null,
+        "en": null,
+        "ja": "バンドリ！ ガールズバンドパーティ！"
+      },
+      "officialWebsite": "https://bang-dream.bushimo.jp/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "project-sekai",
+      "gameUuid": "3f351176-448a-5f18-b0e9-46437eeb29b7",
+      "names": {
+        "ko": null,
+        "en": null,
+        "ja": "プロジェクトセカイ カラフルステージ！ feat. 初音ミク"
+      },
+      "officialWebsite": "https://pjsekai.sega.jp/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "love-live-school-idol-festival-2",
+      "gameUuid": "5ffe1ce7-be85-534c-84be-ffc58bcf726f",
+      "names": {
+        "ko": null,
+        "en": null,
+        "ja": "ラブライブ！スクールアイドルフェスティバル2 MIRACLE LIVE!"
+      },
+      "officialWebsite": "https://lovelive-sif2.bushimo.jp/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "love-live-school-idol-festival-all-stars",
+      "gameUuid": "75f8239a-67f8-5537-9393-13df81e55b48",
+      "names": {
+        "ko": null,
+        "en": null,
+        "ja": "ラブライブ！スクールアイドルフェスティバル ALL STARS"
+      },
+      "officialWebsite": "https://lovelive-as.bushimo.jp/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "dolphin-wave",
+      "gameUuid": "2d10f482-9608-55f4-a668-4971f2454843",
+      "names": {
+        "ko": null,
+        "en": null,
+        "ja": "ドルフィンウェーブ"
+      },
+      "officialWebsite": "https://hpgames.jp/dolphin-wave/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "last-origin",
+      "gameUuid": "38fb2f07-a514-5dcf-bd16-8e5aaa33ba0a",
+      "names": {
+        "ko": null,
+        "en": null,
+        "ja": "ラストオリジン"
+      },
+      "officialWebsite": "https://www.last-origin.com/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "destiny-child",
+      "gameUuid": "4ca82533-1004-5b94-9a85-a0338fed2e50",
+      "names": {
+        "ko": null,
+        "en": null,
+        "ja": "デスティニーチャイルド"
+      },
+      "officialWebsite": "https://www.destiny-child.jp/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "seven-knights-rebirth",
+      "gameUuid": "87cdcbdb-99a6-509b-82e4-c7d93d20fcc9",
+      "names": {
+        "ko": "세븐나이츠 리버스",
+        "en": "Seven Knights Re:BIRTH",
+        "ja": null
+      },
+      "officialWebsite": "https://sena.netmarble.com/en/kimetsunoyaiba",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "seven-knights-idle-adventure",
+      "gameUuid": "03dd1335-89c6-5975-a137-4aa9bdba1209",
+      "names": {
+        "ko": "세븐나이츠 키우기",
+        "en": "Seven Knights Idle Adventure",
+        "ja": null
+      },
+      "officialWebsite": "https://skidle.netmarble.com/en",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "seven-deadly-sins-grand-cross",
+      "gameUuid": "7022033a-7c75-5736-ad0b-01f8e0602669",
+      "names": {
+        "ko": null,
+        "en": "The Seven Deadly Sins: Grand Cross",
+        "ja": null
+      },
+      "officialWebsite": "https://7dsgc.netmarble.com/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "world-flipper",
+      "gameUuid": "48ff1ea7-096f-5b43-bf42-4ce4fe4e7d63",
+      "names": {
+        "ko": null,
+        "en": "WORLD FLIPPER",
+        "ja": "ワールドフリッパー"
+      },
+      "officialWebsite": "https://worldflipper.jp/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "dragalia-lost",
+      "gameUuid": "c0778b59-b247-53cf-bded-64d604728402",
+      "names": {
+        "ko": null,
+        "en": "Dragalia Lost",
+        "ja": null
+      },
+      "officialWebsite": "https://dragalialost.com/en/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "senran-kagura-new-link",
+      "gameUuid": "88930cbf-7744-5562-b726-75ec4d5cc439",
+      "names": {
+        "ko": null,
+        "en": null,
+        "ja": "シノビマスター 閃乱カグラ NEW LINK"
+      },
+      "officialWebsite": "https://hpgames.jp/shinomas/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "touhou-lostword",
+      "gameUuid": "bbe83a9e-a2ba-5641-8d32-f6f65b048184",
+      "names": {
+        "ko": null,
+        "en": null,
+        "ja": "東方LostWord"
+      },
+      "officialWebsite": "https://touhoulostword.com/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "alice-gear-aegis",
+      "gameUuid": "93e845c6-4885-5678-a1dd-6c5138813442",
+      "names": {
+        "ko": null,
+        "en": null,
+        "ja": "アリス・ギア・アイギス"
+      },
+      "officialWebsite": "https://colopl.co.jp/alicegearaegis/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "disgaea-rpg",
+      "gameUuid": "e2b8f54b-9659-543c-8d01-441845571183",
+      "names": {
+        "ko": null,
+        "en": null,
+        "ja": "魔界戦記ディスガイアRPG ～最凶魔王決定戦！～"
+      },
+      "officialWebsite": "https://disgaea-app.com/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "azur-promilia",
+      "gameUuid": "b5e8cd5f-ba85-54d4-b064-7d1d35e3d700",
+      "names": {
+        "ko": null,
+        "en": "Azur Promilia",
+        "ja": "アズールプロミリア"
+      },
+      "officialWebsite": "https://azurpromilia.jp/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "neural-cloud",
+      "gameUuid": "20c75eda-e44f-593b-977b-29575aa3d17a",
+      "names": {
+        "ko": null,
+        "en": "Neural Cloud",
+        "ja": null
+      },
+      "officialWebsite": "https://42lab-us.sunborngame.com/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "alchemy-stars",
+      "gameUuid": "b4894349-0d7b-5577-8d31-7f39ec730228",
+      "names": {
+        "ko": null,
+        "en": "Alchemy Stars",
+        "ja": "白夜極光"
+      },
+      "officialWebsite": "https://tencentjapan.com/pressrelease/913/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "alchemia-story",
+      "gameUuid": "0b873289-f438-5e7e-8d2f-c9bea137b918",
+      "names": {
+        "ko": null,
+        "en": "Alchemia Story",
+        "ja": "アルケミアストーリー"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/2208530/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "8e1689ca-f8ea-591f-ad84-fde284f5b08e",
+          "game_id": "0b873289-f438-5e7e-8d2f-c9bea137b918",
+          "game_slug": "alchemia-story",
+          "steam_appid": 2208530,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=2208530",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/2208530/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "artery-gear-fusion",
+      "gameUuid": "ff5aecf3-6f41-526b-8501-6d4a536d329a",
+      "names": {
+        "ko": null,
+        "en": null,
+        "ja": "アーテリーギア-機動戦姫-"
+      },
+      "officialWebsite": "https://game.bilibili.co.jp/arterygear/news.html",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "blue-oath",
+      "gameUuid": "d53a29b0-ece6-5c40-b6ce-18e09fbd6e98",
+      "names": {
+        "ko": null,
+        "en": null,
+        "ja": "蒼藍の誓い-ブルーオース"
+      },
+      "officialWebsite": "https://prtimes.jp/main/html/rd/p/000000003.000071227.html",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "final-gear",
+      "gameUuid": "b8c18468-f165-5d16-b0dc-b09776b041f9",
+      "names": {
+        "ko": null,
+        "en": "Final Gear",
+        "ja": "ファイナルギア-重装戦姫-"
+      },
+      "officialWebsite": "https://finalgear.komoejoy.com/en/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "ash-echoes",
+      "gameUuid": "3ad0297e-65a8-5b6e-81fa-ce9aed98f280",
+      "names": {
+        "ko": null,
+        "en": "Ash Echoes Global",
+        "ja": null
+      },
+      "officialWebsite": "https://store.steampowered.com/app/3068700/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "dad3e0ed-e7d9-5487-a36c-bb0b0bf41e6a",
+          "game_id": "3ad0297e-65a8-5b6e-81fa-ce9aed98f280",
+          "game_slug": "ash-echoes",
+          "steam_appid": 3068700,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=3068700",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/3068700/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "echocalypse",
+      "gameUuid": "ad61ae33-13fb-5cc5-b4a8-e2aa2117c3d9",
+      "names": {
+        "ko": "에코칼립스: 진홍의 서약",
+        "en": "Echocalypse: The Scarlet Covenant",
+        "ja": null
+      },
+      "officialWebsite": "https://store.steampowered.com/app/2917030/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "2b50b223-e8ff-54db-9a0e-26d171856fe1",
+          "game_id": "ad61ae33-13fb-5cc5-b4a8-e2aa2117c3d9",
+          "game_slug": "echocalypse",
+          "steam_appid": 2917030,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=2917030",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/2917030/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "outerplane",
+      "gameUuid": "556cb39d-1c7d-5171-80c2-cc21248f3de0",
+      "names": {
+        "ko": "아우터플레인",
+        "en": "OUTERPLANE",
+        "ja": null
+      },
+      "officialWebsite": "https://store.steampowered.com/app/4247320/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "5a8fc747-496e-5028-afd1-8283c2aba074",
+          "game_id": "556cb39d-1c7d-5171-80c2-cc21248f3de0",
+          "game_slug": "outerplane",
+          "steam_appid": 4247320,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=4247320",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/4247320/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "eminence-in-shadow-master-of-garden",
+      "gameUuid": "5291ab5b-9b80-5a4f-8678-06b73a989342",
+      "names": {
+        "ko": "어둠의 실력자가 되고 싶어서! 마스터 오브 가든",
+        "en": "The Eminence in Shadow: Master of Garden",
+        "ja": "陰の実力者になりたくて！マスターオブガーデン"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/2776900/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "56c66cf1-f58b-514d-b043-17902be7165d",
+          "game_id": "5291ab5b-9b80-5a4f-8678-06b73a989342",
+          "game_slug": "eminence-in-shadow-master-of-garden",
+          "steam_appid": 2776900,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=2776900",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/2776900/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "danmachi-battle-chronicle",
+      "gameUuid": "3b5e60a1-d00b-59b6-a41e-1a1bbd22211b",
+      "names": {
+        "ko": null,
+        "en": "Is It Wrong to Try to Pick Up Girls in a Dungeon?: Battle Chronicle",
+        "ja": "ダンジョンに出会いを求めるのは間違っているだろうか バトル・クロニクル"
+      },
+      "officialWebsite": "https://www.danmachi-danchro.com/en/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "danmachi-memoria-freese",
+      "gameUuid": "4add05f2-3f3c-56ab-881f-e5f441926f0d",
+      "names": {
+        "ko": null,
+        "en": "DanMachi - MEMORIA FREESE",
+        "ja": "ダンジョンに出会いを求めるのは間違っているだろうか〜メモリア・フレーゼ〜"
+      },
+      "officialWebsite": "https://hd.gree.net/jp/en/news/press/2018/0402-01.html",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "haze-reverb",
+      "gameUuid": "9d0d8966-37d5-535d-8ec1-2fb01bada9f6",
+      "names": {
+        "ko": "헤이즈 리버브",
+        "en": "HAZE REVERB",
+        "ja": "ハツリバーブ -HAZE REVERB-"
+      },
+      "officialWebsite": "https://gmgm.co.jp/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "cat-fantasy",
+      "gameUuid": "77b9ab11-d945-5f0e-b493-1a020f36c7af",
+      "names": {
+        "ko": "캣 판타지",
+        "en": "CAT FANTASY",
+        "ja": null
+      },
+      "officialWebsite": "https://catfantasygame.com/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "lost-sword",
+      "gameUuid": "7b0649d6-03df-563f-94e7-3a2042c51bae",
+      "names": {
+        "ko": "로스트 소드",
+        "en": "Lost Sword",
+        "ja": null
+      },
+      "officialWebsite": "https://store.steampowered.com/app/5009850/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "10ccf2c7-3738-5f3d-8b86-b3a9cf4a5e1e",
+          "game_id": "7b0649d6-03df-563f-94e7-3a2042c51bae",
+          "game_slug": "lost-sword",
+          "steam_appid": 5009850,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=5009850",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/5009850/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "stella-sora",
+      "gameUuid": "fdc5ad26-781e-589f-ba0d-ac85d57306a4",
+      "names": {
+        "ko": "스텔라 소라",
+        "en": "Stella Sora",
+        "ja": null
+      },
+      "officialWebsite": "https://www.stellasora.global/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "blue-protocol-star-resonance",
+      "gameUuid": "4bd430db-7c81-5538-b9db-d8b09e696582",
+      "names": {
+        "ko": "블루 프로토콜: 스타 레조넌스",
+        "en": "Blue Protocol: Star Resonance",
+        "ja": null
+      },
+      "officialWebsite": "https://store.steampowered.com/app/3681810/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "fac83649-5beb-5194-9062-1d1bb6219188",
+          "game_id": "4bd430db-7c81-5538-b9db-d8b09e696582",
+          "game_slug": "blue-protocol-star-resonance",
+          "steam_appid": 3681810,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=3681810",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/3681810/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "chaos-zero-nightmare",
+      "gameUuid": "c33d56da-3ba1-52bc-b3d1-74538e10c502",
+      "names": {
+        "ko": "카오스 제로 나이트메어",
+        "en": "Chaos Zero Nightmare",
+        "ja": null
+      },
+      "officialWebsite": "https://newsroom.smilegate.com/en/eng/1731386793",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "crystal-of-atlan",
+      "gameUuid": "2b4c286b-9e64-5ceb-9b7e-4ac9d71805ce",
+      "names": {
+        "ko": "크리스탈 오브 아틀란",
+        "en": "Crystal of Atlan",
+        "ja": null
+      },
+      "officialWebsite": "https://store.steampowered.com/app/3839850/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "8782f1e1-7dab-5c8c-a3b8-e4e53ff26837",
+          "game_id": "2b4c286b-9e64-5ceb-9b7e-4ac9d71805ce",
+          "game_slug": "crystal-of-atlan",
+          "steam_appid": 3839850,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=3839850",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/3839850/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "duet-night-abyss",
+      "gameUuid": "65afc10c-d4c6-5b83-8d0c-7076f9adc5c7",
+      "names": {
+        "ko": "듀엣 나이트 어비스",
+        "en": "Duet Night Abyss",
+        "ja": null
+      },
+      "officialWebsite": "https://store.steampowered.com/app/3950020/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "c6798fe0-b7e7-56fd-a244-5e70cf464462",
+          "game_id": "65afc10c-d4c6-5b83-8d0c-7076f9adc5c7",
+          "game_slug": "duet-night-abyss",
+          "steam_appid": 3950020,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=3950020",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/3950020/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "takt-op-symphony",
+      "gameUuid": "f38963f2-9bcc-5198-bc3e-b6735f5c3cd3",
+      "names": {
+        "ko": null,
+        "en": null,
+        "ja": "takt op. 運命は真紅き旋律の街を"
+      },
+      "officialWebsite": "https://game.takt-op.jp/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "archeland",
+      "gameUuid": "8edccf6b-d77f-56e6-87ca-c8782cbd2cef",
+      "names": {
+        "ko": "아르케랜드",
+        "en": null,
+        "ja": "アルケランド"
+      },
+      "officialWebsite": "https://archeland.zlongame.co.jp/jx/archelandNotice/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "langrisser",
+      "gameUuid": "136b7c83-19f3-5864-875e-1022eb556771",
+      "names": {
+        "ko": "랑그릿사",
+        "en": "Langrisser",
+        "ja": "ラングリッサーモバイル"
+      },
+      "officialWebsite": "https://www.langrisser.co.kr/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "red-pride-of-eden",
+      "gameUuid": "7ad64ee7-fcab-56e8-9d20-5fa5ee6b53fe",
+      "names": {
+        "ko": null,
+        "en": "RED Pride of Eden",
+        "ja": null
+      },
+      "officialWebsite": "https://prideofeden.red/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "millennium-tour-elf",
+      "gameUuid": "0cb94827-21bb-5de4-9a44-d3667b9dafdb",
+      "names": {
+        "ko": null,
+        "en": null,
+        "ja": "千年の旅ELF"
+      },
+      "officialWebsite": "https://www.sentabijp.com/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "dragon-sword",
+      "gameUuid": "ea19c1b6-8437-5e42-97c8-eedbfb94fe06",
+      "names": {
+        "ko": "드래곤소드",
+        "en": "DRAGON SWORD",
+        "ja": null
+      },
+      "officialWebsite": "https://brand-dragonsword.webzen.co.kr/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "infinity-nikki",
+      "gameUuid": "b7c263d6-0045-5ba6-bfc8-942585977b29",
+      "names": {
+        "ko": "인피니티 니키",
+        "en": "Infinity Nikki",
+        "ja": null
+      },
+      "officialWebsite": "https://store.steampowered.com/app/3164330/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "22a268ae-6ba2-56b5-b625-101645edf678",
+          "game_id": "b7c263d6-0045-5ba6-bfc8-942585977b29",
+          "game_slug": "infinity-nikki",
+          "steam_appid": 3164330,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=3164330",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/3164330/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "shining-nikki",
+      "gameUuid": "2d55e417-acc7-5b69-b317-98552aa2d714",
+      "names": {
+        "ko": null,
+        "en": "Shining Nikki",
+        "ja": null
+      },
+      "officialWebsite": "https://www.papegames.com/en/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "love-nikki",
+      "gameUuid": "6a490d49-5043-5da2-8e20-e108c0ffb466",
+      "names": {
+        "ko": null,
+        "en": "Love Nikki",
+        "ja": null
+      },
+      "officialWebsite": "https://lovenikki.elexapp.com/index.php",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "onmyoji",
+      "gameUuid": "ceb1d691-bba0-550d-be6d-4eaa58210a47",
+      "names": {
+        "ko": null,
+        "en": "Onmyoji",
+        "ja": null
+      },
+      "officialWebsite": "https://store.steampowered.com/app/551170/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "c3ddd163-5094-59ed-bf23-a26342f18bf4",
+          "game_id": "ceb1d691-bba0-550d-be6d-4eaa58210a47",
+          "game_slug": "onmyoji",
+          "steam_appid": 551170,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=551170",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/551170/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "onmyoji-arena",
+      "gameUuid": "4e42c501-3ae6-5e90-8433-acdff086dfe1",
+      "names": {
+        "ko": null,
+        "en": "Onmyoji Arena",
+        "ja": "決戦！平安京"
+      },
+      "officialWebsite": "https://www.onmyojiarena.us/global/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "idola-phantasy-star-saga",
+      "gameUuid": "840d1058-8a06-5438-b417-020f998efc10",
+      "names": {
+        "ko": null,
+        "en": null,
+        "ja": "イドラ ファンタシースターサーガ"
+      },
+      "officialWebsite": "https://www.sega.jp/game/detail/idola/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "phantasy-star-online-2-new-genesis",
+      "gameUuid": "7b0eaff5-1184-5d99-8bf7-fdad78329718",
+      "names": {
+        "ko": null,
+        "en": "Phantasy Star Online 2 New Genesis",
+        "ja": null
+      },
+      "officialWebsite": "https://store.steampowered.com/app/1056640/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "0cc9db33-144f-5b84-bc59-d0cfc43d0892",
+          "game_id": "7b0eaff5-1184-5d99-8bf7-fdad78329718",
+          "game_slug": "phantasy-star-online-2-new-genesis",
+          "steam_appid": 1056640,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=1056640",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/1056640/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "blue-protocol",
+      "gameUuid": "c0d283a5-bec0-5e2b-a48b-f098d3afb404",
+      "names": {
+        "ko": null,
+        "en": "BLUE PROTOCOL",
+        "ja": "ブループロトコル"
+      },
+      "officialWebsite": "https://www.bandainamcostudios.com/products/blue-protocol.html",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "lord-of-heroes",
+      "gameUuid": "f251bb52-9434-5f00-a2e6-6e324f1e5c38",
+      "names": {
+        "ko": "로드 오브 히어로즈",
+        "en": "Lord of Heroes",
+        "ja": null
+      },
+      "officialWebsite": "https://www.lordofheroes.com/en",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "gate-of-nightmares",
+      "gameUuid": "d75b65c3-384f-5509-884f-ff7f520b11fa",
+      "names": {
+        "ko": null,
+        "en": "Gate of Nightmares",
+        "ja": "ゲート オブ ナイトメア"
+      },
+      "officialWebsite": "https://www.jp.square-enix.com/topics/archive/1879/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "sinoalice",
+      "gameUuid": "fcb0529b-0f65-5d45-8428-00d3f89b2e90",
+      "names": {
+        "ko": null,
+        "en": "SINoALICE",
+        "ja": "シノアリス"
+      },
+      "officialWebsite": "https://www.jp.square-enix.com/sinoalice/sp/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "konosuba-fantastic-days",
+      "gameUuid": "cfbdee7b-ce1f-55ef-8ccc-eedeebb26c44",
+      "names": {
+        "ko": null,
+        "en": null,
+        "ja": "この素晴らしい世界に祝福を！ファンタスティックデイズ"
+      },
+      "officialWebsite": "https://konosubafd.jp/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "disney-twisted-wonderland",
+      "gameUuid": "a5b694cd-7949-5af4-a5cb-c059e52ab086",
+      "names": {
+        "ko": null,
+        "en": "Disney Twisted-Wonderland",
+        "ja": "ディズニー ツイステッドワンダーランド"
+      },
+      "officialWebsite": "https://disneytwistedwonderland.com/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "ensemble-stars-music",
+      "gameUuid": "31c8f0b2-56a9-5ee1-86e7-367fa504c878",
+      "names": {
+        "ko": "앙상블스타즈",
+        "en": "ENSEMBLE STARS Music",
+        "ja": "あんさんぶるスターズ！！Music"
+      },
+      "officialWebsite": "https://ensemblestars.com/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "bungo-stray-dogs-tales-of-the-lost",
+      "gameUuid": "0d14a7c2-f334-5b06-8efb-45b9e05ac67a",
+      "names": {
+        "ko": null,
+        "en": "Bungo Stray Dogs: Tales of the Lost",
+        "ja": "文豪ストレイドッグス 迷ヰ犬怪奇譚"
+      },
+      "officialWebsite": "https://www.bungo-tales.com/pc/news-info.php?id=30",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "guns-girl-z",
+      "gameUuid": "69f9ed21-b783-5a06-b319-2dfb2ceb1946",
+      "names": {
+        "ko": null,
+        "en": "Guns Girl Z",
+        "ja": "崩壊学園"
+      },
+      "officialWebsite": "https://play.google.com/store/apps/details?id=com.miHoYo.HSoDv2JPOriginalEx&hl=en_US",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "velvet-code",
+      "gameUuid": "2a5f0176-7c5c-5c9c-b1d7-16ce5ea31e9d",
+      "names": {
+        "ko": null,
+        "en": "Velvet Code",
+        "ja": "ヴェルヴェットコード"
+      },
+      "officialWebsite": "https://prtimes.jp/main/html/rd/p/000000074.000026752.html",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "love-and-deepspace",
+      "gameUuid": "97b3a507-617f-576e-8196-c064d3d35288",
+      "names": {
+        "ko": "러브앤딥스페이스",
+        "en": "Love and Deepspace",
+        "ja": "恋と深空"
+      },
+      "officialWebsite": "https://apps.apple.com/us/app/love-and-deepspace/id6443467666",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "tears-of-themis",
+      "gameUuid": "ae5e3bb5-21c1-5a07-9aa2-f0b54e8decb8",
+      "names": {
+        "ko": "미해결사건부",
+        "en": "Tears of Themis",
+        "ja": null
+      },
+      "officialWebsite": "https://tot.hoyoverse.com/en/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "onmyoji-the-card-game",
+      "gameUuid": "58486ba5-f48c-5a95-81d3-63d7a6ee924b",
+      "names": {
+        "ko": null,
+        "en": "Onmyoji: The Card Game",
+        "ja": null
+      },
+      "officialWebsite": "https://store.steampowered.com/app/2183390/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "f167dc11-e1e9-5803-a2f5-ea3dc8eb298f",
+          "game_id": "58486ba5-f48c-5a95-81d3-63d7a6ee924b",
+          "game_slug": "onmyoji-the-card-game",
+          "steam_appid": 2183390,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=2183390",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/2183390/",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "elpis-fallen-star",
+      "gameUuid": "0243fb36-f64e-59b2-bbf1-ea0f8c599c94",
+      "names": {
+        "ko": null,
+        "en": "ELPIS: Fallen Star",
+        "ja": null
+      },
+      "officialWebsite": "https://gmgm.co.jp/",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "sources": [],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "persona-5-the-phantom-x",
+      "gameUuid": "eabae550-54a9-5d80-a621-792d2c454a85",
+      "names": {
+        "en": "Persona5: The Phantom X",
+        "ko": null,
+        "ja": "ペルソナ５: The Phantom X"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/3061570/?l=english",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "dbd2d66c-3b9a-5d69-abb6-ed50c3bf7760",
+          "game_id": "eabae550-54a9-5d80-a621-792d2c454a85",
+          "game_slug": "persona-5-the-phantom-x",
+          "steam_appid": 3061570,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=3061570",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/3061570/?l=english",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "persona-3-reload",
+      "gameUuid": "af2036fb-cf71-509d-a7cb-6b1f07597e7c",
+      "names": {
+        "en": "Persona 3 Reload",
+        "ko": "페르소나3 리로드",
+        "ja": "ペルソナ３ リロード"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/2161700/?l=english",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "cbfd0a79-dd47-5c4a-a9d6-2bfa6aa22584",
+          "game_id": "af2036fb-cf71-509d-a7cb-6b1f07597e7c",
+          "game_slug": "persona-3-reload",
+          "steam_appid": 2161700,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=2161700",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/2161700/?l=english",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "persona-4-golden",
+      "gameUuid": "f9c2dfba-529e-5118-815e-f78fefc1a7f7",
+      "names": {
+        "en": "Persona 4 Golden",
+        "ko": "페르소나4 더 골든",
+        "ja": "ペルソナ4 ザ・ゴールデン"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/1113000/?l=english",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "381800dd-ff13-5008-9a6f-2dfafcd9fc0d",
+          "game_id": "f9c2dfba-529e-5118-815e-f78fefc1a7f7",
+          "game_slug": "persona-4-golden",
+          "steam_appid": 1113000,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=1113000",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/1113000/?l=english",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "persona-5-royal",
+      "gameUuid": "ea0474c1-c746-5c94-ada8-f393b950c68b",
+      "names": {
+        "en": "Persona 5 Royal",
+        "ko": "페르소나 5 더 로열",
+        "ja": "ペルソナ５ ザ・ロイヤル"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/1687950/?l=english",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "1f32489b-d363-57bf-9f97-2ca2de439080",
+          "game_id": "ea0474c1-c746-5c94-ada8-f393b950c68b",
+          "game_slug": "persona-5-royal",
+          "steam_appid": 1687950,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=1687950",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/1687950/?l=english",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "persona-5-strikers",
+      "gameUuid": "2a9fedbd-9951-5df3-b24a-62120d17ea4c",
+      "names": {
+        "en": "Persona® 5 Strikers",
+        "ko": "페르소나 5 스크램블 더 팬텀 스트라이커즈",
+        "ja": "ペルソナ5 スクランブル ザ ファントム ストライカーズ"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/1382330/?l=english",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "40f4887f-ac0a-5e46-8d2f-2faebfd24ec2",
+          "game_id": "2a9fedbd-9951-5df3-b24a-62120d17ea4c",
+          "game_slug": "persona-5-strikers",
+          "steam_appid": 1382330,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=1382330",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/1382330/?l=english",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "persona-5-tactica",
+      "gameUuid": "cb0c351f-498c-5809-afeb-ec8fae69ec22",
+      "names": {
+        "en": "Persona 5 Tactica",
+        "ko": "페르소나5 택티카",
+        "ja": "ペルソナ５ タクティカ"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/2254740/?l=english",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "ecb3188b-458b-560c-8cb8-a9af2d7a3df0",
+          "game_id": "cb0c351f-498c-5809-afeb-ec8fae69ec22",
+          "game_slug": "persona-5-tactica",
+          "steam_appid": 2254740,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=2254740",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/2254740/?l=english",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "metaphor-refantazio",
+      "gameUuid": "302bbb70-b18a-568c-95c7-1cf91c6c6770",
+      "names": {
+        "en": "Metaphor: ReFantazio",
+        "ko": "메타포: 리판타지오",
+        "ja": "メタファー：リファンタジオ"
+      },
+      "officialWebsite": "https://store.steampowered.com/app/2679460/?l=english",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "4a1a96ef-63dd-5e20-8d5f-08d2bfd9a77c",
+          "game_id": "302bbb70-b18a-568c-95c7-1cf91c6c6770",
+          "game_slug": "metaphor-refantazio",
+          "steam_appid": 2679460,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=2679460",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/2679460/?l=english",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "nier-automata",
+      "gameUuid": "2dad0ae8-0bc6-544c-ac69-ac8ef5dd34a4",
+      "names": {
+        "en": "NieR:Automata™",
+        "ko": null,
+        "ja": null
+      },
+      "officialWebsite": "https://store.steampowered.com/app/524220/?l=english",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "cfb53a5f-3825-5357-8670-dda91a7f2b44",
+          "game_id": "2dad0ae8-0bc6-544c-ac69-ac8ef5dd34a4",
+          "game_slug": "nier-automata",
+          "steam_appid": 524220,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=524220",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/524220/?l=english",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "nier-replicant",
+      "gameUuid": "21d908ed-0a6f-5b80-9e4e-03d20fb87735",
+      "names": {
+        "en": "NieR Replicant™ ver.1.22474487139...",
+        "ko": null,
+        "ja": null
+      },
+      "officialWebsite": "https://store.steampowered.com/app/1113560/?l=english",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "95778598-c2cd-5c1e-9575-5dd6fc73f9aa",
+          "game_id": "21d908ed-0a6f-5b80-9e4e-03d20fb87735",
+          "game_slug": "nier-replicant",
+          "steam_appid": 1113560,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=1113560",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/1113560/?l=english",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "scarlet-nexus",
+      "gameUuid": "1d09a60c-8083-532b-b94c-efd5715731c6",
+      "names": {
+        "en": "SCARLET NEXUS",
+        "ko": "스칼렛 스트링스",
+        "ja": null
+      },
+      "officialWebsite": "https://store.steampowered.com/app/775500/?l=english",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "a16ea39f-685b-580c-9bb3-7bc3cf2127f8",
+          "game_id": "1d09a60c-8083-532b-b94c-efd5715731c6",
+          "game_slug": "scarlet-nexus",
+          "steam_appid": 775500,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=775500",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/775500/?l=english",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "tales-of-arise",
+      "gameUuid": "5ebf9308-9dce-5e99-ba0b-13559af00916",
+      "names": {
+        "en": "Tales of ARISE",
+        "ko": "테일즈 오브 어라이즈",
+        "ja": null
+      },
+      "officialWebsite": "https://store.steampowered.com/app/740130/?l=english",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "25262c30-8ed4-5dae-9c14-a964dcc915d3",
+          "game_id": "5ebf9308-9dce-5e99-ba0b-13559af00916",
+          "game_slug": "tales-of-arise",
+          "steam_appid": 740130,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=740130",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/740130/?l=english",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    },
+    {
+      "gameId": "tales-of-berseria",
+      "gameUuid": "ace955b1-d41f-5aaf-b3c2-7cbbba80dfbc",
+      "names": {
+        "en": "Tales of Berseria™",
+        "ko": null,
+        "ja": null
+      },
+      "officialWebsite": "https://store.steampowered.com/app/429660/?l=english",
+      "baselineStatus": "NO_SOURCE",
+      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "sources": [
+        {
+          "id": "bf505235-3733-5144-934d-f8ee46bb73f0",
+          "game_id": "ace955b1-d41f-5aaf-b3c2-7cbbba80dfbc",
+          "game_slug": "tales-of-berseria",
+          "steam_appid": 429660,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=429660",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-10T08:40:00Z",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "Exact publisher feed URL supplied by official TLS Steam News API; appid, feedname and same gid are validated. No arbitrary CDN content is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-10T08:40:00Z",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/429660/?l=english",
+            "verifiedFields": [
+              "officialWebsite"
+            ]
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        }
+      ],
+      "serviceStatus": "UNKNOWN",
+      "serverRegion": "UNSPECIFIED"
+    }
+  ]
+}
