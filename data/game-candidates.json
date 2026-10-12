@@ -2023,6 +2023,15 @@
         ],
         "observedAt": "2026-10-10",
         "notes": "공식 홈페이지 또는 공식 배포사 스토어에서 표시 명칭과 URL을 확인. 국가별 현재 서비스 상태, 초기화 규칙, 공식 완료 API 및 자동 접근 허가는 확인되지 않음."
+      },
+      {
+        "url": "https://store.steampowered.com/app/1973710/?l=english",
+        "locale": "ja",
+        "verifiedFields": [
+          "names.ja"
+        ],
+        "observedAt": "2026-10-12",
+        "notes": "Official Steam product title matches the existing Japanese name. Steam publisher is WRIGHT FLYER STUDIOS; the product website link resolves to https://heaven-burns-red.com/, also identified as this game official site by WFS in its 2026-05-22 publication. Store language support is not a server-region declaration."
       }
     ],
     "image": {
