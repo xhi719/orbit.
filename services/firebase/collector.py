@@ -66,7 +66,7 @@ def seed_catalogue(store, games, registry):
         # Candidate seed is not permission to overwrite independently verified reset rules.
         def upsert(old):
             if old:
-                row.update({k:old[k] for k in ["resetRules","verifiedResetRuleIds"] if k in old})
+                row.update({k:old[k] for k in ["resetRules","verifiedResetRuleIds","resetRuleById"] if k in old})
             return (None,False) if old == row else (row,True)
         changed=store.mutate("games/"+game["id"],upsert)
         result["games" if changed else "unchanged"]+=1
