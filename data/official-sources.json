@@ -529,9 +529,66 @@
         "ja": "ヘブンバーンズレッド"
       },
       "officialWebsite": "https://kr.heaven-burns-red.com/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "DATE_UNCONFIRMED",
+      "reasonCode": "REVIEWED_PUBLIC_FEED_AVAILABLE_REGIONAL_SCHEDULES_PENDING",
+      "sources": [
+        {
+          "id": "2c01343f-655e-5de6-ac64-301eb2804f80",
+          "game_id": "934e35a9-4317-5cf3-b088-79f4b4bd4800",
+          "game_slug": "heaven-burns-red",
+          "steam_appid": 1973710,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=1973710",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamcommunity.com",
+            "store.steampowered.com",
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-12T11:24:56.747764+00:00",
+          "provider_notice_routes": [
+            {
+              "host": "steamstore-a.akamaihd.net",
+              "pathTemplate": "/news/externalpost/steam_community_announcements/{gid}",
+              "evidence": "20/20 actual publisher-feed items use the exact same-gid provider route supplied by the documented Steam News API. No arbitrary CDN URL or additional host is accepted."
+            }
+          ],
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-12T11:24:56.747764+00:00",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/1973710/?l=english",
+            "locale": "ja",
+            "verifiedFields": [
+              "names.ja"
+            ],
+            "observedAt": "2026-10-12",
+            "notes": "Official Steam product title matches the existing Japanese name. Steam publisher is WRIGHT FLYER STUDIOS; the product website link resolves to https://heaven-burns-red.com/, also identified as this game official site by WFS in its 2026-05-22 publication. Store language support is not a server-region declaration."
+          },
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "daily_reverification_hours": 24,
+          "rate_policy": {
+            "provider_daily_limit": 100000,
+            "daily_budget_alert_threshold": 10000,
+            "budget_monitoring_deployed": false,
+            "minimum_request_spacing_seconds": 1,
+            "concurrency": 1,
+            "stop_host_on_429": true
+          },
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": null,
+          "notes": "Reviewed public publisher-announcement API only. No Steam account, personal data, credentials, login bypass, page crawler or image-permission claim. Source registration does not approve game schedule dates or regional attribution. Registry enablement remains false; proposed operating activation is a separate parent review decision."
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
