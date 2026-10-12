@@ -73,6 +73,13 @@ class MemoryStore:
         self.reads+=max(1,len(rows))
         return rows
 
+    def list_cursor(self,collection,after_id=None,limit=25):
+        if not 1<=limit<=100 or after_id is not None and (not isinstance(after_id,str) or '/' in after_id):raise SafetyError("bounded_document_cursor_required")
+        prefix=collection+"/"
+        rows=sorted((path[len(prefix):],deepcopy(value)) for path,value in self.records.items()
+                    if path.startswith(prefix) and "/" not in path[len(prefix):] and (after_id is None or path[len(prefix):]>after_id))[:limit]
+        self.reads+=max(1,len(rows));return rows
+
 
 def verify_no_billing(project_id, credentials, opener=urlopen):
     """Never attach/detach billing. Any unavailable/ambiguous response fails closed."""
@@ -184,6 +191,16 @@ class FirestoreStore:
         rows=[(document.id,document.to_dict()) for document in query.stream(timeout=20)]
         self.reads+=max(1,len(rows))
         return rows
+
+    def list_cursor(self,collection,after_id=None,limit=25):
+        self.guard()
+        if not 1<=limit<=100 or after_id is not None and (not isinstance(after_id,str) or '/' in after_id):raise SafetyError("bounded_document_cursor_required")
+        remaining=min(limit,self.max_reads-self.reads)
+        parent=self.db.collection(collection)
+        query=parent.order_by("__name__")
+        if after_id is not None:query=query.start_after([parent.document(after_id)])
+        rows=[(document.id,document.to_dict()) for document in query.limit(remaining).stream(timeout=20)]
+        self.reads+=max(1,len(rows));return rows
 
     def finish_usage(self):
         """Worker-only observations; Firebase client traffic is NOT measured here."""
