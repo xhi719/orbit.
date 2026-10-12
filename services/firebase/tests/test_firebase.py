@@ -8,8 +8,8 @@ from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from store import MemoryStore,FirestoreStore,SafetyError,timestamp
 from collector import reviewed,seed_catalogue,event_identity,upsert_notice,claim_source,collect_one,run
-from notifications import quiet,eligible,plan_user,dispatch,fixed_payload,fcm_message,run as notification_run
-from admin import validate_change,apply_requests,cleanup_accounts
+from notifications import quiet,eligible,plan_user,dispatch,fixed_payload,fcm_message,run as notification_run,reset_cycle,completed_cycle,attendance_context,plan_attendance_user
+from admin import validate_change,apply_requests,cleanup_accounts,cleanup_execution_retention
 from import_pending_pickups import validate_bundle,apply_bundle
 
 NOW=datetime(2026,10,11,10,tzinfo=timezone.utc)
@@ -214,6 +214,76 @@ class FirebaseRecipientIsolationTests(unittest.TestCase):
   with self.assertRaisesRegex(SafetyError,'recipient_uid_required'):
    fcm_message(Messaging,'fake-token',{'title':'Title','body':'Body','url':'/settings','jobId':'job','tag':'tag'})
 
+class FirebaseAttendanceNotificationTests(unittest.TestCase):
+ def fixture(self):
+  store,_=owner_store();rule={'id':'kr-daily','verified':True,'timezone':'UTC','dailyTime':'04:00','evidenceUrl':'https://official.example/reset','region':'KR'}
+  store.records['games/blue-archive']={'names':{'ko':'테스트 게임','en':'Test game','ja':'テストゲーム'},'resetRules':[rule],'verifiedResetRuleIds':['kr-daily'],'resetRuleById':{'kr-daily':rule}}
+  store.records['users/alice/userGames/blue-archive'].update(resetRuleId='kr-daily',serverRegion='KR')
+  store.records['users/alice/notificationSettings/global'].update(attendanceEnabled=True,attendanceDeliveryMode='remote',reminderTimes=['10:00'])
+  return store,rule
+ def summary(self,cycle):
+  return {'gameId':'blue-archive','completionStatus':'completed','source':'device_observed','executionCount':1,'verifiedResetRuleId':cycle['ruleId'],'cycleKey':cycle['cycleKey'],'timezone':cycle['timezone'],'cycleStart':cycle['cycleStart'],'cycleEnd':cycle['cycleEnd'],'firstExecutionAt':NOW,'lastExecutionAt':NOW,'lastExecutionRecordId':'expired-raw-id'}
+ def complete(self,store,rule):
+  cycle=reset_cycle(rule,NOW);store.put('users/alice/attendanceDaily/blue-archive_'+rule['id']+'_'+cycle['localDate'],self.summary(cycle));return cycle
+ def test_reset_boundary_uses_verified_rule_and_server_timezone(self):
+  _,rule=self.fixture();self.assertEqual(reset_cycle(rule,NOW.replace(hour=3))['localDate'],'2026-10-10');self.assertEqual(reset_cycle(rule,NOW.replace(hour=4))['localDate'],'2026-10-11')
+  self.assertIsNone(reset_cycle({**rule,'verified':False},NOW));self.assertIsNone(reset_cycle({**rule,'dailyTime':'25:00'},NOW));self.assertIsNone(reset_cycle({**rule,'evidenceUrl':'http://official.example'},NOW))
+ def test_dst_ambiguous_and_nonexistent_resets_are_not_guessed(self):
+  _,rule=self.fixture();self.assertIsNone(reset_cycle({**rule,'timezone':'America/New_York','dailyTime':'01:30'},datetime(2026,11,1,8,tzinfo=timezone.utc)));self.assertIsNone(reset_cycle({**rule,'timezone':'America/New_York','dailyTime':'02:30'},datetime(2026,3,8,10,tzinfo=timezone.utc)))
+ def test_remote_attendance_is_explicit_opt_in_and_local_mode_never_remote_sends(self):
+  store,_=self.fixture()
+  for mode in ['local','off',None]:
+   store.records['users/alice/notificationSettings/global']['attendanceDeliveryMode']=mode
+   self.assertEqual(plan_attendance_user(store,'alice',NOW),0)
+  store.records['users/alice/notificationSettings/global'].pop('attendanceDeliveryMode');self.assertEqual(plan_attendance_user(store,'alice',NOW),0)
+ def test_existing_game_preference_missing_mode_stays_local_even_with_remote_global(self):
+  store,_=self.fixture();store.put('users/alice/notificationSettings/blue-archive',{'attendanceEnabled':True,'enabled':True})
+  self.assertEqual(plan_attendance_user(store,'alice',NOW),0)
+  store.records['users/alice/notificationSettings/blue-archive']['attendanceDeliveryMode']='remote';self.assertEqual(plan_attendance_user(store,'alice',NOW),1)
+ def test_unknown_or_unselected_reset_does_not_create_attendance_job(self):
+  store,_=self.fixture();store.records['users/alice/userGames/blue-archive']['resetRuleId']=None;self.assertEqual(plan_attendance_user(store,'alice',NOW),0)
+  store.records['users/alice/userGames/blue-archive']['resetRuleId']='guessed';self.assertEqual(plan_attendance_user(store,'alice',NOW),0)
+ def test_rule_region_must_match_selected_server(self):
+  store,_=self.fixture();store.records['users/alice/userGames/blue-archive']['serverRegion']='JP';self.assertIsNone(attendance_context(store,'alice','blue-archive',NOW))
+ def test_completion_on_another_device_stops_current_cycle_before_plan(self):
+  store,rule=self.fixture();self.complete(store,rule);self.assertEqual(plan_attendance_user(store,'alice',NOW),0)
+ def test_global_record_deletion_marker_invalidates_old_completed_summary_before_cleanup(self):
+  store,rule=self.fixture();self.complete(store,rule);store.records['users/alice']['executionRecordsDeletedAt']=NOW
+  self.assertEqual(plan_attendance_user(store,'alice',NOW),1)
+ def test_a_new_observed_launch_after_deletion_marker_still_stops_reminders(self):
+  store,rule=self.fixture();cycle=self.complete(store,rule);store.records['users/alice']['executionRecordsDeletedAt']=NOW-timedelta(seconds=1)
+  self.assertIsNone(attendance_context(store,'alice','blue-archive',NOW));self.assertTrue(completed_cycle(self.summary(cycle),'blue-archive',cycle))
+ def test_completed_summary_survives_raw_retention_without_new_queries_or_writes(self):
+  store,rule=self.fixture();cycle=self.complete(store,rule);self.assertTrue(completed_cycle(self.summary(cycle),'blue-archive',cycle));self.assertIsNone(store.get('users/alice/executionRecords/expired-raw-id'));writes=store.writes;self.assertEqual(plan_attendance_user(store,'alice',NOW),0);self.assertEqual(store.writes,writes)
+ def test_other_server_or_prior_cycle_cannot_suppress_current_attendance(self):
+  store,rule=self.fixture();cycle=reset_cycle(rule,NOW)
+  for row in [{**self.summary(cycle),'verifiedResetRuleId':'jp-daily'},{**self.summary(cycle),'cycleKey':'kr-daily:2026-10-10'},{**self.summary(cycle),'cycleStart':cycle['cycleStart']-timedelta(days=1)}]:
+   self.assertFalse(completed_cycle(row,'blue-archive',cycle))
+ def test_dedupe_prevents_repeated_same_slot(self):
+  store,_=self.fixture();self.assertEqual(plan_attendance_user(store,'alice',NOW),1);writes=store.writes;self.assertEqual(plan_attendance_user(store,'alice',NOW+timedelta(minutes=10)),0);self.assertEqual(store.writes,writes)
+ def test_maximum_three_per_cycle_even_after_reminder_time_changes(self):
+  store,_=self.fixture()
+  for hour in [10,11,12,13]:
+   store.records['users/alice/notificationSettings/global']['reminderTimes']=[str(hour)+':00']
+   self.assertEqual(plan_attendance_user(store,'alice',NOW.replace(hour=hour)),int(hour!=13))
+  self.assertEqual(len(store.list('users/alice/notificationJobs')),3)
+ def test_completion_after_plan_is_rechecked_before_fcm_and_cancels(self):
+  store,rule=self.fixture();plan_attendance_user(store,'alice',NOW);job_id=store.list('users/alice/notificationJobs')[0][0];self.complete(store,rule)
+  self.assertEqual(dispatch(store,'alice',job_id,lambda *_:self.fail('completed user sent'),NOW),'cancelled')
+ def test_unsubscribe_after_plan_cancels_attendance_without_a_push(self):
+  store,_=self.fixture();plan_attendance_user(store,'alice',NOW);job_id=store.list('users/alice/notificationJobs')[0][0];store.delete('users/alice/userGames/blue-archive')
+  self.assertEqual(dispatch(store,'alice',job_id,lambda *_:self.fail('unfollowed game sent'),NOW),'cancelled')
+ def test_attendance_payload_has_cycle_and_does_not_claim_in_game_noncompletion(self):
+  store,_=self.fixture();plan_attendance_user(store,'alice',NOW);job_id=store.list('users/alice/notificationJobs')[0][0];calls=[]
+  self.assertEqual(dispatch(store,'alice',job_id,lambda token,payload:calls.append(payload) or 'provider-id',NOW),'provider_accepted')
+  self.assertEqual(calls[0]['kind'],'attendance');self.assertEqual(calls[0]['url'],'/dashboard');self.assertEqual(calls[0]['cycleKey'],'kr-daily:2026-10-11');self.assertEqual(calls[0]['resetRuleId'],'kr-daily');self.assertIn('실행 기록',calls[0]['body']);self.assertNotIn('미완료',calls[0]['body'])
+  self.assertEqual(dispatch(store,'alice',job_id,lambda *_:self.fail('repeat send'),NOW),'skipped')
+ def test_global_off_and_game_override_off_block_remote_attendance(self):
+  store,_=self.fixture();store.records['users/alice/notificationSettings/global']['attendanceEnabled']=False;self.assertEqual(plan_attendance_user(store,'alice',NOW),0)
+  store.records['users/alice/notificationSettings/global']['attendanceEnabled']=True;store.put('users/alice/notificationSettings/blue-archive',{'attendanceEnabled':False});self.assertEqual(plan_attendance_user(store,'alice',NOW),0)
+ def test_invalid_quiet_timezone_fails_closed_instead_of_stopping_all_users(self):
+  self.assertTrue(quiet({'quietStart':'00:00','quietEnd':'23:59','timezone':'Invalid/Zone'},NOW))
+
 class FirebaseAdminTests(unittest.TestCase):
  def test_official_field_whitelist(self):
   with self.assertRaises(SafetyError):validate_change('games','game',{'secretKey':'not-a-real-key'})
@@ -222,7 +292,11 @@ class FirebaseAdminTests(unittest.TestCase):
  def test_unverified_reset_rule_rejected(self):
   with self.assertRaises(SafetyError):validate_change('games','game',{'names':{'en':'Game'},'officialWebsite':'https://official.example','resetRules':[{'id':'guessed','verified':False,'timezone':'UTC','dailyTime':'04:00','evidenceUrl':'https://official.example'}]})
  def test_verified_reset_derive_ids(self):
-  r=validate_change('games','game',{'names':{'en':'Game'},'officialWebsite':'https://official.example','resetRules':[{'id':'verified','verified':True,'timezone':'UTC','dailyTime':'04:00','evidenceUrl':'https://official.example/reset'}]});self.assertEqual(r['verifiedResetRuleIds'],['verified'])
+  rule={'id':'verified','verified':True,'timezone':'UTC','dailyTime':'04:00','evidenceUrl':'https://official.example/reset'};r=validate_change('games','game',{'names':{'en':'Game'},'officialWebsite':'https://official.example','resetRules':[rule],'resetRuleById':{'forged':rule}});self.assertEqual(r['verifiedResetRuleIds'],['verified']);self.assertEqual(r['resetRuleById'],{'verified':rule})
+ def test_reset_ids_are_unique_canonical_and_regions_cannot_conflict(self):
+  rule={'id':'verified','verified':True,'timezone':'UTC','dailyTime':'04:00','evidenceUrl':'https://official.example/reset'}
+  for rules in [[rule,rule],[{**rule,'id':'BAD_ID'}],[{**rule,'region':'KR','serverRegion':'JP'}]]:
+   with self.assertRaises(SafetyError):validate_change('games','game',{'names':{'en':'Game'},'officialWebsite':'https://official.example','resetRules':rules})
  def test_verified_event_requires_region_dates_and_evidence(self):
   with self.assertRaises(SafetyError):validate_change('gameEvents','event',{'officialUrl':'https://official.example/notice','verificationStatus':'verified','serverRegion':'UNSPECIFIED'})
  def test_source_enable_requires_review(self):
@@ -245,5 +319,41 @@ class FirebaseAdminTests(unittest.TestCase):
   s,e=owner_store();s.records['users/alice']['deletionRequestedAt']=NOW;s.put('users/alice/pushTestLimits/current',{'uid':'alice'});s.put('users/alice/notifications/n',{'uid':'alice'});deleted=[];r=cleanup_accounts(s,delete_auth=lambda uid:deleted.append(uid));self.assertEqual(r['accountsDeleted'],1);self.assertEqual(deleted,['alice']);self.assertIsNone(s.get('users/alice'));self.assertEqual(s.list('users/alice/notificationSubscriptions'),[])
  def test_account_cleanup_document_limit_keeps_tombstone(self):
   s,e=owner_store();s.records['users/alice']['deletionRequestedAt']=NOW;r=cleanup_accounts(s,max_documents=1);self.assertEqual(r['pending'],1);self.assertIsNotNone(s.get('users/alice'))
+
+class FirebaseExecutionRetentionTests(unittest.TestCase):
+ def test_requested_global_deletion_removes_old_raw_and_daily_without_deleting_new_launches_or_receipts(self):
+  records={'users/alice':{'uid':'alice','executionRecordsDeletedAt':NOW},'users/alice/executionRecords/old':{'uid':'alice','startedAt':NOW},'users/alice/executionRecords/new':{'uid':'alice','startedAt':NOW+timedelta(seconds=1)},'users/alice/attendanceDaily/old':{'uid':'alice','lastExecutionAt':NOW},'users/alice/attendanceDaily/new':{'uid':'alice','lastExecutionAt':NOW+timedelta(seconds=1)},'users/alice/notificationReceipts/current':{'uid':'alice','createdAt':NOW}}
+  store=MemoryStore(records);result=cleanup_execution_retention(store,NOW+timedelta(minutes=1));self.assertEqual(result['explicitMarkerDeletes'],2);self.assertEqual(result['attendanceDailyWrites'],1);self.assertIsNotNone(store.get('users/alice/executionRecords/new'));self.assertIsNotNone(store.get('users/alice/attendanceDaily/new'));self.assertIsNotNone(store.get('users/alice/notificationReceipts/current'))
+ def test_requested_global_deletion_also_clears_unconfirmed_daily_rows_older_than_marker(self):
+  store=MemoryStore({'users/alice':{'uid':'alice','executionRecordsDeletedAt':NOW},'users/alice/attendanceDaily/unconfirmed':{'uid':'alice','lastExecutionAt':None,'updatedAt':NOW-timedelta(seconds=1),'completionStatus':'unconfirmed'}});result=cleanup_execution_retention(store,NOW+timedelta(minutes=1));self.assertEqual(result['explicitMarkerDeletes'],1);self.assertIsNone(store.get('users/alice/attendanceDaily/unconfirmed'))
+ def test_old_launches_and_receipts_are_removed_without_changing_retained_daily_summary(self):
+  records={'users/alice':{'uid':'alice'},'users/alice/attendanceDaily/retained':{'uid':'alice','completionStatus':'completed','executionCount':3},'users/alice/executionRecords/old':{'uid':'alice','startedAt':NOW-timedelta(days=31)},'users/alice/executionRecords/new':{'uid':'alice','startedAt':NOW-timedelta(days=1)},'users/alice/notificationReceipts/old':{'uid':'alice','createdAt':NOW-timedelta(days=31)},'users/alice/attendanceReminderLimits/old':{'uid':'alice','createdAt':NOW-timedelta(days=36)}}
+  store=MemoryStore(records);result=cleanup_execution_retention(store,NOW)
+  self.assertEqual(result['documentsDeleted'],3);self.assertEqual(result['attendanceDailyWrites'],0);self.assertEqual(store.get('users/alice/attendanceDaily/retained'),records['users/alice/attendanceDaily/retained']);self.assertIsNotNone(store.get('users/alice/executionRecords/new'))
+ def test_24_hour_gate_and_active_lease_do_not_repeat_remote_writes(self):
+  store=MemoryStore({'users/alice':{'uid':'alice'}});cleanup_execution_retention(store,NOW);writes=store.writes;self.assertEqual(cleanup_execution_retention(store,NOW+timedelta(minutes=15))['status'],'DEFERRED');self.assertEqual(store.writes,writes)
+  store=MemoryStore({'collectorLocks/execution-retention':{'leaseUntil':NOW+timedelta(minutes=5)}});self.assertEqual(cleanup_execution_retention(store,NOW)['status'],'DEFERRED');self.assertEqual(store.writes,0)
+ def test_user_cursor_reaches_users_after_first_twenty(self):
+  records={}
+  for index in range(21):
+   uid=f'user-{index:02d}';records['users/'+uid]={'uid':uid};records[f'users/{uid}/executionRecords/old']={'uid':uid,'startedAt':NOW-timedelta(days=31)}
+  store=MemoryStore(records);first=cleanup_execution_retention(store,NOW);self.assertEqual(first['usersVisited'],20);self.assertEqual(first['documentsDeleted'],20);self.assertTrue(first['scanLimitReached']);second=cleanup_execution_retention(store,NOW+timedelta(days=1));self.assertEqual(second['usersVisited'],1);self.assertEqual(second['documentsDeleted'],1);self.assertTrue(second['allUsersScanned'])
+ def test_document_cursor_resumes_after_recent_front_page_instead_of_starving_old_records(self):
+  records={'users/alice':{'uid':'alice'}}
+  for index in range(101):records[f'users/alice/executionRecords/{index:03d}']={'uid':'alice','startedAt':NOW-timedelta(days=1)}
+  records['users/alice/executionRecords/999']={'uid':'alice','startedAt':NOW-timedelta(days=31)}
+  store=MemoryStore(records);first=cleanup_execution_retention(store,NOW);self.assertEqual(first['recordsScanned'],100);self.assertEqual(first['documentsDeleted'],0);self.assertTrue(first['scanLimitReached']);second=cleanup_execution_retention(store,NOW+timedelta(days=1));self.assertEqual(second['documentsDeleted'],1);self.assertIsNone(store.get('users/alice/executionRecords/999'));self.assertEqual(len(store.list('users/alice/executionRecords')),101)
+ def test_exact_boundary_is_retained_and_unknown_dates_are_not_guessed(self):
+  store=MemoryStore({'users/alice':{'uid':'alice'},'users/alice/executionRecords/boundary':{'uid':'alice','startedAt':NOW-timedelta(days=30)},'users/alice/executionRecords/invalid':{'uid':'alice','startedAt':'not-a-date'}});result=cleanup_execution_retention(store,NOW);self.assertEqual(result['documentsDeleted'],0);self.assertEqual(result['invalidTimestamps'],1)
+ def test_invalid_bounds_are_rejected_before_reading_or_writing(self):
+  store=MemoryStore()
+  for args in [{'max_users':21},{'max_documents':101},{'max_documents':0}]:
+   with self.assertRaises(SafetyError):cleanup_execution_retention(store,NOW,**args)
+  self.assertEqual(store.reads,0);self.assertEqual(store.writes,0)
+ def test_cursor_query_checks_read_budget_before_sdk_call(self):
+  store=FirestoreStore.__new__(FirestoreStore);store.reads=2500;store.max_reads=2500;store.writes=0;store.max_writes=500
+  with self.assertRaisesRegex(SafetyError,'soft_budget'):store.list_cursor('users',None,20)
+ def test_account_cleanup_includes_receipts_and_server_only_reminder_ledgers(self):
+  store=MemoryStore({'users/alice':{'deletionRequestedAt':NOW},'users/alice/notificationReceipts/r':{'uid':'alice'},'users/alice/attendanceReminderLimits/r':{'uid':'alice'}});self.assertEqual(cleanup_accounts(store)['accountsDeleted'],1);self.assertEqual(store.list('users/alice/notificationReceipts'),[]);self.assertEqual(store.list('users/alice/attendanceReminderLimits'),[])
 
 if __name__=='__main__':unittest.main()
