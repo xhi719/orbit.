@@ -13,7 +13,7 @@ from urllib.parse import urlsplit
 from store import FirestoreStore,MemoryStore,SafetyError,timestamp
 
 FIELDS={
- "games":{"id","slug","names","aliases","developer","publisher","platforms","regions","officialWebsite","officialNoticeUrl","officialSocialUrls","serviceStatus","collectionSupport","dailyReset","weeklyReset","resetTimezone","officialIntegration","metadataStatus","nameProvenance","sourceEvidence","image","resetRules","verifiedResetRuleIds","enabled","createdAt","updatedAt"},
+ "games":{"id","slug","names","aliases","developer","publisher","platforms","regions","officialWebsite","officialNoticeUrl","officialSocialUrls","serviceStatus","collectionSupport","dailyReset","weeklyReset","resetTimezone","officialIntegration","metadataStatus","nameProvenance","sourceEvidence","image","resetRules","verifiedResetRuleIds","resetRuleById","enabled","createdAt","updatedAt"},
  "gameSources":{"id","gameId","url","parser","steamAppid","enabled","accessStatus","approvedForStaging","termsUrl","termsCheckedAt","noticeHostsVerifiedAt","allowedNoticeHosts","feedAllowlist","intervalMinutes","serverRegion","serverLabel","health","lastCheckedAt","lastSuccessAt","lastErrorAt","lastReverifiedAt","nextRunAt"},
  "gameEvents":{"id","sourceId","externalKey","gameIds","serverRegion","serverLabel","title","description","originalTitle","originalDescription","originalLanguage","officialUrl","publishedAt","sourceUpdatedAt","rawSha256","eventTypeCandidates","firstCheckedAt","lastCheckedAt","lastChangedAt","lastVerifiedAt","verificationStatus","revision","startsAt","endsAt","reservationStartsAt","reservationEndsAt","ticketSalesAt","originalTimezone","category","scheduleStatus","status","venue","imageRightsStatus","translations"},
  "pickupSchedules":{"id","eventId","gameId","serverRegion","serverLabel","officialUrl","verificationStatus","lastCheckedAt","firstCheckedAt","firstConfirmedAt","lastChangedAt","pickupKind","characters","weapons","outfits","startsAt","endsAt","lastVerifiedAt"},
@@ -49,13 +49,17 @@ def validate_change(collection,document_id,data,old=None):
   if not https(row.get('officialWebsite')):raise SafetyError('official_website_https_required')
   names=row.get('names',{})
   if not isinstance(names,dict) or set(names)-{'ko','en','ja'} or not any(isinstance(v,str) and v for v in names.values()):raise SafetyError('official_game_name_required')
-  ids=[]
+  ids=[];by_id={}
   for rule in row.get('resetRules',[]):
-   if not isinstance(rule,dict) or set(rule)-{'id','verified','timezone','dailyTime','evidenceUrl','region','serverLabel'}:raise SafetyError('invalid_reset_rule_fields')
+   if not isinstance(rule,dict) or set(rule)-{'id','verified','timezone','dailyTime','evidenceUrl','region','serverRegion','serverLabel'}:raise SafetyError('invalid_reset_rule_fields')
    if rule.get('verified') is not True or not https(rule.get('evidenceUrl')) or not re.fullmatch(r'([01]\d|2[0-3]):[0-5]\d',rule.get('dailyTime','')):raise SafetyError('verified_reset_evidence_required')
+   if not isinstance(rule.get('id'),str) or not re.fullmatch(r'[a-z0-9][a-z0-9-]{0,63}',rule['id']) or rule['id'] in ids:raise SafetyError('unique_reset_rule_slug_required')
+   if rule.get('region') and rule.get('serverRegion') and rule['region']!=rule['serverRegion']:raise SafetyError('conflicting_reset_region')
+   if rule.get('region',rule.get('serverRegion')) not in [None,'KR','JP','GLOBAL']:raise SafetyError('known_reset_region_required')
    from zoneinfo import ZoneInfo
-   ZoneInfo(rule['timezone']);ids.append(rule['id'])
+   ZoneInfo(rule['timezone']);ids.append(rule['id']);by_id[rule['id']]=dict(rule)
   row['verifiedResetRuleIds']=ids
+  row['resetRuleById']=by_id # Derived from reviewed rules; callers cannot substitute a different index.
  if collection=='gameSources':
   if row.get('parser')!='steam_news' or not isinstance(row.get('steamAppid'),int) or not https(row.get('url')):raise SafetyError('reviewed_source_adapter_required')
   if row.get('intervalMinutes',0)<15:raise SafetyError('minimum_source_interval_15_minutes')
@@ -111,7 +115,70 @@ def apply_requests(store,max_requests=25):
  return result
 
 
-PRIVATE_COLLECTIONS=['userGames','attendanceDaily','executionRecords','deviceRegistrations','notificationSettings','notificationSubscriptions','bookmarks','reports','notificationJobs','notifications','pushTestLimits']
+PRIVATE_COLLECTIONS=['userGames','attendanceDaily','executionRecords','deviceRegistrations','notificationSettings','notificationSubscriptions','notificationReceipts','attendanceReminderLimits','bookmarks','reports','notificationJobs','notifications','pushTestLimits']
+
+def cleanup_execution_retention(store,now=None,max_users=20,max_documents=100):
+ """Free worker deletion, not paid Firestore TTL. Cursor progresses fairly.
+
+ A bounded pass is eligible every 24 hours. Large backlogs can extend retention;
+ callers must inspect `scanLimitReached` instead of claiming exact TTL expiry.
+ Existing attendanceDaily summaries are preserved unless the owner requested
+ their deletion through executionRecordsDeletedAt; only then are they scanned.
+ """
+ if not 1<=max_users<=20 or not 1<=max_documents<=100:raise SafetyError('bounded_retention_limits_required')
+ now=now or datetime.now(timezone.utc);lock_path='collectorLocks/execution-retention';lease=uuid.uuid4().hex
+ def claim(old):
+  old=old or {}
+  if old.get('leaseUntil') and timestamp(old['leaseUntil'])>now or old.get('nextRunAt') and timestamp(old['nextRunAt'])>now:return None,None
+  return {**old,'leaseToken':lease,'leaseUntil':now+timedelta(minutes=12),'updatedAt':now},old
+ prior=store.mutate(lock_path,claim)
+ if prior is None:return {'status':'DEFERRED','documentsDeleted':0,'attendanceDailyWrites':0}
+ cursor={key:prior.get(key) for key in ['afterUser','activeUser','afterRecord']};cursor['collectionIndex']=prior.get('collectionIndex',0)
+ collections=[('executionRecords','startedAt',30),('notificationReceipts','createdAt',30),('attendanceReminderLimits','createdAt',35),('attendanceDaily','lastExecutionAt',None)]
+ stats={'status':'SUCCESS','usersVisited':0,'recordsScanned':0,'documentsDeleted':0,'explicitMarkerDeletes':0,'invalidTimestamps':0,'invalidOwnership':0,'scanLimitReached':False,'allUsersScanned':False,'attendanceDailyWrites':0};visited=set();profiles={}
+ try:
+  while (len(visited)<max_users or cursor['activeUser'] in visited) and stats['recordsScanned']<max_documents:
+   if not cursor['activeUser']:
+    users=store.list_cursor('users',cursor['afterUser'],1)
+    if not users:
+     cursor.update(afterUser=None,activeUser=None,afterRecord=None,collectionIndex=0);stats['allUsersScanned']=True;break
+    cursor['activeUser']=users[0][0]
+    profiles[users[0][0]]=users[0][1]
+   uid=cursor['activeUser'];visited.add(uid)
+   if uid not in profiles:profiles[uid]=store.get('users/'+uid) or {}
+   marker=profiles[uid].get('executionRecordsDeletedAt')
+   name,field,days=collections[cursor['collectionIndex']]
+   if name=='attendanceDaily' and not marker:
+    cursor.update(afterUser=uid,activeUser=None,collectionIndex=0,afterRecord=None);continue
+   requested=min(25,max_documents-stats['recordsScanned'])
+   records=store.list_cursor(f'users/{uid}/{name}',cursor['afterRecord'],requested)
+   for record_id,row in records:
+    stats['recordsScanned']+=1
+    if row.get('uid')!=uid:
+     stats['invalidOwnership']+=1;cursor['afterRecord']=record_id;continue
+    try:
+     value=timestamp(row.get(field) or row.get('updatedAt')) if name=='attendanceDaily' else timestamp(row.get(field))
+     explicit=marker and name in ['executionRecords','attendanceDaily'] and value<=timestamp(marker)
+     expired=days is not None and value<now-timedelta(days=days)
+     if explicit or expired:
+      store.delete(f'users/{uid}/{name}/{record_id}');stats['documentsDeleted']+=1
+      if explicit:stats['explicitMarkerDeletes']+=1
+      if name=='attendanceDaily':stats['attendanceDailyWrites']+=1
+    except (ValueError,TypeError):stats['invalidTimestamps']+=1
+    cursor['afterRecord']=record_id
+   if len(records)<requested:
+    cursor['collectionIndex']+=1;cursor['afterRecord']=None
+    if cursor['collectionIndex']==len(collections):cursor.update(afterUser=uid,activeUser=None,collectionIndex=0)
+   if stats['recordsScanned']==max_documents:stats['scanLimitReached']=True
+  stats['usersVisited']=len(visited)
+  if len(visited)>=max_users and not stats['allUsersScanned']:stats['scanLimitReached']=True
+ except Exception as error:
+  stats.update(status='FAILED_RETRYABLE',reasonCode=type(error).__name__,usersVisited=len(visited))
+ def finish(old):
+  if not old or old.get('leaseToken')!=lease:return None,False
+  return {**old,**cursor,'leaseToken':None,'leaseUntil':None,'lastRunAt':now,'nextRunAt':now+(timedelta(minutes=15) if stats['status']=='FAILED_RETRYABLE' else timedelta(hours=24)),'metrics':stats,'updatedAt':now},True
+ store.mutate(lock_path,finish)
+ return stats
 def cleanup_accounts(store,max_users=20,max_documents=300,delete_auth=None):
  stats={'accountsDeleted':0,'documentsDeleted':0,'pending':0}
  for uid,profile in store.list('users',max_users):
@@ -141,6 +208,6 @@ def cleanup_accounts(store,max_users=20,max_documents=300,delete_auth=None):
 def main():
  parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--apply',action='store_true');args=parser.parse_args()
  if not args.apply:print(json.dumps({'status':'PLAN_ONLY','remoteWrites':0}));return
- store=FirestoreStore();result={'adminRequests':apply_requests(store),'accountCleanup':cleanup_accounts(store),'remoteWrites':store.writes};store.finish_usage();print(json.dumps(result))
+ store=FirestoreStore();result={'adminRequests':apply_requests(store),'accountCleanup':cleanup_accounts(store),'executionRetention':cleanup_execution_retention(store),'remoteWrites':store.writes};store.finish_usage();print(json.dumps(result))
 
 if __name__=='__main__':main()
