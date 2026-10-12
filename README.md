@@ -1,8 +1,8 @@
 # Orbit free worker — review-only source package
 
-This is a proposed public repository containing only worker code and public game/source metadata. It is not a deployed scheduler. No project owner ADC, service key, user/device data, raw collection DB, images, app/UI, or native binaries are included. No reuse license is granted by this package.
+This approved public repository contains only worker code and public game/source metadata. The Spark worker and free FCM dispatcher are connected separately through repository secrets. No project owner ADC, service key, user/device data, raw collection DB, images, app/UI, or native binaries are included. No reuse license is granted by this package.
 
-Read [the concrete review plan](docs/github-free-runner-plan.md) before publishing or configuring credentials. `MANIFEST.sha256.json` records each payload file. The workflow remains skipped for a private repository or unless `ORBIT_FIREBASE_ENABLED=true`; FCM remains disabled unless explicitly configured. Publishing the repository is a separate user-approved action.
+Read [the concrete review plan and dated updates](docs/github-free-runner-plan.md). `MANIFEST.sha256.json` records each payload file. The workflow remains skipped for a private repository or unless `ORBIT_FIREBASE_ENABLED=true`; FCM remains disabled unless explicitly configured. No new cloud permissions or billing configuration are created by source updates.
 
 Local checks (Python 3.11+; no external service/key needed):
 
@@ -14,4 +14,4 @@ python services/firebase/admin.py
 python services/firebase/notifications.py
 ```
 
-Only after separate permission/Secret/Spark review, install `services/firebase/requirements.txt` and follow the plan's exact operational commands. Runtime defaults are PLAN_ONLY/DISABLED. The 137 candidate games have unknown/unverified reset rules; the 49 reviewed Steam feeds do not imply full official channel coverage. Publication timestamps never become event schedules. TASK_REMINDER is disabled. FCM provider acceptance is not physical receipt.
+Only after permission/Secret/Spark review, install `services/firebase/requirements.txt` and follow the plan's exact operational commands. Runtime defaults are PLAN_ONLY/DISABLED. The candidate games require official reset evidence; reviewed Steam feeds do not imply full official channel coverage. Publication timestamps never become event schedules. TASK_REMINDER is disabled. Remote launch attendance is explicit opt-in with a selected verified server, completion recheck and at most three reminders per cycle. FCM provider acceptance is not physical receipt. Native device receipt and cross-device launch detection require separate physical tests.
