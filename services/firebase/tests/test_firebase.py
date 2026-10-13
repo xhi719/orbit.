@@ -626,6 +626,63 @@ class FirebaseNativePayloadTests(unittest.TestCase):
    AndroidConfig=staticmethod(lambda **kw:kw)
   p={'title':'韓'*500,'body':'日'*5000,'url':'/events/e','jobId':'job','tag':'dedupe','recipientUid':'alice','gameId':'game','gameIds':['game'+str(n)for n in range(1000)]};m=fcm_message(Messaging,'fake-token',p);self.assertLess(len(json.dumps(m['data'],ensure_ascii=False).encode()),3500);self.assertEqual(json.loads(m['data']['gameIds']),['game'])
 
+class FirebaseLocalizedEventPayloadTests(unittest.TestCase):
+ def fixture(self,lang='ko',**changes):
+  store,event=owner_store();store.records['users/alice']['language']=lang
+  event={**event,'originalTitle':'Synthetic official pickup','originalDescription':'New synthetic character pickup details.','originalLanguage':'en','rawSha256':'fixture-raw-hash','revision':3,**changes}
+  return store,event
+ def translation(self,lang='ko',**changes):
+  text={'ko':('합성 캐릭터 픽업 안내','합성 캐릭터의 픽업 일정 안내입니다.'),'ja':('合成キャラクターピックアップのお知らせ','合成キャラクターのピックアップ日程をご確認ください。'),'en':('Synthetic translated pickup notice','Synthetic translated pickup schedule details.')}
+  title,body=text[lang]
+  return {'title':title,'description':body,'status':'completed','verificationStatus':'verified','sourceLanguage':'en','targetLanguage':lang,'sourceSha256':'fixture-raw-hash','sourceTitle':'Synthetic official pickup','sourceRevision':3,**changes}
+ def payload(self,store,event,**job):return fixed_payload(store,'alice',{'id':'job','kind':'event:start',**job},event,NOW)
+ def test_verified_korean_event_translation_used_in_notification(self):
+  s,e=self.fixture(translations={'ko':self.translation()});p=self.payload(s,e);self.assertEqual(p['title'],'합성 캐릭터 픽업 안내');self.assertEqual(p['body'],'합성 캐릭터의 픽업 일정 안내입니다.')
+ def test_untranslated_english_source_not_korean_push_fallback(self):
+  s,e=self.fixture();p=self.payload(s,e);self.assertEqual(p['title'],'캐릭터·무기 픽업 소식');self.assertEqual(p['body'],'자세한 내용은 원문 공식 공지에서 확인해 주세요.');self.assertNotIn('Synthetic',p['title']+p['body'])
+ def test_untranslated_korean_source_not_japanese_or_english_push_fallback(self):
+  for lang in ('ja','en'):
+   s,e=self.fixture(lang,originalLanguage='ko',originalTitle='합성 한국어 공식 공지',originalDescription='합성 한국어 본문입니다.');p=self.payload(s,e);self.assertNotIn('합성',p['title']+p['body'])
+ def test_verified_japanese_translation_uses_japanese_notice_text(self):
+  s,e=self.fixture('ja',translations={'ja':self.translation('ja')});p=self.payload(s,e);self.assertEqual(p['title'],'合成キャラクターピックアップのお知らせ');self.assertIn('日程',p['body'])
+ def test_selected_locale_original_text_used_only_when_script_matches(self):
+  for lang,title,body in [('ko','합성 한국어 픽업','합성 한국어 본문 안내입니다.'),('ja','合成ピックアップ','合成の日程をご確認ください。'),('en','Synthetic pickup','Synthetic source details.')]:
+   s,e=self.fixture(lang,originalLanguage=lang,originalTitle=title,originalDescription=body);p=self.payload(s,e);self.assertEqual(p['title'],title);self.assertEqual(p['body'],body)
+ def test_incorrect_korean_source_language_tag_cannot_pass_english_original(self):
+  s,e=self.fixture(originalLanguage='ko');p=self.payload(s,e);self.assertEqual(p['title'],'캐릭터·무기 픽업 소식');self.assertNotIn('New synthetic',p['body'])
+ def test_copied_english_translation_does_not_pass_korean_or_japanese_locale(self):
+  for lang in ('ko','ja'):
+   s,e=self.fixture(lang);e['translations']={lang:self.translation(lang,title=e['originalTitle'],description=e['originalDescription'])};p=self.payload(s,e);self.assertNotIn('Synthetic',p['title']);self.assertNotIn('New synthetic',p['body'])
+ def test_korean_translation_body_cannot_leak_english_when_title_valid(self):
+  s,e=self.fixture(translations={'ko':self.translation(description='New synthetic character pickup details.')});p=self.payload(s,e);self.assertEqual(p['title'],'합성 캐릭터 픽업 안내');self.assertEqual(p['body'],'자세한 내용은 원문 공식 공지에서 확인해 주세요.')
+ def test_unverified_rejected_or_failed_translation_not_used(self):
+  for patch in ({'status':'pending'},{'status':'failed'},{'verificationStatus':'pending'},{'verificationStatus':'rejected'}):
+   s,e=self.fixture(translations={'ko':self.translation(**patch)});self.assertEqual(self.payload(s,e)['title'],'캐릭터·무기 픽업 소식')
+ def test_target_or_source_language_tag_mismatch_blocks_translation(self):
+  for patch in ({'targetLanguage':'ja'},{'sourceLanguage':'ja'}):
+   s,e=self.fixture(translations={'ko':self.translation(**patch)});self.assertEqual(self.payload(s,e)['title'],'캐릭터·무기 픽업 소식')
+ def test_stale_source_hash_or_different_section_title_blocks_translation(self):
+  for patch in ({'sourceSha256':'changed-source-hash'},{'sourceTitle':'Synthetic other pickup'}):
+   s,e=self.fixture(translations={'ko':self.translation(**patch)});self.assertEqual(self.payload(s,e)['title'],'캐릭터·무기 픽업 소식')
+ def test_extraction_only_revision_increment_keeps_exact_hash_and_selected_title_translation(self):
+  s,e=self.fixture(revision=4,translations={'ko':self.translation(sourceRevision=3)});self.assertEqual(self.payload(s,e)['title'],'합성 캐릭터 픽업 안내')
+ def test_changed_revision_without_exact_hash_and_source_title_requires_new_translation(self):
+  s,e=self.fixture(revision=4,translations={'ko':self.translation(sourceRevision=3,sourceSha256=None)});self.assertEqual(self.payload(s,e)['title'],'캐릭터·무기 픽업 소식')
+ def test_selected_publisher_section_title_is_translation_source_not_parent_title(self):
+  s,e=self.fixture(displayTitle='Synthetic selected pickup',translations={'ko':self.translation(sourceTitle='Synthetic selected pickup')});self.assertEqual(self.payload(s,e)['title'],'합성 캐릭터 픽업 안내')
+  e['translations']['ko']['sourceTitle']=e['originalTitle'];self.assertEqual(self.payload(s,e)['title'],'캐릭터·무기 픽업 소식')
+ def test_notification_markup_and_image_urls_not_rendered_as_message_body(self):
+  s,e=self.fixture(translations={'ko':self.translation(title='[b]합성 픽업[/b]',description='<script>bad()</script>[p]합성 안내입니다.[/p][img]https://cdn.example/fixture.webp[/img]')});p=self.payload(s,e);self.assertEqual(p['title'],'합성 픽업');self.assertEqual(p['body'],'합성 안내입니다.')
+ def test_localized_event_send_preserves_recipient_url_tag_kind_and_dedupe_without_real_provider(self):
+  s,e=self.fixture(translations={'ko':self.translation()});s.records['gameEvents/event']=e;s.put('users/alice/notificationJobs/localized',{'uid':'alice','kind':'event:start','eventId':'event','eventRevision':3,'dedupeKey':'same-key','status':'requested','dueAt':NOW});calls=[]
+  self.assertEqual(dispatch(s,'alice','localized',lambda token,payload:calls.append(payload) or 'mock-provider-id',NOW),'provider_accepted');self.assertEqual(len(calls),1);p=calls[0]
+  self.assertEqual(p['title'],'합성 캐릭터 픽업 안내');self.assertEqual(p['recipientUid'],'alice');self.assertEqual(p['url'],'/events/event');self.assertEqual(p['tag'],'orbit-event-same-key');self.assertEqual(p['kind'],'event:start');self.assertEqual(p['gameIds'],['blue-archive'])
+  self.assertEqual(dispatch(s,'alice','localized',lambda *_:self.fail('duplicate mock send'),NOW),'skipped')
+ def test_existing_push_test_localized_message_unchanged(self):
+  expected={'ko':('푸시 알림 테스트','이 알림이 보이면 앱에서 수신 확인을 눌러 주세요.'),'en':('Push notification test','If this notification appears, confirm receipt in the app.'),'ja':('プッシュ通知テスト','この通知が表示されたら、アプリで受信を確認してください。')}
+  for lang,(title,body)in expected.items():
+   s,e=self.fixture(lang);p=fixed_payload(s,'alice',{'id':'test','kind':'push_test'},None,NOW);self.assertEqual((p['title'],p['body']),(title,body));self.assertEqual(p['tag'],'orbit-test-test');self.assertEqual(p['recipientUid'],'alice')
+
 class FirebaseRecipientIsolationTests(unittest.TestCase):
  def test_all_payloads_use_authoritative_target_uid_not_job_uid(self):
   s,e=owner_store()
