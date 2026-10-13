@@ -6,10 +6,12 @@ quarantined rather than retried automatically, avoiding known transport duplicat
 from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 import argparse
+import html
 import json
 import re
 from pathlib import Path
 import uuid
+import unicodedata
 from zoneinfo import ZoneInfo
 from collector import digest
 from store import FirestoreStore, MemoryStore, SafetyError, timestamp
@@ -22,6 +24,92 @@ TEXT={"ko":("푸시 알림 테스트","이 알림이 보이면 앱에서 수신 
 ATTENDANCE_TEXT={"ko":("ORBIT 출석 확인","{game}: 이번 출석 기간의 게임 실행 기록이 아직 확인되지 않았습니다."),
                  "en":("ORBIT attendance reminder","{game}: a game launch has not been confirmed for this attendance period."),
                  "ja":("ORBIT 出席確認","{game}: 今回の出席期間のゲーム起動記録がまだ確認できていません。")}
+EVENT_NEWS={
+ "ko":{"official":"게임 공식 소식","pickup":"캐릭터·무기 픽업 소식","new":"최고 등급 신규 캐릭터 픽업 소식","rerun":"최고 등급 캐릭터 복각 소식",
+  "event":"게임 이벤트 소식","offline":"오프라인 행사 소식","goods":"굿즈 판매 소식","broadcast":"공식 방송 소식","update":"게임 업데이트 소식","maintenance":"점검 소식",
+  "body":"자세한 내용은 원문 공식 공지에서 확인해 주세요."},
+ "en":{"official":"Official game notice","pickup":"Character or weapon pickup notice","new":"New top-rarity character pickup notice","rerun":"Top-rarity character rerun notice",
+  "event":"Game event notice","offline":"Offline event notice","goods":"Merchandise sales notice","broadcast":"Official broadcast notice","update":"Game update notice","maintenance":"Maintenance notice",
+  "body":"Open the original official notice for details."},
+ "ja":{"official":"ゲーム公式のお知らせ","pickup":"キャラクター・武器ピックアップのお知らせ","new":"最高レアリティ新キャラクターピックアップのお知らせ","rerun":"最高レアリティキャラクター復刻のお知らせ",
+  "event":"ゲームイベントのお知らせ","offline":"オフラインイベントのお知らせ","goods":"グッズ販売のお知らせ","broadcast":"公式配信のお知らせ","update":"ゲームアップデートのお知らせ","maintenance":"メンテナンスのお知らせ",
+  "body":"詳しくは原文の公式お知らせをご確認ください。"}}
+
+
+def _content_language(value):
+    return re.split(r"[-_]",value.strip().lower())[0] if isinstance(value,str) else ""
+
+
+def _plain_event_text(value):
+    if not isinstance(value,str):return ""
+    text=re.sub(r"<(?:script|style)\b[^>]*>.*?</(?:script|style)>","",value,flags=re.I|re.S)
+    text=re.sub(r"\[img(?:=[^\]]*)?\].*?\[/img\]","",text,flags=re.I|re.S)
+    text=re.sub(r"</?(?:p|div|h[1-6]|li|br)\b[^>]*>","\n",text,flags=re.I)
+    text=re.sub(r"<[^>]+>","",text)
+    text=re.sub(r"\[/?(?:p|h[1-6]|list|\*)(?:=[^\]]*|\s[^\]]*)?\]","\n",text,flags=re.I)
+    text=re.sub(r"\[/?(?:b|i|u|s|strike|url|quote|table|tr|td|th|previewyoutube|video)(?:=[^\]]*)?\]","",text,flags=re.I)
+    text=html.unescape(text)
+    return re.sub(r"\n{3,}","\n\n",re.sub(r"[ \t]+\n","\n",text)).strip()
+
+
+def _text_matches_language(text,lang):
+    letters=[char for char in text if char.isalpha()]
+    if not letters:return False
+    names=[unicodedata.name(char,"") for char in letters]
+    hangul=sum(name.startswith("HANGUL") for name in names)
+    kana=sum(name.startswith(("HIRAGANA","KATAKANA")) for name in names)
+    han=sum(name.startswith(("CJK UNIFIED IDEOGRAPH","CJK COMPATIBILITY IDEOGRAPH")) for name in names)
+    if lang=="ko":return hangul>=2 and hangul/len(letters)>=0.2
+    if lang=="ja":return not hangul and (kana>0 or han>=2) and (kana+han)/len(letters)>=0.2
+    return not hangul and not kana and not han and bool(re.search(r"[a-z]",text,re.I))
+
+
+def _neutral_event_title(event,lang):
+    category=str(event.get("category","")).lower().replace("_","-")
+    kind="official"
+    if category in ("pickup","recruitment","banner","gacha","character-pickup","weapon-pickup"):
+        kind=event.get("announcementKind") if event.get("rarityLabel") and event.get("announcementKind") in ("new","rerun") else "pickup"
+    elif category in ("limited-event","in-game","in-game-event","ingame-event","login-reward","login-event","attendance-event","collaboration"):kind="event"
+    elif category in ("offline","offline-event","cafe","popup","pop-up","exhibition","fanmeeting","fan-meeting","concert","orchestra","festival","ticket","ticket-sale","ticket-sales"):kind="offline"
+    elif category in ("merchandise","goods","goods-sale","goods-sales","goods-reservation","merchandise-reservation","preorder","pre-order","restock"):kind="goods"
+    elif category in ("broadcast","livestream","live-stream"):kind="broadcast"
+    elif category=="update":kind="update"
+    elif category in ("maintenance","maintenance-extension"):kind="maintenance"
+    return EVENT_NEWS[lang][kind]
+
+
+def localized_event_payload(event,lang):
+    """Use the same verified language/source guards as the web presentation.
+
+    English source text is never a Korean/Japanese fallback. An extraction-only
+    revision increment does not stale a translation with the exact same source
+    hash and selected title; changed source bytes or section title always do.
+    """
+    lang=_content_language(lang)
+    if lang not in EVENT_NEWS:lang="en"
+    selected=event.get("displayTitle") or event.get("sourceSectionTitle") or event.get("originalTitle") or event.get("title") or ""
+    title=_plain_event_text(selected)
+    body=_plain_event_text(event.get("displayDescription") or event.get("originalDescription") or event.get("description"))
+    source_language=_content_language(event.get("originalLanguage"))
+    translations=event.get("translations") or {}
+    candidate=translations.get(lang) if isinstance(translations,dict) else None
+    usable=isinstance(candidate,dict) and candidate.get("status") in ("completed","verified")
+    if usable:
+        same_source=bool(candidate.get("sourceSha256") and candidate["sourceSha256"]==event.get("rawSha256")
+            and candidate.get("sourceTitle") and candidate["sourceTitle"]==selected)
+        if (candidate.get("verificationStatus") and candidate["verificationStatus"]!="verified"
+            or candidate.get("targetLanguage") and _content_language(candidate["targetLanguage"])!=lang
+            or candidate.get("sourceLanguage") and _content_language(candidate["sourceLanguage"])!=source_language
+            or candidate.get("sourceTitle") and candidate["sourceTitle"]!=selected
+            or candidate.get("sourceRevision") is not None and event.get("revision") is not None and candidate["sourceRevision"]!=event["revision"] and not same_source
+            or candidate.get("sourceSha256") and event.get("rawSha256") and candidate["sourceSha256"]!=event["rawSha256"]):usable=False
+    def local_field(key,original):
+        translated=_plain_event_text(candidate.get(key)) if usable else ""
+        if translated and _text_matches_language(translated,lang) and (source_language==lang or unicodedata.normalize("NFKC",translated)!=unicodedata.normalize("NFKC",original)):
+            return translated
+        if source_language==lang and _text_matches_language(original,lang):return original
+        return ""
+    return local_field("title",title) or _neutral_event_title(event,lang),local_field("description",body) or EVENT_NEWS[lang]["body"]
 
 
 def reset_cycle(rule,now):
@@ -223,8 +311,8 @@ def fixed_payload(store,uid,job,event=None,now=None):
                 "cycleKey":context["cycleKey"],"resetRuleId":context["ruleId"]}
     eligible_games=[game_id for game_id in event.get("gameIds",[])
                     if eligible(store,uid,{**event,"gameIds":[game_id]},job["kind"],now)]
-    return {"title":event.get("originalTitle",event.get("title","Official event"))[:200],
-            "body":event.get("originalDescription",event.get("description",""))[:500],
+    title,body=localized_event_payload(event,lang)
+    return {"title":title[:200],"body":body[:500],
             "url":"/events/"+event["id"],"jobId":job["id"],"tag":"orbit-event-"+job.get("dedupeKey",job["id"]),
             "kind":job["kind"],"gameId":eligible_games[0] if eligible_games else "",
             "gameIds":eligible_games,"category":event.get("category",""),"eventId":event["id"],"recipientUid":uid}
