@@ -2,6 +2,30 @@
   "schemaVersion": 1,
   "label": "STAGING ONLY",
   "operatingDatabaseConnected": false,
+  "socialCollectionPolicy": {
+    "reviewedAt": "2026-10-13",
+    "goalPlatforms": ["youtube", "x"],
+    "billingAllowedWon": 0,
+    "youtube": {
+      "adapter": "youtube_atom",
+      "method": "official_channel_feed",
+      "status": "CAPABILITY_READY_CHANNEL_REVIEW_REQUIRED",
+      "documentationUrl": "https://developers.google.com/youtube/v3/guides/push_notifications",
+      "channelIdentityRequired": true,
+      "publisherLinkEvidenceRequired": true,
+      "apiKeyRequired": false,
+      "full72HourCoverageGuaranteed": false,
+      "thumbnailReuseRequiresSeparateReview": true
+    },
+    "x": {
+      "method": "manual_verified_source",
+      "status": "ACCESS_REQUIRES_COST_REVIEW",
+      "automaticReadsEnabled": false,
+      "pricingUrl": "https://docs.x.com/x-api/getting-started/pricing",
+      "reasonCode": "METERED_READ_API_BLOCKED_BY_ZERO_WON_POLICY",
+      "scrapingFallbackEnabled": false
+    }
+  },
   "reviewedAt": "2026-10-10T08:40:00Z",
   "window": {
     "startsAt": "2026-10-07T08:40:00Z",
@@ -70,6 +94,20 @@
         "ja": "ドールズフロントライン2：エクシリウム"
       },
       "officialWebsite": "https://gf2.haoplay.com/kr/",
+      "socialTargets": [
+        {
+          "platform": "youtube",
+          "url": "https://www.youtube.com/@GFL2EXILlUMGLOBAL",
+          "publisher": "HaoPlay Limited",
+          "publisherIdentityEvidenceUrl": "https://play.google.com/store/apps/details?id=com.haoplay.game.and.exilium&hl=en",
+          "publisherIdentityCheckedAt": "2026-10-13",
+          "youtubeChannelId": null,
+          "status": "CHANNEL_ID_AND_LIVE_FEED_REVIEW_REQUIRED",
+          "enabled": false,
+          "serverRegion": "UNSPECIFIED",
+          "contentLanguage": "en"
+        }
+      ],
       "baselineStatus": "NO_SOURCE",
       "reasonCode": "REVIEWED_PUBLISHER_FEED_SERVER_UNCONFIRMED",
       "sources": [
