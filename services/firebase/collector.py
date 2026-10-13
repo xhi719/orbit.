@@ -25,7 +25,7 @@ from backfill import retry_after_seconds
 from store import MemoryStore, FirestoreStore, SafetyError, timestamp
 
 UTC = timezone.utc
-EXTRACTION_VERSION = 3
+EXTRACTION_VERSION = 4
 
 
 def source_policy(source):
@@ -387,7 +387,17 @@ def confirmed_window_overlap(document,source,start,end):
     """
     enriched=enrich_document(document,source)
     scopes=[enriched]+[enrich_document(section,source) for section in enriched["section_documents"]]
-    return any(row["schedule_verified"] and row["schedule"]["startsAt"]<end and row["schedule"]["endsAt"]>=start for row in scopes)
+    return any((row["schedule_verified"] or region_pending_period(row)) and row["schedule"]["startsAt"]<end and row["schedule"]["endsAt"]>=start for row in scopes)
+
+
+def region_pending_period(document):
+    """A reviewed source can establish dates without establishing the server.
+
+    These are candidate source facts, never confirmed calendar/notification times.
+    No other missing proof/conflict reason may use this bounded ingestion path.
+    """
+    return bool(document["schedule"]["startsAt"] and document["schedule"]["endsAt"] and
+        set(document["schedule_reason_codes"])=={"SERVER_REGION_UNCONFIRMED"})
 
 
 def retire_derived_event(store,event_id,row,observed,depth=0):
@@ -413,7 +423,7 @@ def upsert_notice(store, source, document, observed):
           "rawPublicationTimestamp":document["raw_publication_timestamp"],"observedAt":observed,
           "officialUrl":document["official_url"]},True))
     def update(old):
-        if old and old.get("rawSha256") == document["raw_sha256"] and old.get("extractionVersion")==EXTRACTION_VERSION and old.get("extractionPolicySha256")==document["extraction_policy_sha256"]:
+        if old and old.get("rawSha256") == document["raw_sha256"] and old.get("extractionVersion")==EXTRACTION_VERSION and old.get("extractionPolicySha256")==document["extraction_policy_sha256"] and old.get("categoryCandidate")==document["category_candidate"]:
             if old.get("verificationStatus")=="verified" and old.get("status") not in ("cancelled","postponed") and old.get("startsAt") and old.get("endsAt"):
                 state="ended" if timestamp(old["endsAt"])<=observed else "ongoing" if timestamp(old["startsAt"])<=observed else "upcoming"
                 if state!=old.get("status"):
@@ -430,11 +440,15 @@ def upsert_notice(store, source, document, observed):
              "publishedAt":timestamp(document["published_at"]) if document["published_at"] else None,
              "sourceUpdatedAt":timestamp(document["source_updated_at"]) if document["source_updated_at"] else None,
              "rawSha256":document["raw_sha256"],"eventTypeCandidates":document["event_type_candidates"],
+             "categoryCandidate":document["category_candidate"],
              "firstCheckedAt":old.get("firstCheckedAt",observed) if old else observed,
              "lastCheckedAt":observed,"lastChangedAt":observed,"verificationStatus":"pending",
              "extractionVersion":EXTRACTION_VERSION,"extractionPolicySha256":document["extraction_policy_sha256"],
              "scheduleEvidence":{"method":"explicit_labelled_timestamps","evidenceText":document["schedule"]["evidenceText"],
                  "reasonCodes":document["schedule_reason_codes"]},
+             "candidateStartsAt":document["schedule"]["startsAt"] if region_pending_period(document) else None,
+             "candidateEndsAt":document["schedule"]["endsAt"] if region_pending_period(document) else None,
+             "candidateTimezone":document["schedule"]["originalTimezone"] if region_pending_period(document) else None,
              "imageCandidates":document["image_candidates"],"image":document["approved_image"],
              "announcementKind":"aggregate" if document["highest_rarity_targets"] else None,
              "derivedCharacterAnnouncements":len(document["highest_rarity_targets"]),
@@ -474,6 +488,9 @@ def upsert_notice(store, source, document, observed):
                  "officialUrl":pickup["official_url"],"verificationStatus":"pending","lastCheckedAt":observed,
                  "imageCandidates":document["image_candidates"],"image":document["approved_image"],
                  "status":"cancelled" if document["cancelled"] else "unconfirmed",
+                 "candidateStartsAt":document["schedule"]["startsAt"] if region_pending_period(document) else None,
+                 "candidateEndsAt":document["schedule"]["endsAt"] if region_pending_period(document) else None,
+                 "candidateTimezone":document["schedule"]["originalTimezone"] if region_pending_period(document) else None,
                  "firstCheckedAt":old.get("firstCheckedAt",observed) if old else observed}
             for key,default in {"pickupKind":None,"characters":[],"weapons":[],"startsAt":None,"endsAt":None}.items():
                 row.setdefault(key,default)
@@ -511,6 +528,7 @@ def upsert_notice(store, source, document, observed):
                     "officialUrl":parent["officialUrl"],"pickupKind":"character","characters":[target["name"]],"weapons":[],
                     "announcementKind":target["announcementKind"],"rarityLabel":target["rarityLabel"],
                     "startsAt":parent.get("startsAt"),"endsAt":parent.get("endsAt"),"originalTimezone":parent.get("originalTimezone"),
+                    "candidateStartsAt":parent.get("candidateStartsAt"),"candidateEndsAt":parent.get("candidateEndsAt"),"candidateTimezone":parent.get("candidateTimezone"),
                     "verificationStatus":parent["verificationStatus"],"status":parent["status"],"image":document["approved_image"],
                     "imageCandidates":document["image_candidates"],"lastCheckedAt":observed,"lastChangedAt":observed,
                     "firstCheckedAt":old.get("firstCheckedAt",observed) if old else observed,
@@ -592,6 +610,7 @@ def collect_one(store, source, start, end, mode="backfill", fetch=fetch_source, 
     metrics={"pagesFetched":0,"itemsSeen":0,"created":0,"updated":0,"unchanged":0,"verifiedSchedules":0,
              "knownEventsForReverify":0,"knownEventsQueryLimitReached":False,"olderUnseenSkipped":0,"ongoingOlderIncluded":0,
              "verifiedSectionSchedules":0,"derivedChildrenQueryLimitReached":False}
+    metrics.update(candidateSchedules=0,candidateSectionSchedules=0)
     success,error,http_status,retry_after=False,None,None,0
     cursor=int(end.timestamp())+1
     try:
@@ -620,12 +639,17 @@ def collect_one(store, source, start, end, mode="backfill", fetch=fetch_source, 
                     stored=store.get("gameEvents/"+event_identity(document,source))
                     if stored and stored.get("verificationStatus")=="verified" and stored.get("startsAt") and stored.get("endsAt"):
                         metrics["verifiedSchedules"]+=1
+                    if stored and stored.get("candidateStartsAt") and stored.get("candidateEndsAt") and stored.get("status")!="cancelled":
+                        metrics["candidateSchedules"]+=1
                     if stored and stored.get("derivedSectionCount"):
                         children=store.list_equal("gameEvents","parentEventId",stored["id"],50)
                         metrics["derivedChildrenQueryLimitReached"]=metrics["derivedChildrenQueryLimitReached"] or len(children)==50
                         verified_children=[row for _,row in children if row.get("verificationStatus")=="verified" and row.get("startsAt") and row.get("endsAt") and row.get("status")!="cancelled"]
                         metrics["verifiedSchedules"]+=len(verified_children)
                         metrics["verifiedSectionSchedules"]+=sum(bool(row.get("sourceSectionKey")) for row in verified_children)
+                        candidate_children=[row for _,row in children if row.get("verificationStatus")=="pending" and row.get("candidateStartsAt") and row.get("candidateEndsAt") and row.get("status")!="cancelled"]
+                        metrics["candidateSchedules"]+=len(candidate_children)
+                        metrics["candidateSectionSchedules"]+=sum(bool(row.get("sourceSectionKey")) for row in candidate_children)
                 elif mode=="reverify":
                     metrics["olderUnseenSkipped"]+=1
             oldest=min(dates) if dates else None
@@ -671,6 +695,7 @@ def run(registry,store,start,end,mode="backfill",fetch=fetch_source,sleep=time.s
     return {"recordedAt":datetime.now(UTC),"backend":"FIREBASE" if store.remote else "LOCAL_STAGING",
             "remoteFirestoreWrites":store.writes if store.remote else 0,"fcmSends":0,"windowHours":(end-start).total_seconds()/3600,
             "results":results,"verifiedEventSchedules":sum(row.get("metrics",{}).get("verifiedSchedules",0) for row in results),"fullSourceCoverageVerified":False,
+            "candidateEventSchedules":sum(row.get("metrics",{}).get("candidateSchedules",0) for row in results),
             "extractionVersion":EXTRACTION_VERSION,"imageReuseRequiresSeparateReview":True}
 
 
