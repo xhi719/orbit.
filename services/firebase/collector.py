@@ -16,24 +16,107 @@ import re
 import sys
 import time
 import uuid
-from urllib.parse import urlsplit
+import xml.etree.ElementTree as ET
+from urllib.parse import urlsplit, parse_qsl, urlencode
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "collector"))
 from engine import fetch_source, ValidationError, normalize_url
-from official_adapter import steam_request, parse_steam_documents, aware_timestamp
+from official_adapter import steam_request, parse_steam_documents, aware_timestamp, TYPES
 from backfill import retry_after_seconds
 from store import MemoryStore, FirestoreStore, SafetyError, timestamp
 
 UTC = timezone.utc
 EXTRACTION_VERSION = 4
+YOUTUBE_CHANNEL_ID = re.compile(r"UC[A-Za-z0-9_-]{22}")
+YOUTUBE_VIDEO_ID = re.compile(r"[A-Za-z0-9_-]{11}")
+YOUTUBE_FEED_PATHS = ("/feeds/videos.xml", "/xml/feeds/videos.xml")
+YOUTUBE_FEED_DOCUMENTATION = "https://developers.google.com/youtube/v3/guides/push_notifications"
+
+
+def youtube_request(source):
+    """Only YouTube's channel feed is supported; no video-page scraper/API key."""
+    channel = source.get("youtube_channel_id", "")
+    if source.get("parser") != "youtube_atom" or not isinstance(channel, str) or not YOUTUBE_CHANNEL_ID.fullmatch(channel):
+        raise ValidationError("youtube_channel_identity_required")
+    url = safe_public_url(source.get("url"))
+    if not url:
+        raise ValidationError("youtube_public_feed_required")
+    parsed = urlsplit(source["url"])
+    if parsed.hostname != "www.youtube.com" or parsed.path not in YOUTUBE_FEED_PATHS or parsed.fragment or parse_qsl(parsed.query,keep_blank_values=True) != [("channel_id", channel)]:
+        raise ValidationError("youtube_public_feed_required")
+    return {**source, "enabled": True, "method": "official_feed", "official_host": "www.youtube.com"}
+
+
+def parse_youtube_documents(raw, source, observed_at):
+    """A publisher-verified channel must match every Atom entry.
+
+    Publication/update times remain notice metadata. Recent feeds are bounded and
+    not a historical/archive API, so no complete 72-hour coverage is asserted.
+    Thumbnails are source evidence only until a separate reuse review approves them.
+    """
+    youtube_request(source)
+    if len(raw) > 2097152 or b"\x00" in raw or re.search(br"<!\s*(?:DOCTYPE|ENTITY)\b", raw, re.I):
+        raise ValidationError("youtube_xml_unsafe")
+    try:
+        feed = ET.fromstring(raw.decode("utf-8-sig"))
+    except (ET.ParseError, UnicodeError) as error:
+        raise ValidationError("youtube_xml_invalid") from error
+    atom, yt, media = "{http://www.w3.org/2005/Atom}", "{http://www.youtube.com/xml/schemas/2015}", "{http://search.yahoo.com/mrss/}"
+    channel = source["youtube_channel_id"]
+    if feed.tag != atom+"feed" or feed.findtext(atom+"id") != "yt:channel:"+channel:
+        raise ValidationError("youtube_response_channel_mismatch")
+    if feed.findtext(yt+"channelId") not in (None, channel):
+        raise ValidationError("youtube_response_channel_mismatch")
+    items = feed.findall(atom+"entry")
+    if len(items) > 50:
+        raise ValidationError("youtube_items_invalid")
+    documents, seen = [], set()
+    for item in items:
+        video = item.findtext(yt+"videoId") or ""
+        if item.findtext(yt+"channelId") != channel or not YOUTUBE_VIDEO_ID.fullmatch(video) or item.findtext(atom+"id") != "yt:video:"+video or video in seen:
+            raise ValidationError("youtube_entry_identity_mismatch")
+        seen.add(video)
+        title, content = item.findtext(atom+"title"), item.findtext(media+"group/"+media+"description") or ""
+        if not isinstance(title, str) or not 1 <= len(title.strip()) <= 500 or len(content) > 200000:
+            raise ValidationError("youtube_document_fields_invalid")
+        published = item.findtext(atom+"published")
+        updated = item.findtext(atom+"updated")
+        published_time = aware_timestamp(published)
+        if updated and aware_timestamp(updated) < published_time:
+            raise ValidationError("youtube_update_before_publication")
+        links = [node.get("href", "") for node in item.findall(atom+"link") if node.get("rel") == "alternate"]
+        if len(links) != 1:
+            raise ValidationError("youtube_video_url_required")
+        original = urlsplit(links[0])
+        if original.scheme not in ("https", "http") or original.hostname not in ("www.youtube.com", "youtube.com") or original.path != "/watch" or original.username or original.password or original.port not in (None, 80, 443) or original.fragment or parse_qsl(original.query,keep_blank_values=True) != [("v", video)]:
+            raise ValidationError("youtube_video_url_mismatch")
+        url = "https://www.youtube.com/watch?"+urlencode({"v": video})
+        thumbnails = []
+        for node in item.findall(media+"group/"+media+"thumbnail")[:5]:
+            image = safe_public_url(node.get("url"))
+            if image and urlsplit(image).hostname == "i.ytimg.com":
+                thumbnails.append(image)
+        raw_item = {"channelId":channel, "videoId":video, "title":title, "description":content,
+                    "published":published, "updated":updated, "officialUrl":url, "thumbnailUrls":thumbnails}
+        hints = [kind for kind, patterns in TYPES.items() if any(re.search(pattern, title+"\n"+content, re.I) for pattern in patterns)]
+        documents.append({"external_key":video, "raw_sha256":digest(raw_item), "raw_json":raw_item,
+            "raw_publication_timestamp":published, "published_at":published_time.isoformat(), "source_updated_at":updated,
+            "observed_at":observed_at, "official_url":url, "original_title":title, "original_description":content,
+            "original_language":source.get("content_language") or "unknown", "server_region":source.get("server_region") or "UNSPECIFIED",
+            "server_label":source.get("server_label"), "event_type_candidates":hints, "pickups":[], "source_image_urls":thumbnails})
+    return documents, {"items_seen":len(items), "items_accepted":len(documents), "items_skipped":0,
+        "skip_reasons":[], "window_coverage_verified":False, "coverage_reason":"RECENT_FEED_WITHOUT_HISTORY_PAGINATION"}
 
 
 def source_policy(source):
     """Source-specific opt-ins remain separate from permission to read a feed."""
-    return {key: source.get(key) for key in (
+    policy = {key: source.get(key) for key in (
         "schedule_extraction_approved", "schedule_extraction_reviewed_at", "schedule_extraction_evidence_url",
         "content_language", "server_region", "server_label", "highest_character_rarity", "image_reuse",
         "section_schedule_format", "paired_recruitment_period_approved")}
+    if source.get("parser") == "youtube_atom":
+        policy.update({key:source.get(key) for key in ("youtube_channel_id", "publisher_identity_evidence_url", "publisher_identity_checked_at")})
+    return policy
 
 
 def plain_notice(value):
@@ -214,6 +297,7 @@ def image_candidates(document, source):
     """
     raw = document["original_description"]
     found = re.findall(r"\[img\](https://[^\[\s]+)\[/img\]|<img\b[^>]*\bsrc=[\"'](https://[^\"']+)[\"']", raw, re.I)
+    found += [(url, "") for url in document.get("source_image_urls", [])[:5] if isinstance(url, str)]
     policy = source.get("image_reuse") or {}
     approved = policy.get("rightsStatus") == "APPROVED" and safe_public_url(policy.get("evidenceUrl")) and policy.get("checkedAt")
     candidates = []
@@ -303,16 +387,31 @@ def digest(value):
 
 
 def reviewed(source):
-    return (source.get("approved_for_staging") is True and source.get("access_status") == "approved"
-            and source.get("parser") == "steam_news" and source.get("terms_checked_at")
+    common = (source.get("approved_for_staging") is True and source.get("access_status") == "approved"
+            and source.get("terms_checked_at")
             and source.get("notice_hosts_verified_at") and source.get("terms_url", "").startswith("https://")
-            and source.get("allowed_notice_hosts") and source.get("feed_allowlist") == ["steam_community_announcements"])
+            and source.get("allowed_notice_hosts"))
+    if not common:
+        return False
+    if source.get("parser") == "steam_news":
+        return source.get("feed_allowlist") == ["steam_community_announcements"]
+    if source.get("parser") == "youtube_atom":
+        try:
+            youtube_request(source)
+        except (ValidationError, ValueError, TypeError):
+            return False
+        return bool(source.get("feed_allowlist") == ["youtube_channel_videos"] and source.get("allowed_notice_hosts") == ["www.youtube.com"]
+            and safe_public_url(source.get("publisher_identity_evidence_url")) and source.get("publisher_identity_checked_at")
+            and source.get("terms_url") == YOUTUBE_FEED_DOCUMENTATION)
+    return False  # X API/social HTML scraping are deliberately unsupported in the 0-won worker.
 
 
 def source_row(source, game_id):
     """Only non-secret registered public provider metadata is exported."""
-    return {"id":source["id"], "gameId":game_id, "url":source["url"], "parser":"steam_news",
-            "steamAppid":source["steam_appid"], "enabled":False, "accessStatus":source["access_status"],
+    return {"id":source["id"], "gameId":game_id, "url":source["url"], "parser":source["parser"],
+            "steamAppid":source.get("steam_appid"), "youtubeChannelId":source.get("youtube_channel_id"),
+            "publisherIdentityEvidenceUrl":source.get("publisher_identity_evidence_url"), "publisherIdentityCheckedAt":source.get("publisher_identity_checked_at"),
+            "enabled":False, "accessStatus":source["access_status"],
             "approvedForStaging":bool(source.get("approved_for_staging")), "termsUrl":source["terms_url"],
             "termsCheckedAt":timestamp(source["terms_checked_at"]),
             "noticeHostsVerifiedAt":timestamp(source["notice_hosts_verified_at"]),
@@ -331,13 +430,15 @@ def source_row(source, game_id):
 def operating_source(row):
     """Admin-reviewed Firestore source configuration is authoritative in apply mode."""
     return {"id":row["id"],"game_id":row["gameId"],"url":row["url"],"parser":row["parser"],
-            "steam_appid":row["steamAppid"],"enabled":row.get("enabled",False),
+            "steam_appid":row.get("steamAppid"), "youtube_channel_id":row.get("youtubeChannelId"),
+            "publisher_identity_evidence_url":row.get("publisherIdentityEvidenceUrl"), "publisher_identity_checked_at":row.get("publisherIdentityCheckedAt"), "enabled":row.get("enabled",False),
             "approved_for_staging":row.get("approvedForStaging",False),"access_status":row.get("accessStatus"),
             "terms_url":row.get("termsUrl"),"terms_checked_at":row.get("termsCheckedAt"),
             "notice_hosts_verified_at":row.get("noticeHostsVerifiedAt"),"allowed_notice_hosts":row.get("allowedNoticeHosts",[]),
             "feed_allowlist":row.get("feedAllowlist",[]),"collection_interval_minutes":max(15,row.get("intervalMinutes",15)),
             "server_region":row.get("serverRegion") or "UNSPECIFIED","server_label":row.get("serverLabel"),
-            "method":"official_api","official_host":"api.steampowered.com","request_timeout_seconds":20,"max_response_bytes":2097152,
+            "method":"official_feed" if row.get("parser")=="youtube_atom" else "official_api",
+            "official_host":"www.youtube.com" if row.get("parser")=="youtube_atom" else "api.steampowered.com","request_timeout_seconds":20,"max_response_bytes":2097152,
             "schedule_extraction_approved":row.get("scheduleExtractionApproved",False),
             "schedule_extraction_reviewed_at":row.get("scheduleExtractionReviewedAt"),
             "schedule_extraction_evidence_url":row.get("scheduleExtractionEvidenceUrl"),
@@ -365,7 +466,8 @@ def seed_catalogue(store, games, registry):
             def upsert_source(old):
                 if old:
                     row.update({k:old[k] for k in ["enabled","health","lastCheckedAt","lastSuccessAt","lastErrorAt","lastReverifiedAt","nextRunAt",
-                        "scheduleExtractionApproved","scheduleExtractionReviewedAt","scheduleExtractionEvidenceUrl","contentLanguage","highestCharacterRarity","imageReuse","sectionScheduleFormat","pairedRecruitmentPeriodApproved"] if k in old})
+                        "scheduleExtractionApproved","scheduleExtractionReviewedAt","scheduleExtractionEvidenceUrl","contentLanguage","highestCharacterRarity","imageReuse","sectionScheduleFormat","pairedRecruitmentPeriodApproved",
+                        "youtubeChannelId","publisherIdentityEvidenceUrl","publisherIdentityCheckedAt"] if k in old})
                 return (None,False) if old == row else (row,True)
             changed=store.mutate("gameSources/"+source["id"],upsert_source)
             result["sources" if changed else "unchanged"]+=1
@@ -621,19 +723,22 @@ def collect_one(store, source, start, end, mode="backfill", fetch=fetch_source, 
         for _ in range(max_pages):
             if deadline is not None and time.monotonic()>=deadline:raise SafetyError("run_time_limit")
             sleep(1)
-            request=steam_request({**source,"enabled":True},cursor,50)
+            request=youtube_request(source) if source["parser"]=="youtube_atom" else steam_request({**source,"enabled":True},cursor,50)
             http_status,raw,headers=fetch(request);metrics["pagesFetched"]+=1
             if http_status!=200:
                 retry_after=retry_after_seconds(headers.get("retry-after"))
                 raise SafetyError("source_http_"+str(http_status))
-            documents,parsed=parse_steam_documents(raw,source,observed.isoformat())
+            documents,parsed=(parse_youtube_documents(raw,source,observed.isoformat()) if source["parser"]=="youtube_atom" else parse_steam_documents(raw,source,observed.isoformat()))
+            if source["parser"]=="youtube_atom":
+                metrics.update(windowCoverageVerified=False,coverageReason=parsed["coverage_reason"])
             metrics["itemsSeen"]+=parsed["items_seen"]
             dates=[]
             for document in documents:
                 if not document["published_at"]:raise SafetyError("publication_timestamp_unconfirmed")
                 date=aware_timestamp(document["published_at"]);dates.append(int(date.timestamp()))
                 ongoing_old=date<start and confirmed_window_overlap(document,source,start,end)
-                if start<=date<end or ongoing_old or mode=="reverify" and event_identity(document,source) in known_event_ids:
+                changed=aware_timestamp(document["source_updated_at"]) if document.get("source_updated_at") else None
+                if start<=date<end or changed and start<=changed<end or ongoing_old or mode=="reverify" and event_identity(document,source) in known_event_ids:
                     if ongoing_old:metrics["ongoingOlderIncluded"]+=1
                     metrics[upsert_notice(store,source,document,observed)]+=1
                     stored=store.get("gameEvents/"+event_identity(document,source))
@@ -655,7 +760,7 @@ def collect_one(store, source, start, end, mode="backfill", fetch=fetch_source, 
             oldest=min(dates) if dates else None
             if parsed["items_seen"]>=50 and oldest is not None and dates.count(oldest)>1 and oldest>=int(start.timestamp()):
                 raise SafetyError("pagination_boundary_ambiguous")
-            if mode=="reverify" or parsed["items_seen"]<50 or oldest is not None and oldest<int(start.timestamp()):
+            if source["parser"]=="youtube_atom" or mode=="reverify" or parsed["items_seen"]<50 or oldest is not None and oldest<int(start.timestamp()):
                 success=True;break
             if oldest is None or oldest>=cursor:raise SafetyError("pagination_cursor_not_advancing")
             cursor=oldest
