@@ -14,7 +14,7 @@ from store import FirestoreStore,MemoryStore,SafetyError,timestamp
 
 FIELDS={
  "games":{"id","slug","names","aliases","developer","publisher","platforms","regions","officialWebsite","officialNoticeUrl","officialSocialUrls","serviceStatus","collectionSupport","dailyReset","weeklyReset","resetTimezone","officialIntegration","metadataStatus","nameProvenance","sourceEvidence","image","resetRules","verifiedResetRuleIds","resetRuleById","enabled","createdAt","updatedAt"},
- "gameSources":{"id","gameId","url","parser","steamAppid","youtubeChannelId","publisherIdentityEvidenceUrl","publisherIdentityCheckedAt","enabled","accessStatus","approvedForStaging","termsUrl","termsCheckedAt","noticeHostsVerifiedAt","allowedNoticeHosts","feedAllowlist","intervalMinutes","serverRegion","serverLabel","health","lastCheckedAt","lastSuccessAt","lastErrorAt","lastReverifiedAt","nextRunAt","scheduleExtractionApproved","scheduleExtractionReviewedAt","scheduleExtractionEvidenceUrl","contentLanguage","highestCharacterRarity","imageReuse","sectionScheduleFormat","pairedRecruitmentPeriodApproved"},
+ "gameSources":{"id","gameId","url","parser","steamAppid","youtubeChannelId","publisherIdentityEvidenceUrl","publisherIdentityCheckedAt","enabled","accessStatus","approvedForStaging","termsUrl","termsCheckedAt","noticeHostsVerifiedAt","allowedNoticeHosts","feedAllowlist","intervalMinutes","serverRegion","serverLabel","health","lastCheckedAt","lastSuccessAt","lastErrorAt","lastReverifiedAt","nextRunAt","scheduleExtractionApproved","scheduleExtractionReviewedAt","scheduleExtractionEvidenceUrl","contentLanguage","highestCharacterRarity","imageReuse","sectionScheduleFormat","pairedRecruitmentPeriodApproved","contentLocalization","originalImageReference","reviewedNoticeReferences","calendarRolePolicy","localizationRoster"},
  "gameEvents":{"id","sourceId","externalKey","gameIds","serverRegion","serverLabel","title","description","originalTitle","originalDescription","originalLanguage","officialUrl","publishedAt","sourceUpdatedAt","rawSha256","eventTypeCandidates","firstCheckedAt","lastCheckedAt","lastChangedAt","lastVerifiedAt","verificationStatus","revision","startsAt","endsAt","reservationStartsAt","reservationEndsAt","ticketSalesAt","originalTimezone","category","scheduleStatus","status","venue","imageRightsStatus","translations"},
  "pickupSchedules":{"id","eventId","gameId","serverRegion","serverLabel","officialUrl","verificationStatus","lastCheckedAt","firstCheckedAt","firstConfirmedAt","lastChangedAt","pickupKind","characters","weapons","outfits","startsAt","endsAt","lastVerifiedAt"},
 }
@@ -36,6 +36,58 @@ def reject_secret_fields(value):
    reject_secret_fields(item)
  elif isinstance(value,list):
   for item in value:reject_secret_fields(item)
+
+
+def validate_enrichment_policies(row):
+ """Source-specific localization/references are bounded admin-reviewed metadata."""
+ from collector import operating_source,reviewed,reviewed_localization_policy,policy_timestamp,safe_public_url,GF2_ROSTER_URLS
+ source=operating_source(row)
+ fields=['contentLocalization','originalImageReference','reviewedNoticeReferences','calendarRolePolicy','localizationRoster']
+ if not any(row.get(field) is not None for field in fields):return
+ if not reviewed(source):raise SafetyError('enrichment_source_review_required')
+ if len(json.dumps({field:row.get(field) for field in fields},default=lambda value:value.isoformat()).encode())>200000:raise SafetyError('bounded_enrichment_policy_required')
+ localization=row.get('contentLocalization')
+ if localization is not None:
+  allowed={'mode','version','gameId','sourceLanguage','reviewedAt','evidenceUrl','terms','formats'}
+  if not isinstance(localization,dict) or set(localization)-allowed or not reviewed_localization_policy(source):raise SafetyError('reviewed_localization_policy_required')
+  term_fields={'kind','sourceName','aliases','names','evidenceUrl','checkedAt','publisherUnitId','pairedSourceSha256','pairedTargetSha256'}
+  if any(set(term)-term_fields for term in localization['terms']):raise SafetyError('unexpected_localized_name_fields')
+  if any(re.search(r'[<>\r\n]',value) for term in localization['terms'] for value in [term['sourceName'],*term.get('aliases',[]),*term['names'].values()]):raise SafetyError('plain_official_names_required')
+ images=row.get('originalImageReference')
+ if images is not None:
+  if not isinstance(images,dict) or set(images)-{'mode','reviewedAt','evidenceUrl','allowedHosts'} or images.get('mode')!='matched_original_link_v1' or not safe_public_url(images.get('evidenceUrl')):raise SafetyError('reviewed_original_image_link_required')
+  try:policy_timestamp(images.get('reviewedAt'))
+  except Exception as error:raise SafetyError('reviewed_original_image_link_required') from error
+  hosts=images.get('allowedHosts')
+  if not isinstance(hosts,list) or not 1<=len(hosts)<=20 or any(not isinstance(host,str) or not re.fullmatch(r'[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?',host) or not safe_public_url('https://'+host+'/') for host in hosts):raise SafetyError('exact_image_hosts_required')
+ refs=row.get('reviewedNoticeReferences')
+ if refs is not None:
+  if not isinstance(refs,dict) or set(refs)-{'mode','version','reviewedAt','evidenceUrl','references'} or refs.get('mode')!='exact_reviewed_notice_links_v1' or not isinstance(refs.get('references'),list) or not 1<=len(refs['references'])<=50:raise SafetyError('bounded_exact_notice_references_required')
+  for ref in refs['references']:
+   if not isinstance(ref,dict) or set(ref)-{'sourceSha256','sourceTitle','officialUrl','url','sourceUrl','kind','characterNames','evidenceText','checkedAt'}:raise SafetyError('unexpected_notice_reference_fields')
+   if not re.fullmatch(r'[a-f0-9]{64}',str(ref.get('sourceSha256',''))) or not isinstance(ref.get('sourceTitle'),str) or not 1<=len(ref['sourceTitle'])<=500 or ref.get('kind') not in ['PICKUP_ART','EVENT_ART']:raise SafetyError('exact_notice_reference_identity_required')
+   if any(not safe_public_url(ref.get(field)) for field in ['officialUrl','url','sourceUrl']) or urlsplit(ref['officialUrl']).hostname not in source['allowed_notice_hosts']:raise SafetyError('exact_notice_reference_url_required')
+   values=ref.get('characterNames',[])
+   if not isinstance(values,list) or len(values)>20 or any(not isinstance(value,str) or not 1<=len(value)<=150 for value in values) or not isinstance(ref.get('evidenceText'),str) or not 1<=len(ref['evidenceText'])<=2000:raise SafetyError('exact_notice_reference_subject_required')
+   try:policy_timestamp(ref.get('checkedAt'))
+   except Exception as error:raise SafetyError('exact_notice_reference_review_required') from error
+ roles=row.get('calendarRolePolicy')
+ if roles is not None:
+  if not isinstance(roles,dict) or set(roles)-{'mode','version','reviewedAt','evidenceUrl','roles'} or roles.get('mode')!='reviewed_main_roles_v1' or not isinstance(roles.get('roles'),list) or not 1<=len(roles['roles'])<=50:raise SafetyError('bounded_calendar_role_policy_required')
+  for role in roles['roles']:
+   if not isinstance(role,dict) or set(role)-{'sourceSha256','sourceTitle','characterNames','role','evidenceUrl','checkedAt'} or not re.fullmatch(r'[a-f0-9]{64}',str(role.get('sourceSha256',''))) or role.get('role') not in ['main-character','main-event','other'] or not isinstance(role.get('sourceTitle'),str) or not 1<=len(role['sourceTitle'])<=500 or not safe_public_url(role.get('evidenceUrl')):raise SafetyError('exact_calendar_role_review_required')
+   values=role.get('characterNames',[])
+   if not isinstance(values,list) or len(values)>20 or any(not isinstance(value,str) or not 1<=len(value)<=150 for value in values):raise SafetyError('exact_calendar_role_subject_required')
+   try:policy_timestamp(role.get('checkedAt'))
+   except Exception as error:raise SafetyError('exact_calendar_role_review_required') from error
+ roster=row.get('localizationRoster')
+ if roster is not None:
+  fields={'mode','enabled','gameId','sourceLanguage','sourceUrl','targetUrls','accessStatus','termsUrl','termsCheckedAt','identityCheckedAt'}
+  if not isinstance(roster,dict) or set(roster)-fields or roster.get('mode')!='gf2_paired_roster_v1' or row.get('gameId')!='girls-frontline-2' or roster.get('gameId')!=row['gameId'] or roster.get('sourceLanguage')!='en' or roster.get('sourceUrl')!=GF2_ROSTER_URLS['en'] or roster.get('targetUrls')!={'ko':GF2_ROSTER_URLS['ko']} or not isinstance(roster.get('enabled'),bool):raise SafetyError('exact_paired_roster_policy_required')
+  if roster.get('enabled'):
+   if not localization or roster.get('accessStatus')!='approved' or not safe_public_url(roster.get('termsUrl')):raise SafetyError('paired_roster_permission_review_required')
+   try:policy_timestamp(roster.get('termsCheckedAt'));policy_timestamp(roster.get('identityCheckedAt'))
+   except Exception as error:raise SafetyError('paired_roster_permission_review_required') from error
 
 
 def validate_change(collection,document_id,data,old=None):
@@ -94,6 +146,7 @@ def validate_change(collection,document_id,data,old=None):
    if images.get('rightsStatus')=='APPROVED':
     if not hosts or not https(images.get('evidenceUrl')) or not images.get('checkedAt'):raise SafetyError('image_reuse_evidence_required')
     images['checkedAt']=timestamp(images['checkedAt'])
+  validate_enrichment_policies(row)
  if collection in ['gameEvents','pickupSchedules']:
   if not https(row.get('officialUrl')):raise SafetyError('official_notice_https_required')
   if collection=='pickupSchedules':

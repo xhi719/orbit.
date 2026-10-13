@@ -6,9 +6,11 @@ checks and pre-enabled Firestore sources. Retained Supabase workers are inactive
 """
 from __future__ import annotations
 import argparse
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 import hashlib
 import html
+from html.parser import HTMLParser
 import ipaddress
 import json
 from pathlib import Path
@@ -17,7 +19,7 @@ import sys
 import time
 import uuid
 import xml.etree.ElementTree as ET
-from urllib.parse import urlsplit, parse_qsl, urlencode
+from urllib.parse import urlsplit, parse_qsl, urlencode, urljoin
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "collector"))
 from engine import fetch_source, ValidationError, normalize_url
@@ -26,7 +28,7 @@ from backfill import retry_after_seconds
 from store import MemoryStore, FirestoreStore, SafetyError, timestamp
 
 UTC = timezone.utc
-EXTRACTION_VERSION = 5
+EXTRACTION_VERSION = 6
 YOUTUBE_CHANNEL_ID = re.compile(r"UC[A-Za-z0-9_-]{22}")
 YOUTUBE_VIDEO_ID = re.compile(r"[A-Za-z0-9_-]{11}")
 YOUTUBE_FEED_PATHS = ("/feeds/videos.xml", "/xml/feeds/videos.xml")
@@ -118,7 +120,8 @@ def source_policy(source):
     policy = {key: source.get(key) for key in (
         "schedule_extraction_approved", "schedule_extraction_reviewed_at", "schedule_extraction_evidence_url",
         "content_language", "server_region", "server_label", "highest_character_rarity", "image_reuse",
-        "section_schedule_format", "paired_recruitment_period_approved")}
+        "section_schedule_format", "paired_recruitment_period_approved", "content_localization", "original_image_reference",
+        "reviewed_notice_references", "calendar_role_policy", "localization_roster")}
     if source.get("parser") == "youtube_atom":
         policy.update({key:source.get(key) for key in ("youtube_channel_id", "publisher_identity_evidence_url", "publisher_identity_checked_at")})
     return policy
@@ -473,6 +476,271 @@ def notice_language(old, document, source):
     return language,proof
 
 
+def policy_timestamp(value):
+    if isinstance(value,datetime):value=value.isoformat()
+    return aware_timestamp(value)
+
+
+def reviewed_localization_policy(source):
+    """A bounded source/game dictionary supplies names, never guessed translations."""
+    policy=source.get("content_localization")
+    if not reviewed(source) or not isinstance(policy,dict) or policy.get("mode")!="reviewed_templates_v1" or policy.get("gameId")!=source.get("game_id"):
+        return None
+    if type(policy.get("version")) is not int or not 1<=policy["version"]<=10000 or policy.get("sourceLanguage") not in ("en","ko","ja"):
+        return None
+    try:policy_timestamp(policy.get("reviewedAt"))
+    except (ValidationError,TypeError):return None
+    if not safe_public_url(policy.get("evidenceUrl")) or not policy["evidenceUrl"].startswith("https://"):
+        return None
+    terms=policy.get("terms")
+    if not isinstance(terms,list) or not 1<=len(terms)<=200:return None
+    index={}
+    for term in terms:
+        if not isinstance(term,dict) or term.get("kind") not in ("character","weapon","event") or not isinstance(term.get("sourceName"),str) or not 1<=len(term["sourceName"])<=150:
+            return None
+        aliases=term.get("aliases",[]);names=term.get("names")
+        if not isinstance(aliases,list) or len(aliases)>10 or any(not isinstance(alias,str) or not 1<=len(alias)<=150 for alias in aliases) or not isinstance(names,dict) or not names:return None
+        if not safe_public_url(term.get("evidenceUrl")) or not term["evidenceUrl"].startswith("https://"):return None
+        try:policy_timestamp(term.get("checkedAt"))
+        except (ValidationError,TypeError):return None
+        for locale,name in names.items():
+            if locale not in ("ko","ja") or not isinstance(name,str) or not 1<=len(name)<=150:return None
+            model_name=term["kind"] in ("character","weapon") and name==term["sourceName"] and bool(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{1,30}',name)) and bool(re.search(r'\d',name))
+            if locale=="ko" and not (re.search('[가-힣]',name) or model_name) or locale=="ja" and (re.search('[가-힣]',name) or not re.search('[ぁ-んァ-ヶ一-龯]',name)):return None
+        for alias in [term["sourceName"],*aliases]:
+            key=(term["kind"],image_name(alias))
+            if key in index and index[key]!=term:return None
+            index[key]=term
+    formats=policy.get("formats",[])
+    if not isinstance(formats,list) or any(value not in ("gf2_targeted_procurement_v1","gf2_military_upgrade_v1","highest_character_new_rerun_v1") for value in formats):return None
+    return policy,index
+
+
+def localized_template_title(row,source,locale,policy,index):
+    selected=row.get("displayTitle") or row.get("sourceSectionTitle") or row.get("originalTitle") or row.get("title") or ""
+    source_title=plain_notice(selected).strip(' ■[]')
+    term=index.get(("event",image_name(source_title)))
+    if term and row.get("categoryCandidate") not in ("recruitment","pickup"):
+        return term["names"].get(locale)
+    formats=policy.get("formats",[])
+    body=plain_notice(row.get("description") or row.get("originalDescription") or "")
+    patterns=(
+        ("gf2_targeted_procurement_v1","character",r"Targeted Procurement(?: Event)?\s*[|:]\s*(.+)",r"drop rate for the Elite Doll\s*\[([^\]]+)\]\s+is increased",{"ko":"캐릭터 픽업","ja":"キャラクターピックアップ"}),
+        ("gf2_military_upgrade_v1","weapon",r"Military Upgrade\s*[|:]\s*(.+)",r"drop rate for the Elite Weapon\s*\[([^\]]+)\]\s+is increased",{"ko":"무기 픽업","ja":"武器ピックアップ"}),
+    )
+    for rule,kind,pattern,proof,labels in patterns:
+        match=re.fullmatch(pattern,source_title,re.I)
+        if rule not in formats or not match:continue
+        original=match.group(1).strip();term=index.get((kind,image_name(original)))
+        local_names=[value for value in re.findall(proof,body,re.I) if image_name(value)==image_name(original)]
+        if not term or not local_names or not term["names"].get(locale):return None
+        return term["names"][locale]+" · "+labels[locale]
+    if "highest_character_new_rerun_v1" in formats and row.get("announcementKind") in ("new","rerun") and row.get("rarityLabel"):
+        term=index.get(("character",image_name(source_title)))
+        if term and term["names"].get(locale) and row.get("characters")==[source_title] and row.get("characterEvidenceText"):
+            labels={"ko":{"new":"신규 캐릭터 픽업","rerun":"복각 캐릭터 픽업"},"ja":{"new":"新キャラクターピックアップ","rerun":"復刻キャラクターピックアップ"}}
+            return term["names"][locale]+" · "+labels[locale][row["announcementKind"]]
+    return None
+
+
+def localize_collected_row(row,source,observed):
+    """Rebuild exact-source summaries on create/change or source-policy revision.
+
+    Empty descriptions are intentional: no reward or uncertainty boilerplate is
+    invented. Unknown names stay untranslated; their official raw text survives.
+    """
+    selected=row.get("displayTitle") or row.get("sourceSectionTitle") or row.get("originalTitle") or row.get("title") or ""
+    existing=row.get("translations") or {};translations={}
+    if isinstance(existing,dict):
+        for locale,tr in existing.items():
+            if (locale in ("ko","en","ja") and isinstance(tr,dict) and tr.get("sourceSha256")==row.get("rawSha256")
+                and tr.get("sourceTitle")==selected and tr.get("sourceLanguage")==row.get("originalLanguage")):
+                translations[locale]=tr
+    row={**row,"translations":translations,"contentLocalization":None}
+    validated=reviewed_localization_policy(source)
+    if not validated or validated[0]["sourceLanguage"]!=row.get("originalLanguage") or urlsplit(row.get("officialUrl","")).hostname not in source.get("allowed_notice_hosts",[]):return row
+    policy,index=validated;generated=[]
+    for locale in ("ko","ja"):
+        title=localized_template_title(row,source,locale,policy,index)
+        if not title:continue
+        translations[locale]={"title":title,"description":"","status":"completed","verificationStatus":"verified",
+            "sourceLanguage":row["originalLanguage"],"targetLanguage":locale,"translatedAt":observed.isoformat(),"reviewedAt":policy["reviewedAt"],
+            "sourceSha256":row["rawSha256"],"sourceTitle":selected,"sourceRevision":row["revision"],
+            "method":"official_localized","contentType":"summary","evidenceUrl":row["officialUrl"]}
+        generated.append(locale)
+    if generated:row["contentLocalization"]={"method":"reviewed_templates_v1","policyVersion":policy["version"],"policySha256":digest(policy),"languages":generated}
+    return row
+
+
+def original_subject_image(images,source,observed):
+    """Link only a unique exact labelled image present in this fetched notice.
+
+    This opt-in never grants copying/reuse rights or guesses a role from order.
+    Unlabelled homepage posters and multiple matches require separate review.
+    """
+    policy=source.get("original_image_reference")
+    if not reviewed(source) or not isinstance(policy,dict) or policy.get("mode")!="matched_original_link_v1":return None
+    if not safe_public_url(policy.get("evidenceUrl")) or not policy["evidenceUrl"].startswith("https://"):return None
+    hosts=policy.get("allowedHosts")
+    if not isinstance(hosts,list) or not 1<=len(hosts)<=20 or any(not isinstance(host,str) or not re.fullmatch(r'[A-Za-z0-9.-]+',host) for host in hosts):return None
+    try:policy_timestamp(policy.get("reviewedAt"));checked=policy_timestamp(observed).isoformat()
+    except (ValidationError,TypeError):return None
+    matched=[]
+    for image in images:
+        evidence=image.get("subjectEvidence") or {}
+        if (image.get("rightsStatus")=="UNCONFIRMED" and image.get("subjectStatus")=="MATCHED"
+            and evidence.get("method") in ("source_alt","source_section") and evidence.get("status")=="MATCHED"
+            and safe_public_url(image.get("url")) and image["url"].startswith("https://") and urlsplit(image["url"]).hostname in hosts
+            and safe_public_url(image.get("sourceUrl")) and image["sourceUrl"].startswith("https://")
+            and urlsplit(image["sourceUrl"]).hostname in source.get("allowed_notice_hosts",[]) and evidence.get("officialUrl")==image["sourceUrl"]):
+            matched.append({**image,"sourceReference":{"mode":"OFFICIAL_NOTICE_IMAGE","sourceUrl":image["sourceUrl"],"checkedAt":checked,"allowedImageUrl":image["url"]}})
+    return matched[0] if len(matched)==1 else None
+
+
+def reviewed_notice_image(document,source,event_id):
+    """A reviewed source policy can reapply an exact previously inspected poster.
+
+    Different raw bytes/title/subject never reuse that old banner. No inference
+    from character resemblance, filename order or a regional publisher logo.
+    """
+    policy=source.get("reviewed_notice_references")
+    if not reviewed(source) or not isinstance(policy,dict) or policy.get("mode")!="exact_reviewed_notice_links_v1":return None
+    references=policy.get("references",[])
+    if not isinstance(references,list) or len(references)>50:return None
+    selected=document.get("_section_title") or document["original_title"];pickup="pickup" in document.get("event_type_candidates",[])
+    names=document.get("_raw_character_names",[]);matched=[]
+    for ref in references:
+        if not isinstance(ref,dict) or ref.get("sourceSha256")!=document["raw_sha256"] or ref.get("sourceTitle")!=selected or ref.get("officialUrl")!=document["official_url"]:continue
+        if ref.get("kind")!=("PICKUP_ART" if pickup else "EVENT_ART") or ref.get("characterNames",[])!=names or not isinstance(ref.get("evidenceText"),str) or not ref["evidenceText"]:continue
+        if any(not safe_public_url(ref.get(key)) or not ref[key].startswith("https://") for key in ("url","sourceUrl")):continue
+        if GENERIC_GAME_IMAGE.search(ref["url"]):continue
+        try:checked=policy_timestamp(ref.get("checkedAt")).isoformat()
+        except (ValidationError,TypeError):continue
+        matched.append({"url":ref["url"],"sourceUrl":document["official_url"],"kind":ref["kind"],"rightsStatus":"UNCONFIRMED",
+            "sourceReference":{"mode":"OFFICIAL_NOTICE_IMAGE","sourceUrl":ref["sourceUrl"],"checkedAt":checked,"allowedImageUrl":ref["url"]},
+            "subjectEvidence":{"status":"MATCHED","eventId":event_id,"officialUrl":document["official_url"],"kind":"pickup" if pickup else "event",
+                "method":"reviewed_image","evidenceText":ref["evidenceText"],"characterNames":names}})
+    return matched[0] if len(matched)==1 else None
+
+
+def reviewed_calendar_role(row,source):
+    """Main versus secondary roles require an exact reviewed article snapshot."""
+    policy=source.get("calendar_role_policy")
+    row={**row,"calendarRole":None,"calendarRoleEvidence":None}
+    if not reviewed(source) or not isinstance(policy,dict) or policy.get("mode")!="reviewed_main_roles_v1":return row
+    roles=policy.get("roles",[])
+    if not isinstance(roles,list) or len(roles)>50:return row
+    selected=row.get("displayTitle") or row.get("sourceSectionTitle") or row.get("originalTitle") or row.get("title")
+    for role in roles:
+        if not isinstance(role,dict) or role.get("sourceSha256")!=row.get("rawSha256") or role.get("sourceTitle")!=selected or role.get("role") not in ("main-character","main-event","other"):continue
+        if role.get("characterNames",[])!=row.get("characterNames",[]) or not safe_public_url(role.get("evidenceUrl")) or not role["evidenceUrl"].startswith("https://"):continue
+        if role["role"]=="main-character" and (row.get("categoryCandidate")!="recruitment" or not row.get("characterNames")):continue
+        if role["role"]=="main-event" and row.get("categoryCandidate") not in ("limited-event","login-reward"):continue
+        try:checked=policy_timestamp(role.get("checkedAt")).isoformat()
+        except (ValidationError,TypeError):continue
+        row.update(calendarRole=role["role"],calendarRoleEvidence={"status":"verified","sourceSha256":row["rawSha256"],"sourceTitle":selected,"role":role["role"],"evidenceUrl":role["evidenceUrl"],"checkedAt":checked})
+        break
+    return row
+
+
+GF2_ROSTER_URLS={"en":"https://gf2.haoplay.com/en/roleinfo/allroles.html","ko":"https://gf2.haoplay.com/kr/roleinfo/allroles.html"}
+
+
+class OfficialPairedRoster(HTMLParser):
+    """Extract names only from publisher-labelled links with stable role IDs.
+
+    Portrait filenames have a different identifier; image URLs never identify
+    the character and are neither parsed nor fetched by this adapter.
+    """
+    def __init__(self,url):
+        super().__init__(convert_charrefs=True);self.url=url;self.depth=0;self.active=None;self.rows={}
+    def handle_starttag(self,tag,attributes):
+        if tag in ("img","br","hr","meta","link","input","source","area","base","embed","param","track","wbr"):return
+        self.depth+=1;attrs=dict(attributes)
+        if tag=="a" and "allroles-roles-main-div" in attrs.get("class","").split():
+            target=urlsplit(urljoin(self.url,attrs.get("href","")));pairs=parse_qsl(target.query,keep_blank_values=True)
+            if target.scheme!="https" or target.hostname!="gf2.haoplay.com" or target.path!=urlsplit(self.url).path.removesuffix("allroles.html") or target.username or target.fragment or len(pairs)!=1 or pairs[0][0]!="role" or not re.fullmatch(r'\d{1,5}',pairs[0][1]):
+                raise ValidationError("roster_role_identity_invalid")
+            self.active={"id":pairs[0][1],"depth":self.depth,"nameDepth":None,"text":[]}
+        if self.active and tag=="div" and "allroles-roles-name-name-div" in attrs.get("class","").split():self.active["nameDepth"]=self.depth
+    def handle_data(self,value):
+        if self.active and self.active["nameDepth"]==self.depth:self.active["text"].append(value)
+    def handle_endtag(self,tag):
+        if self.active and tag=="a" and self.active["depth"]==self.depth:
+            name=re.sub(r'\s+',' ',''.join(self.active["text"])).strip();identity=self.active["id"]
+            if not 1<=len(name)<=150 or identity in self.rows and self.rows[identity]!=name:raise ValidationError("roster_name_invalid_or_conflicting")
+            self.rows[identity]=name;self.active=None
+        if self.active and self.active["nameDepth"]==self.depth:self.active["nameDepth"]=None
+        self.depth=max(0,self.depth-1)
+    def handle_startendtag(self,tag,attrs):
+        pass
+
+
+def parse_official_roster(raw,url):
+    if url not in GF2_ROSTER_URLS.values() or len(raw)>1048576 or b'\x00' in raw:raise ValidationError("roster_response_invalid")
+    parser=OfficialPairedRoster(url)
+    try:parser.feed(raw.decode('utf-8-sig'));parser.close()
+    except UnicodeError as error:raise ValidationError("roster_utf8_required") from error
+    if not 1<=len(parser.rows)<=200:raise ValidationError("roster_names_missing_or_unbounded")
+    return parser.rows
+
+
+def refresh_localization_roster(store,source,observed,fetch,sleep,deadline=None):
+    """Two reviewed public requests per due source; failure preserves old names."""
+    policy=source.get("localization_roster");disabled={"status":"DISABLED","pagesFetched":0,"dictionaryWrites":0}
+    if not isinstance(policy,dict) or policy.get("enabled") is not True:return source,disabled
+    if (not reviewed(source) or source.get("game_id")!="girls-frontline-2" or policy.get("mode")!="gf2_paired_roster_v1"
+        or policy.get("gameId")!=source["game_id"] or policy.get("accessStatus")!="approved" or policy.get("sourceLanguage")!="en"
+        or policy.get("sourceUrl")!=GF2_ROSTER_URLS["en"] or policy.get("targetUrls")!={"ko":GF2_ROSTER_URLS["ko"]}
+        or not safe_public_url(policy.get("termsUrl")) or not policy["termsUrl"].startswith("https://") or not reviewed_localization_policy(source)):
+        return source,{**disabled,"status":"REVIEW_REQUIRED"}
+    try:policy_timestamp(policy.get("termsCheckedAt"));policy_timestamp(policy.get("identityCheckedAt"))
+    except (ValidationError,TypeError):return source,{**disabled,"status":"REVIEW_REQUIRED"}
+    metrics={"status":"FETCH_FAILED","pagesFetched":0,"dictionaryWrites":0};raws={}
+    try:
+        rosters={}
+        for locale,url in GF2_ROSTER_URLS.items():
+            if deadline is not None and time.monotonic()>=deadline:raise SafetyError("run_time_limit")
+            sleep(1)
+            request={"enabled":True,"access_status":"approved","terms_url":policy["termsUrl"],"terms_checked_at":policy["termsCheckedAt"],
+                "url":url,"official_host":"gf2.haoplay.com","method":"public_html","request_timeout_seconds":10,"max_response_bytes":1048576}
+            status,raw,_=fetch(request);metrics["pagesFetched"]+=1
+            if status!=200:raise SafetyError("roster_http_"+str(status))
+            raws[locale]=raw;rosters[locale]=parse_official_roster(raw,url)
+        existing=source["content_localization"];updated=deepcopy(existing);terms=updated["terms"];changed=False;pair_names={};paired=0
+        for identity in sorted(set(rosters['en'])&set(rosters['ko']),key=int):
+            name,localized=rosters['en'][identity],rosters['ko'][identity]
+            model_name=localized==name and bool(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{1,30}',name)) and bool(re.search(r'\d',name))
+            if not re.search('[가-힣]',localized) and not model_name:continue
+            key=image_name(name)
+            if key in pair_names and pair_names[key]!=localized:raise ValidationError("roster_ambiguous_paired_name")
+            pair_names[key]=localized;paired+=1
+            previous=next((term for term in terms if term.get('kind')=='character' and (term.get('publisherUnitId')==identity or key in [image_name(alias) for alias in [term['sourceName'],*term.get('aliases',[])]])),None)
+            if previous and previous.get('publisherUnitId')==identity and previous['sourceName']==name and previous['names'].get('ko')==localized:continue
+            aliases=list(previous.get('aliases',[])) if previous else []
+            if previous and previous['sourceName']!=name and previous['sourceName'] not in aliases:aliases.append(previous['sourceName'])
+            term={**(previous or {}),'kind':'character','sourceName':name,'aliases':aliases,'names':{**(previous or {}).get('names',{}),'ko':localized},
+                'publisherUnitId':identity,'evidenceUrl':GF2_ROSTER_URLS['ko'],'checkedAt':observed.isoformat(),
+                'pairedSourceSha256':hashlib.sha256(raws['en']).hexdigest(),'pairedTargetSha256':hashlib.sha256(raws['ko']).hexdigest()}
+            if previous:terms[terms.index(previous)]=term
+            else:terms.append(term)
+            changed=True
+        metrics.update(status="SUCCESS",pairedNames=paired,unmatchedSourceUnits=len(set(rosters['en'])-set(rosters['ko'])),unmatchedTargetUnits=len(set(rosters['ko'])-set(rosters['en'])))
+        if not changed:return source,metrics
+        updated['version']+=1;candidate={**source,'content_localization':updated}
+        if not reviewed_localization_policy(candidate):raise ValidationError("roster_dictionary_invalid")
+        def persist(old):
+            if not old or old.get('contentLocalization')!=existing:return None,False
+            return {**old,'contentLocalization':updated},True
+        if not store.mutate('gameSources/'+source['id'],persist):
+            metrics.update(status='SOURCE_POLICY_CHANGED');return source,metrics
+        metrics['dictionaryWrites']=1;return candidate,metrics
+    except (SafetyError,ValidationError,ValueError,TypeError,KeyError) as error:
+        metrics['reasonCode']=str(error)[:120];return source,metrics
+    except Exception as error:
+        metrics['reasonCode']=type(error).__name__;return source,metrics
+
+
 def highest_rarity_targets(text, source):
     """Never assume SSR/S/6-star means the highest tier across all games.
 
@@ -540,7 +808,7 @@ def enrich_document(document, source):
     return {**document, "schedule": schedule, "schedule_verified": bool(verified), "category_candidate": category,
         "extraction_version": EXTRACTION_VERSION, "extraction_policy_sha256": digest(source_policy(source)),
         "schedule_reason_codes": list(dict.fromkeys(reasons)), "image_candidates": images,
-        "approved_image": approved_subject_image(images),
+        "approved_image": approved_subject_image(images),"referenced_image":original_subject_image(images,source,document.get("observed_at")),
         "highest_rarity_targets": targets, "cancelled": cancelled,"section_documents":section_documents(document,source)}
 
 
@@ -586,7 +854,12 @@ def source_row(source, game_id):
             "scheduleExtractionEvidenceUrl":source.get("schedule_extraction_evidence_url"),
             "contentLanguage":source.get("content_language"),
             "highestCharacterRarity":source.get("highest_character_rarity"),"imageReuse":source.get("image_reuse"),
-            "sectionScheduleFormat":source.get("section_schedule_format"),"pairedRecruitmentPeriodApproved":source.get("paired_recruitment_period_approved",False)}
+            "sectionScheduleFormat":source.get("section_schedule_format"),"pairedRecruitmentPeriodApproved":source.get("paired_recruitment_period_approved",False),
+            **({"contentLocalization":source["content_localization"]} if source.get("content_localization") is not None else {}),
+            **({"originalImageReference":source["original_image_reference"]} if source.get("original_image_reference") is not None else {}),
+            **({"reviewedNoticeReferences":source["reviewed_notice_references"]} if source.get("reviewed_notice_references") is not None else {}),
+            **({"calendarRolePolicy":source["calendar_role_policy"]} if source.get("calendar_role_policy") is not None else {}),
+            **({"localizationRoster":source["localization_roster"]} if source.get("localization_roster") is not None else {})}
 
 
 def operating_source(row):
@@ -606,6 +879,9 @@ def operating_source(row):
             "schedule_extraction_evidence_url":row.get("scheduleExtractionEvidenceUrl"),
             "content_language":row.get("contentLanguage"),"highest_character_rarity":row.get("highestCharacterRarity"),
             "image_reuse":row.get("imageReuse"),"section_schedule_format":row.get("sectionScheduleFormat"),
+            "content_localization":row.get("contentLocalization"),"original_image_reference":row.get("originalImageReference"),
+            "reviewed_notice_references":row.get("reviewedNoticeReferences"),"calendar_role_policy":row.get("calendarRolePolicy"),
+            "localization_roster":row.get("localizationRoster"),
             "paired_recruitment_period_approved":row.get("pairedRecruitmentPeriodApproved",False)}
 
 
@@ -629,7 +905,7 @@ def seed_catalogue(store, games, registry):
                 if old:
                     row.update({k:old[k] for k in ["enabled","health","lastCheckedAt","lastSuccessAt","lastErrorAt","lastReverifiedAt","nextRunAt",
                         "scheduleExtractionApproved","scheduleExtractionReviewedAt","scheduleExtractionEvidenceUrl","contentLanguage","highestCharacterRarity","imageReuse","sectionScheduleFormat","pairedRecruitmentPeriodApproved",
-                        "youtubeChannelId","publisherIdentityEvidenceUrl","publisherIdentityCheckedAt"] if k in old})
+                        "youtubeChannelId","publisherIdentityEvidenceUrl","publisherIdentityCheckedAt","contentLocalization","originalImageReference","reviewedNoticeReferences","calendarRolePolicy","localizationRoster"] if k in old})
                 return (None,False) if old == row else (row,True)
             changed=store.mutate("gameSources/"+source["id"],upsert_source)
             result["sources" if changed else "unchanged"]+=1
@@ -715,8 +991,8 @@ def upsert_notice(store, source, document, observed):
              "candidateStartsAt":document["schedule"]["startsAt"] if region_pending_period(document) else None,
              "candidateEndsAt":document["schedule"]["endsAt"] if region_pending_period(document) else None,
              "candidateTimezone":document["schedule"]["originalTimezone"] if region_pending_period(document) else None,
-             "imageCandidates":document["image_candidates"],"image":document["approved_image"] or retained_image,
-             "sourceImageOverride":old.get("sourceImageOverride") if retained_image and not document["approved_image"] else None,
+             "imageCandidates":document["image_candidates"],"image":document["approved_image"] or document["referenced_image"] or reviewed_notice_image(document,source,event_id) or retained_image,
+             "sourceImageOverride":old.get("sourceImageOverride") if retained_image and not (document["approved_image"] or document["referenced_image"]) else None,
              "announcementKind":"aggregate" if document["highest_rarity_targets"] else None,
              "derivedCharacterAnnouncements":len(document["highest_rarity_targets"]),
              "derivedSectionCount":len(document["section_documents"]),
@@ -741,6 +1017,7 @@ def upsert_notice(store, source, document, observed):
             row.update(startsAt=None,endsAt=None,originalTimezone=None,scheduleStatus="DATE_UNCONFIRMED",status="unconfirmed")
         if document["cancelled"]:
             row.update(status="cancelled",scheduleStatus="CANCELLED")
+        row=reviewed_calendar_role(localize_collected_row(row,source,observed),source)
         if len(json.dumps(row,ensure_ascii=False,default=lambda value:value.isoformat()).encode())>900000:
             raise SafetyError("event_document_exceeds_safe_firestore_size")
         return row,"updated" if old else "created"
@@ -760,6 +1037,8 @@ def upsert_notice(store, source, document, observed):
                  "candidateEndsAt":document["schedule"]["endsAt"] if region_pending_period(document) else None,
                  "candidateTimezone":document["schedule"]["originalTimezone"] if region_pending_period(document) else None,
                  "firstCheckedAt":old.get("firstCheckedAt",observed) if old else observed}
+            row.update({key:current_event.get(key) for key in ("originalTitle","originalDescription","originalLanguage","rawSha256","revision",
+                "displayTitle","sourceSectionTitle","translations","contentLocalization","calendarRole","calendarRoleEvidence")})
             for key,default in {"pickupKind":None,"characters":[],"weapons":[],"startsAt":None,"endsAt":None}.items():
                 row.setdefault(key,default)
             if document.get("_section_key") and pickup.get("pickup_kind") and (pickup.get("characters") or pickup.get("weapons")):
@@ -787,11 +1066,11 @@ def upsert_notice(store, source, document, observed):
                 row={**parent,"id":child_id,"parentEventId":event_id,"announcementKind":target["announcementKind"],
                     "rarityLabel":target["rarityLabel"],"characters":[target["name"]],"characterEvidenceText":target["evidenceText"],
                     "title":title,"displayTitle":title,"characterNames":[target["name"]],"originalTitle":document["original_title"],"derivedCharacterAnnouncements":0,
-                    "imageCandidates":child_images,"image":child_artwork or retained_image,
-                    "sourceImageOverride":old.get("sourceImageOverride") if retained_image else None,
+                    "imageCandidates":child_images,"image":child_artwork or original_subject_image(child_images,source,document.get("observed_at")) or retained_image,
+                    "sourceImageOverride":old.get("sourceImageOverride") if retained_image and not original_subject_image(child_images,source,document.get("observed_at")) else None,
                     "firstCheckedAt":old.get("firstCheckedAt",observed) if old else observed,
                     "revision":old.get("revision",0)+1 if old else 1}
-                return row,True
+                return reviewed_calendar_role(localize_collected_row(row,source,observed),source),True
             store.mutate("gameEvents/"+child_id,child_update)
             pickup_id=digest({"event":child_id,"kind":"character"})
             def child_pickup(old):
@@ -806,6 +1085,8 @@ def upsert_notice(store, source, document, observed):
                     "imageCandidates":child_images,"lastCheckedAt":observed,"lastChangedAt":observed,
                     "firstCheckedAt":old.get("firstCheckedAt",observed) if old else observed,
                     "lastVerifiedAt":parent.get("lastVerifiedAt"),"scheduleOrigin":"automatic"}
+                row.update({key:current_child.get(key) for key in ("originalTitle","originalDescription","originalLanguage","rawSha256","revision",
+                    "displayTitle","sourceSectionTitle","translations","contentLocalization","calendarRole","calendarRoleEvidence")})
                 return row,True
             store.mutate("pickupSchedules/"+pickup_id,child_pickup)
         # Changed text removing a target must stop its old automatic calendar/push.
@@ -887,6 +1168,11 @@ def collect_one(store, source, start, end, mode="backfill", fetch=fetch_source, 
     success,error,http_status,retry_after=False,None,None,0
     cursor=int(end.timestamp())+1
     try:
+        source,roster_metrics=refresh_localization_roster(store,source,observed,fetch,sleep,deadline)
+        metrics['localizationRoster']=roster_metrics
+        if roster_metrics['status'] in ('FETCH_FAILED','SOURCE_POLICY_CHANGED','REVIEW_REQUIRED'):
+            store.put('collectionErrors/'+run_id+'-roster',{'sourceId':source['id'],'gameId':source['game_id'],'kind':'LOCALIZATION_ROSTER',
+                'reasonCode':roster_metrics.get('reasonCode')or roster_metrics['status'],'createdAt':observed})
         known_event_ids=set()
         if mode=="reverify":
             known_event_ids={event_id for event_id,_ in store.list_equal("gameEvents","sourceId",source["id"],50)}
