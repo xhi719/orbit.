@@ -1,7 +1,8 @@
 {
   "schemaVersion": 1,
-  "recordedAt": "2026-10-12T13:07:33.318Z",
-  "scope": "APPROVED_PUBLIC_PAYLOAD_LF_NORMALIZED",
+  "recordedAt": "2026-10-13T07:40:31.118Z",
+  "scope": "APPROVED_PUBLIC_WORKER_ACTUAL_REMOTE_BYTES",
+  "sourceCommit": "36241f01d4305a6e1f9b6653384fa122db93a342",
   "files": [
     {
       "path": ".github/workflows/firebase-free-collector.yml",
@@ -20,13 +21,13 @@
     },
     {
       "path": "data/official-sources.json",
-      "bytes": 189825,
-      "sha256": "e4aa49dfa0718d53f9ccfcee60943c8edeedbe5470e4aaa56fc26a105973671e"
+      "bytes": 192091,
+      "sha256": "26bde6665cf87a243afb82c443a07bae0474272be740c4f747c73b62e246cef8"
     },
     {
       "path": "docs/github-free-runner-plan.md",
-      "bytes": 16615,
-      "sha256": "8f6ff1ca840d64961de5bb863bb2e032d541c3af7b46797f00209de8f0be8f88"
+      "bytes": 18569,
+      "sha256": "5845636f413c2ff393de9b34419276cc583582f86c0a141d83efa16a4c291807"
     },
     {
       "path": "README.md",
@@ -55,13 +56,13 @@
     },
     {
       "path": "services/firebase/admin.py",
-      "bytes": 15331,
-      "sha256": "cceb6ffcbbbedcd7fd0689555d38e63eff513b19d840130c230102a04c7861e3"
+      "bytes": 17774,
+      "sha256": "7331b9ddf44cf4c11961a71c44dd05fd09247d7a8d8a7959d23c14c715c7bd08"
     },
     {
       "path": "services/firebase/collector.py",
-      "bytes": 20394,
-      "sha256": "aa837649d4a4d894e5428aa9aaffae9867f56c0188bbc8504f59aa01296b4b26"
+      "bytes": 51122,
+      "sha256": "8589f1fdd17415fb74c7d8b46827356a91c8de815b642c2cc91ad942daef51b6"
     },
     {
       "path": "services/firebase/iam/orbit-free-fcm-sender-role.json",
@@ -95,11 +96,11 @@
     },
     {
       "path": "services/firebase/tests/test_firebase.py",
-      "bytes": 45901,
-      "sha256": "682bce7b95d1d1edce72bbc4b3ca0ffc0cd0c4342cddb5a20bdb76ad30ff338c"
+      "bytes": 70253,
+      "sha256": "485f09814837421b8d3838bf2d0951f3c5f59ea1babd8289eecedcb54216a673"
     }
   ],
-  "payloadBytes": 794056,
+  "payloadBytes": 838910,
   "excluded": [
     "images",
     "work",
