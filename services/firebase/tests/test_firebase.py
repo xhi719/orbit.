@@ -7,12 +7,13 @@ import unittest
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from store import MemoryStore,FirestoreStore,SafetyError,timestamp
-from collector import reviewed,seed_catalogue,event_identity,upsert_notice,claim_source,collect_one,run
+from collector import reviewed,seed_catalogue,event_identity,upsert_notice,claim_source,collect_one,run,enrich_document,extract_schedule,highest_rarity_targets,source_row,operating_source,section_documents,confirmed_window_overlap
 from notifications import quiet,eligible,plan_user,dispatch,fixed_payload,fcm_message,run as notification_run,reset_cycle,completed_cycle,attendance_context,plan_attendance_user
 from admin import validate_change,apply_requests,cleanup_accounts,cleanup_execution_retention
 from import_pending_pickups import validate_bundle,apply_bundle
 
 NOW=datetime(2026,10,11,10,tzinfo=timezone.utc)
+UTC=timezone.utc
 SOURCE={'id':'source','game_id':'blue-archive','parser':'steam_news','steam_appid':123,'url':'https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=123','approved_for_staging':True,'access_status':'approved','terms_url':'https://steamcommunity.com/dev/apiterms','terms_checked_at':NOW.isoformat(),'notice_hosts_verified_at':NOW.isoformat(),'allowed_notice_hosts':['steamcommunity.com'],'feed_allowlist':['steam_community_announcements'],'server_region':'UNSPECIFIED','server_label':None,'collection_interval_minutes':15}
 def response(title='Official update',date=None,feed='steam_community_announcements',appid=123):
  return json.dumps({'appnews':{'appid':appid,'newsitems':[{'gid':'1','title':title,'contents':'Official publisher notice','url':'https://steamcommunity.com/announcement/1','appid':appid,'feedname':feed,'date':int((date or NOW-timedelta(hours=1)).timestamp())}]}}).encode()
@@ -65,6 +66,225 @@ class FirebaseCollectorTests(unittest.TestCase):
   s=MemoryStore();r=collect_one(s,SOURCE,NOW-timedelta(hours=72),NOW,fetch=lambda _: (200,response(feed='unofficial'),{}),sleep=lambda _:None,now=NOW);self.assertEqual(r['metrics']['created'],0)
  def test_no_credentials_live_staging_has_zero_remote_writes(self):
   r=run({'games':[{'gameId':'blue-archive','sources':[SOURCE]}]},MemoryStore(),NOW-timedelta(hours=72),NOW,fetch=lambda _:(200,response(),{}),sleep=lambda _:None);self.assertEqual(r['remoteFirestoreWrites'],0);self.assertEqual(r['fcmSends'],0)
+
+class FirebaseNoticeEnrichmentTests(unittest.TestCase):
+ def source(self,**changes):
+  return {**SOURCE,'server_region':'KR','schedule_extraction_approved':True,'schedule_extraction_reviewed_at':NOW.isoformat(),
+   'schedule_extraction_evidence_url':'https://steamcommunity.com/announcement/1',
+   'highest_character_rarity':{'labels':['5-star','5성'],'evidenceUrl':'https://official.example/rarity','checkedAt':NOW.isoformat()},**changes}
+ def notice(self,body,**changes):
+  return {**document(region='KR'),'original_description':body,'raw_json':{'title':'Official pickup','contents':body},'raw_sha256':'fixture-'+str(len(body)),**changes}
+ def period(self):return 'Event Duration: 2026-10-13 10:00 - 2026-10-28 18:59 (UTC+8)'
+ def test_explicit_labelled_period_converts_offset(self):
+  schedule=extract_schedule(self.period());self.assertEqual(schedule['startsAt'].isoformat(),'2026-10-13T02:00:00+00:00');self.assertEqual(schedule['endsAt'].isoformat(),'2026-10-28T10:59:00+00:00');self.assertEqual(schedule['reasonCodes'],[])
+ def test_korean_and_japanese_complete_dates(self):
+  for body in ['이벤트 기간: 2026년 10월 13일 10시00분 ~ 2026년 10월 28일 18시59분 (KST)', '開催期間: 2026年10月13日 10:00 ～ 2026年10月28日 18:59 (JST)']:
+   self.assertEqual(extract_schedule(body)['startsAt'],datetime(2026,10,13,1,tzinfo=UTC));self.assertEqual(extract_schedule(body)['reasonCodes'],[])
+ def test_iso_offsets_and_labelled_boundaries(self):
+  schedule=extract_schedule('Starts: 2026-10-13T10:00:00Z\nEnds: 2026-10-28T18:59:00Z');self.assertEqual(schedule['startsAt'],datetime(2026,10,13,10,tzinfo=UTC))
+ def test_bare_utc_clock_is_explicit_zero_offset(self):
+  self.assertEqual(extract_schedule(self.period().replace('UTC+8','UTC'))['startsAt'],datetime(2026,10,13,10,tzinfo=UTC))
+ def test_explicit_english_month_dates_keep_original_evidence(self):
+  for text in ['Event Duration: October 13, 2026 10:00 - October 28, 2026 18:59 (UTC+8)','Event Duration: 13 October 2026 10:00 - 28 October 2026 18:59 (UTC+8)']:
+   result=extract_schedule(text);self.assertEqual(result['startsAt'],datetime(2026,10,13,2,tzinfo=UTC));self.assertEqual(result['evidenceText'],text)
+ def test_twelve_hour_clock_cannot_be_read_as_24_hour_time(self):
+  self.assertIsNone(extract_schedule(self.period().replace('10:00','10:00 PM'))['startsAt'])
+ def test_publication_timestamp_and_unlabelled_dates_never_schedule(self):
+  for text in ['Published: 2026-10-13 10:00 (UTC+8)', '2026-10-13 10:00 - 2026-10-28 18:59 (UTC+8)', 'Event Duration: 10/13 10:00 - 10/28 18:59 (UTC+8)']:
+   self.assertIsNone(extract_schedule(text)['startsAt'])
+ def test_timezone_missing_conflicting_or_invalid_stays_pending(self):
+  for text in [self.period().replace(' (UTC+8)',''), self.period()+' JST',self.period().replace('UTC+8','UTC+8:90'),self.period().replace('UTC+8','UTC+15')]:
+   self.assertIsNone(extract_schedule(text)['startsAt'])
+ def test_multiple_event_periods_fail_closed(self):
+  result=extract_schedule(self.period()+'\nEvent Duration: 2026-10-14 10:00 - 2026-10-29 18:59 (UTC+8)');self.assertIn('SCHEDULE_CONFLICT',result['reasonCodes'])
+ def test_invalid_and_descending_date_rejected(self):
+  for text in [self.period().replace('2026-10-13','2026-02-30'),self.period().replace('2026-10-28','2026-10-12')]:self.assertIsNone(extract_schedule(text)['startsAt'])
+ def test_source_review_is_independent_of_feed_permission(self):
+  result=enrich_document(self.notice(self.period()),self.source(schedule_extraction_approved=False));self.assertFalse(result['schedule_verified']);self.assertIn('EXTRACTION_REVIEW_REQUIRED',result['schedule_reason_codes'])
+ def test_unapproved_source_and_unreviewed_article_cannot_verify(self):
+  self.assertFalse(enrich_document(self.notice(self.period()),self.source(access_status='unknown'))['schedule_verified'])
+  self.assertFalse(enrich_document(self.notice(self.period(),official_url='https://unreviewed.example/notice'),self.source())['schedule_verified'])
+ def test_unknown_and_competing_server_regions_fail_closed(self):
+  for body,region in [(self.period(),'UNSPECIFIED'),(self.period()+'\nJP server','KR'),(self.period()+'\nKR server, JP server','KR')]:self.assertFalse(enrich_document(self.notice(body,server_region=region),self.source())['schedule_verified'])
+ def test_exact_tier_character_new_and_rerun_are_distinct(self):
+  text='New 5-star character "First" pickup\nReturning 5-star character "Second" pickup\nNew 4-star character "Third" pickup'
+  rows=highest_rarity_targets(text,self.source());self.assertEqual([(r['name'],r['announcementKind'])for r in rows],[('First','new'),('Second','rerun')])
+ def test_game_specific_ssr_and_s_tier_do_not_assume_global_rarity(self):
+  text='신규 SSR 인형 "Myt" 픽업\n복각 S 캐릭터 "Second" 픽업'
+  self.assertEqual(highest_rarity_targets(text,self.source()),[])
+  source=self.source(highest_character_rarity={'labels':['SSR'],'evidenceUrl':'https://official.example/rarity','checkedAt':NOW.isoformat()})
+  self.assertEqual([r['name']for r in highest_rarity_targets(text,source)],['Myt'])
+ def test_unknown_rarity_mixed_tier_and_mixed_roles_not_split(self):
+  for text in ['New character "First" pickup','New 5-star character "First" returns','New 5-star character "First" and 4-star character "Second"','New 5-star weapon "Sword" pickup']:
+   self.assertEqual(highest_rarity_targets(text,self.source()),[])
+ def test_rarity_rule_without_official_evidence_is_disabled(self):
+  self.assertEqual(highest_rarity_targets('New 5-star character "First" pickup',self.source(highest_character_rarity={'labels':['5-star']})),[])
+ def test_character_name_is_not_a_new_or_rerun_role_marker(self):
+  self.assertEqual(highest_rarity_targets('5-star character "New" pickup',self.source()),[])
+ def test_publisher_image_origin_does_not_grant_reuse(self):
+  result=enrich_document(self.notice('[img]https://cdn.example/banner.webp[/img]'),self.source());self.assertIsNone(result['approved_image']);self.assertEqual(result['image_candidates'][0]['rightsStatus'],'UNCONFIRMED')
+ def test_reviewed_exact_host_can_allow_image_but_other_host_cannot(self):
+  source=self.source(image_reuse={'rightsStatus':'APPROVED','allowedHosts':['cdn.example'],'evidenceUrl':'https://official.example/reuse','checkedAt':NOW.isoformat()})
+  result=enrich_document(self.notice('<img src="https://cdn.example/banner.webp"><img src="https://evil.cdn.example/banner.webp">'),source)
+  self.assertEqual([r['rightsStatus']for r in result['image_candidates']],['APPROVED','UNCONFIRMED']);self.assertEqual(result['approved_image']['sourceUrl'],'https://steamcommunity.com/announcement/1')
+ def test_unsafe_image_candidates_are_not_preserved(self):
+  result=enrich_document(self.notice('[img]https://127.0.0.1/banner.webp[/img][img]https://localhost/banner.webp[/img]'),self.source());self.assertEqual(result['image_candidates'],[])
+ def test_verified_schedule_saved_only_with_source_review_and_region(self):
+  store=MemoryStore();upsert_notice(store,self.source(),self.notice(self.period()),NOW);row=store.list('gameEvents')[0][1];self.assertEqual(row['verificationStatus'],'verified');self.assertEqual(row['startsAt'],datetime(2026,10,13,2,tzinfo=UTC));self.assertEqual(row['publishedAt'],NOW)
+ def test_manual_date_conflict_preserves_reviewed_value_and_revokes(self):
+  store=MemoryStore();notice=self.notice(self.period());key=event_identity(notice,self.source());store.records['gameEvents/'+key]={'startsAt':NOW,'verificationStatus':'verified','originalTimezone':'UTC'}
+  upsert_notice(store,self.source(),notice,NOW);row=store.get('gameEvents/'+key);self.assertEqual(row['startsAt'],NOW);self.assertEqual(row['verificationStatus'],'pending');self.assertIn('MANUAL_SCHEDULE_CONFLICT',row['scheduleEvidence']['reasonCodes'])
+ def test_child_posts_preserve_original_notice_and_separate_main_rerun(self):
+  store=MemoryStore();notice=self.notice(self.period()+'\nNew 5-star character "First" pickup\nReturning 5-star character "Second" pickup');upsert_notice(store,self.source(),notice,NOW)
+  rows=[row for _,row in store.list('gameEvents')if row.get('parentEventId')];self.assertEqual(len(rows),2);self.assertEqual({r['announcementKind']for r in rows},{'new','rerun'});self.assertTrue(all(r['originalTitle']==notice['original_title']for r in rows));self.assertTrue(all(r['verificationStatus']=='verified'for r in rows))
+ def test_enriched_upsert_unchanged_data_has_zero_extra_writes(self):
+  store=MemoryStore();notice=self.notice(self.period()+'\nNew 5-star character "First" pickup');upsert_notice(store,self.source(),notice,NOW);writes=store.writes;self.assertEqual(upsert_notice(store,self.source(),notice,NOW),'unchanged');self.assertEqual(store.writes,writes)
+ def test_removed_child_is_cancelled_and_cannot_remain_calendar_verified(self):
+  store=MemoryStore();source=self.source();notice=self.notice(self.period()+'\nNew 5-star character "First" pickup');upsert_notice(store,source,notice,NOW);old=[row for _,row in store.list('gameEvents')if row.get('parentEventId')][0]
+  upsert_notice(store,source,{**self.notice(self.period()),'raw_sha256':'revised'},NOW);row=store.get('gameEvents/'+old['id']);self.assertEqual(row['status'],'cancelled');self.assertEqual(row['verificationStatus'],'pending');self.assertTrue(any(r.get('status')=='cancelled'for _,r in store.list('pickupSchedules')))
+ def test_automatic_date_removed_on_unconfirmed_correction(self):
+  store=MemoryStore();source=self.source();notice=self.notice(self.period());upsert_notice(store,source,notice,NOW);upsert_notice(store,source,{**self.notice('Schedule changed; dates TBA'),'raw_sha256':'correction'},NOW);row=store.get('gameEvents/'+event_identity(notice,source));self.assertIsNone(row['startsAt']);self.assertEqual(row['verificationStatus'],'pending')
+ def test_explicit_cancellation_revokes_active_calendar_status(self):
+  store=MemoryStore();upsert_notice(store,self.source(),self.notice(self.period()+'\nEvent has been cancelled'),NOW);row=store.list('gameEvents')[0][1];self.assertEqual(row['status'],'cancelled')
+ def test_oversized_public_record_fails_before_event_write(self):
+  store=MemoryStore();notice=self.notice('字'*160000)
+  with self.assertRaisesRegex(SafetyError,'event_document_exceeds'):upsert_notice(store,self.source(),notice,NOW)
+  self.assertEqual(store.list('gameEvents'),[])
+ def test_source_policy_roundtrip_and_reseed_preserves_admin_review(self):
+  source=self.source();row=source_row(source,'blue-archive');self.assertEqual(operating_source(row)['highest_character_rarity'],source['highest_character_rarity'])
+  store=MemoryStore({'gameSources/source':row});seed_catalogue(store,[],{'games':[{'gameId':'blue-archive','sources':[SOURCE]}]});self.assertTrue(store.get('gameSources/source')['scheduleExtractionApproved'])
+ def test_admin_rejects_extraction_without_region_or_evidence(self):
+  row=source_row(SOURCE,'blue-archive');row.update(scheduleExtractionApproved=True)
+  with self.assertRaisesRegex(SafetyError,'schedule_extraction_review'):validate_change('gameSources','source',row)
+ def test_admin_rejects_unreviewed_rarity_and_image_rights(self):
+  for changes,reason in [({'highestCharacterRarity':{'labels':['SSR']}},'rarity_evidence'),({'imageReuse':{'rightsStatus':'APPROVED','allowedHosts':['cdn.example']}},'image_reuse_evidence')]:
+   with self.assertRaisesRegex(SafetyError,reason):validate_change('gameSources','source',{**source_row(SOURCE,'blue-archive'),**changes})
+
+class FirebasePublisherSectionTests(unittest.TestCase):
+ # Publisher heading syntax and dates are factual; descriptions are deliberately
+ # minimal test metadata. No full publisher article/image is packaged publicly.
+ BODY='''Time-Limited Events
+■[Amber Reel of Moonlight]
+▸Event Duration:
+2026/10/8 9:00 ~ 2026/10/28 18:59 (GMT+0)
+
+■[Inverse Cipher]
+▸Event Duration:
+2026/10/14 05:00 ~ 2026/10/28 04:59 (GMT+0)
+
+■[Intelligence Supplies]
+Log in during the event.
+▸Event Duration:
+2026/10/16 05:00 ~ 2026/10/21 04:59 (GMT+0)
+
+Recruitment
+■Targeted Procurement Event | Mityl
+Elite Doll [Mityl]
+■Military Upgrade | Squirrel Nova
+Elite Weapon [Squirrel Nova]
+▸Duration:
+2026/10/8 9:00 ~ 2026/10/28 18:59 (GMT+0)
+
+■Targeted Procurement Event | Cheyanne
+Elite Doll [Cheyanne]
+■Military Upgrade | Nightwalker Cardamom
+Elite Weapon [Nightwalker Cardamom]
+▸Duration:
+2026/10/8 9:00 ~ 2026/10/28 18:59 (GMT+0)
+
+■Mityl' Outfit | 90s' Sunset Memories
+Brand-new outfit.
+▸Discount Duration:
+2026/10/8 9:00 - 2026/10/28 18:59(GMT+0)'''
+ CLOCK=datetime(2026,10,13,7,tzinfo=UTC)
+ def source(self,**changes):
+  return {**SOURCE,'server_region':'GLOBAL','server_label':'HAOPLAY Steam','schedule_extraction_approved':True,
+   'schedule_extraction_reviewed_at':self.CLOCK.isoformat(),'schedule_extraction_evidence_url':'https://steamcommunity.com/announcement/1',
+   'section_schedule_format':'heading_period_v1','paired_recruitment_period_approved':True,**changes}
+ def notice(self,body=None):
+  return {**document(region='GLOBAL'),'original_title':'Publisher update overview','original_description':body or self.BODY,
+   'raw_json':{'contents':body or self.BODY},'raw_sha256':'section-fixture-'+str(len(body or self.BODY)),
+   'published_at':'2026-10-07T10:00:48+00:00','event_type_candidates':['update'],'pickups':[]}
+ def test_period_label_on_immediate_next_line_has_explicit_dates(self):
+  result=extract_schedule('▸Duration:\n2026/10/8 9:00 ~ 2026/10/28 18:59 (GMT+0)');self.assertEqual(result['startsAt'],datetime(2026,10,8,9,tzinfo=UTC));self.assertEqual(result['reasonCodes'],[])
+ def test_multiple_heading_sections_have_independent_periods(self):
+  document=self.notice();source=self.source();parts=section_documents(document,source);self.assertEqual(len(parts),8)
+  self.assertEqual(parts[0]['_section_title'],'Amber Reel of Moonlight');self.assertEqual(enrich_document(parts[0],source)['schedule']['startsAt'],datetime(2026,10,8,9,tzinfo=UTC))
+  self.assertEqual(enrich_document(parts[1],source)['schedule']['startsAt'],datetime(2026,10,14,5,tzinfo=UTC));self.assertFalse(enrich_document(document,source)['schedule_verified'])
+ def test_character_weapon_pair_requires_specific_format_review(self):
+  source=self.source(paired_recruitment_period_approved=False);parts=section_documents(self.notice(),source)
+  self.assertFalse(enrich_document(parts[3],source)['schedule_verified']);self.assertTrue(enrich_document(parts[4],source)['schedule_verified'])
+ def test_verified_pair_has_factual_character_and_weapon_targets(self):
+  source=self.source();parts=section_documents(self.notice(),source);self.assertEqual(parts[3]['pickups'][0]['characters'],['Mityl']);self.assertEqual(parts[4]['pickups'][0]['weapons'],['Squirrel Nova'])
+  self.assertTrue(enrich_document(parts[3],source)['schedule_verified']);self.assertEqual(enrich_document(parts[3],source)['highest_rarity_targets'],[])
+ def test_new_outfit_does_not_mark_adjacent_character_new(self):
+  source=self.source(highest_character_rarity={'labels':['Elite'],'evidenceUrl':'https://official.example/rarity','checkedAt':self.CLOCK.isoformat()})
+  result=enrich_document(self.notice(),source);self.assertEqual(result['highest_rarity_targets'],[])
+  self.assertTrue(all(not enrich_document(section,source)['highest_rarity_targets']for section in result['section_documents']))
+ def test_future_explicit_elite_doll_role_can_split_when_rarity_reviewed(self):
+  source=self.source(highest_character_rarity={'labels':['Elite'],'evidenceUrl':'https://official.example/rarity','checkedAt':self.CLOCK.isoformat()})
+  self.assertEqual(highest_rarity_targets('New Elite Doll [Mityl]',source)[0]['announcementKind'],'new');self.assertEqual(highest_rarity_targets('Returning Elite Doll [Cheyanne]',source)[0]['announcementKind'],'rerun')
+ def test_section_events_keep_parent_original_and_independent_canonical_ids(self):
+  store=MemoryStore();notice=self.notice();source=self.source();upsert_notice(store,source,notice,self.CLOCK);rows=store.list('gameEvents')
+  children=[row for _,row in rows if row.get('sourceSectionKey')];self.assertEqual(len(children),8);self.assertEqual(len({row['id']for row in children}),8)
+  self.assertTrue(all(row['originalTitle']==notice['original_title'] and row['originalDescription']==notice['original_description']for row in children))
+  self.assertTrue(all(row['verificationStatus']=='verified'for row in children));self.assertEqual(len(store.list('collectionDocuments')),1)
+  pickups=[row for _,row in store.list('pickupSchedules')];self.assertEqual(len(pickups),4);self.assertTrue(all(row['verificationStatus']=='verified'for row in pickups))
+ def test_section_unchanged_revalidation_has_zero_writes(self):
+  store=MemoryStore();notice=self.notice();source=self.source();upsert_notice(store,source,notice,self.CLOCK);before=store.writes;upsert_notice(store,source,notice,self.CLOCK+timedelta(minutes=15));self.assertEqual(store.writes,before)
+ def test_true_conflict_within_one_section_stays_pending(self):
+  text='■[Conflicting event]\nEvent Duration: 2026/10/8 9:00 ~ 2026/10/28 18:59 (GMT+0)\nEvent Duration: 2026/10/9 9:00 ~ 2026/10/29 18:59 (GMT+0)'
+  source=self.source();part=section_documents(self.notice(text),source)[0];self.assertIn('SCHEDULE_CONFLICT',enrich_document(part,source)['schedule_reason_codes'])
+ def test_multi_phase_section_cannot_use_first_subperiod_as_whole_event(self):
+  text='■[Multi phase event]\n▸Event Duration:\nRecruitment Period: 2026/10/8 9:00 ~ 2026/10/9 18:59 (GMT+0)\nVictory Period: 2026/10/14 5:00 ~ 2026/10/28 18:59 (GMT+0)'
+  source=self.source();part=section_documents(self.notice(text),source)[0];self.assertFalse(enrich_document(part,source)['schedule_verified'])
+ def test_old_published_notice_can_supply_confirmed_ongoing_period(self):
+  self.assertTrue(confirmed_window_overlap(self.notice(),self.source(),self.CLOCK-timedelta(hours=72),self.CLOCK));self.assertFalse(confirmed_window_overlap(self.notice(),self.source(schedule_extraction_approved=False),self.CLOCK-timedelta(hours=72),self.CLOCK))
+ def test_bounded_collector_includes_old_ongoing_but_not_expired(self):
+  source=self.source();raw=json.loads(response(title='Publisher update overview',date=datetime(2026,10,7,10,tzinfo=UTC)));raw['appnews']['newsitems'][0]['contents']=self.BODY
+  store=MemoryStore();result=collect_one(store,source,self.CLOCK-timedelta(hours=72),self.CLOCK,mode='backfill',fetch=lambda _:(200,json.dumps(raw).encode(),{}),sleep=lambda _:None,now=self.CLOCK)
+  self.assertEqual(result['status'],'success');self.assertEqual(result['metrics']['ongoingOlderIncluded'],1);self.assertEqual(result['metrics']['verifiedSectionSchedules'],8);self.assertEqual(len([row for _,row in store.list('gameEvents')if row.get('sourceSectionKey')]),8)
+  expired=self.BODY.replace('2026/10/28','2026/10/9').replace('2026/10/21','2026/10/9')
+  self.assertFalse(confirmed_window_overlap(self.notice(expired),source,self.CLOCK-timedelta(hours=72),self.CLOCK))
+ def test_heading_removal_cancels_its_old_pickup(self):
+  source=self.source();store=MemoryStore();notice=self.notice();upsert_notice(store,source,notice,self.CLOCK)
+  old=[row for _,row in store.list('gameEvents')if row.get('sourceSectionTitle')=='Targeted Procurement Event | Mityl'][0]
+  changed=self.BODY.replace('■Targeted Procurement Event | Mityl\nElite Doll [Mityl]\n','');upsert_notice(store,source,self.notice(changed),self.CLOCK)
+  self.assertEqual(store.get('gameEvents/'+old['id'])['status'],'cancelled');self.assertTrue(all(row['status']=='cancelled'for _,row in store.list_equal('pickupSchedules','eventId',old['id'],50)))
+ def test_bounded_sections_do_not_enable_unreviewed_splitting(self):
+  self.assertEqual(section_documents(self.notice(),self.source(section_schedule_format=None)),[])
+ def test_section_canonical_id_does_not_change_when_other_heading_added(self):
+  source=self.source();before=section_documents(self.notice(),source);after=section_documents(self.notice('■[Other]\nNo dates\n'+self.BODY),source)
+  self.assertEqual(event_identity(before[0],source),event_identity(after[1],source))
+ def test_bbcode_headings_preserve_distinct_section_boundaries(self):
+  text=self.BODY.replace('■[Amber Reel of Moonlight]','[h2]Amber Reel of Moonlight[/h2]');self.assertEqual(section_documents(self.notice(text),self.source())[0]['_section_title'],'Amber Reel of Moonlight')
+ def test_next_heading_cannot_supply_previous_unpaired_period(self):
+  text='■[No period]\n▸Event Duration:\n■[Different event]\n▸Event Duration:\n2026/10/8 9:00 ~ 2026/10/28 18:59 (GMT+0)'
+  source=self.source();parts=section_documents(self.notice(text),source);self.assertFalse(enrich_document(parts[0],source)['schedule_verified']);self.assertTrue(enrich_document(parts[1],source)['schedule_verified'])
+ def test_period_passage_updates_status_without_rewriting_raw(self):
+  source=self.source();store=MemoryStore();notice=self.notice();upsert_notice(store,source,notice,self.CLOCK);raw_writes=len(store.list('collectionDocuments'))
+  upsert_notice(store,source,notice,datetime(2026,10,29,0,tzinfo=UTC));rows=[row for _,row in store.list('gameEvents')if row.get('sourceSectionKey')];self.assertTrue(all(row['status']=='ended'for row in rows));self.assertEqual(len(store.list('collectionDocuments')),raw_writes)
+ def test_period_review_can_keep_source_region_explicitly_unknown(self):
+  row=source_row(self.source(server_region='UNSPECIFIED'),'blue-archive');validated=validate_change('gameSources','source',row);self.assertEqual(validated['serverRegion'],'UNSPECIFIED');self.assertTrue(validated['scheduleExtractionApproved'])
+ def test_unknown_region_source_dates_remain_candidate_only(self):
+  source=self.source(server_region='UNSPECIFIED');notice={**self.notice(),'server_region':'UNSPECIFIED'};store=MemoryStore();upsert_notice(store,source,notice,self.CLOCK)
+  rows=[row for _,row in store.list('gameEvents')if row.get('sourceSectionKey')];self.assertEqual(len(rows),8)
+  self.assertTrue(all(row['verificationStatus']=='pending' and row['startsAt'] is None and row['endsAt'] is None for row in rows))
+  self.assertTrue(all(row['candidateStartsAt'] and row['candidateEndsAt'] and row['candidateTimezone']=='UTC'for row in rows))
+  pickups=[row for _,row in store.list('pickupSchedules')];self.assertTrue(all(row['verificationStatus']=='pending' and row['startsAt'] is None and row['candidateStartsAt']for row in pickups))
+ def test_older_unknown_region_period_is_ingested_pending_not_verified(self):
+  source=self.source(server_region='UNSPECIFIED');raw=json.loads(response(title='Publisher update overview',date=datetime(2026,10,7,10,tzinfo=UTC)));raw['appnews']['newsitems'][0]['contents']=self.BODY
+  store=MemoryStore();result=collect_one(store,source,self.CLOCK-timedelta(hours=72),self.CLOCK,mode='backfill',fetch=lambda _:(200,json.dumps(raw).encode(),{}),sleep=lambda _:None,now=self.CLOCK)
+  self.assertEqual(result['status'],'success');self.assertEqual(result['metrics']['ongoingOlderIncluded'],1);self.assertEqual(result['metrics']['verifiedSchedules'],0);self.assertEqual(result['metrics']['candidateSectionSchedules'],8)
+ def test_unknown_region_dates_never_create_remote_notification_jobs(self):
+  source=self.source(server_region='UNSPECIFIED');notice={**self.notice(),'server_region':'UNSPECIFIED'};store,_=owner_store();store.records.pop('gameEvents/event');upsert_notice(store,source,notice,self.CLOCK)
+  rows=[row for _,row in store.list('gameEvents')if row.get('sourceSectionKey')]
+  self.assertTrue(all(not eligible(store,'alice',row,'event:start',self.CLOCK)for row in rows));self.assertEqual(plan_user(store,'alice',rows,self.CLOCK),0);self.assertEqual(store.list('users/alice/notificationJobs'),[])
+ def test_missing_approval_or_timezone_cannot_use_candidate_window_path(self):
+  notice={**self.notice(),'server_region':'UNSPECIFIED'}
+  self.assertFalse(confirmed_window_overlap(notice,self.source(server_region='UNSPECIFIED',schedule_extraction_approved=False),self.CLOCK-timedelta(hours=72),self.CLOCK))
+  missing_zone={**notice,'original_description':notice['original_description'].replace('(GMT+0)','')}
+  self.assertFalse(confirmed_window_overlap(missing_zone,self.source(server_region='UNSPECIFIED'),self.CLOCK-timedelta(hours=72),self.CLOCK))
 
 class FirebaseDailyReverifyRecoveryTests(unittest.TestCase):
  def collect(self,store,now=NOW,mode='incremental',raw=None,fetch=None):
