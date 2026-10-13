@@ -63,9 +63,12 @@ def parse_youtube_documents(raw, source, observed_at):
         raise ValidationError("youtube_xml_invalid") from error
     atom, yt, media = "{http://www.w3.org/2005/Atom}", "{http://www.youtube.com/xml/schemas/2015}", "{http://search.yahoo.com/mrss/}"
     channel = source["youtube_channel_id"]
-    if feed.tag != atom+"feed" or feed.findtext(atom+"id") != "yt:channel:"+channel:
+    # Actual YouTube feeds omit the UC prefix in the root header, while entry
+    # channelId stays the full stable ID. Accept only those exact two forms.
+    header_ids = (channel, channel[2:])
+    if feed.tag != atom+"feed" or feed.findtext(atom+"id") not in tuple("yt:channel:"+value for value in header_ids):
         raise ValidationError("youtube_response_channel_mismatch")
-    if feed.findtext(yt+"channelId") not in (None, channel):
+    if feed.findtext(yt+"channelId") not in (None, *header_ids):
         raise ValidationError("youtube_response_channel_mismatch")
     items = feed.findall(atom+"entry")
     if len(items) > 50:
@@ -88,16 +91,18 @@ def parse_youtube_documents(raw, source, observed_at):
         if len(links) != 1:
             raise ValidationError("youtube_video_url_required")
         original = urlsplit(links[0])
-        if original.scheme not in ("https", "http") or original.hostname not in ("www.youtube.com", "youtube.com") or original.path != "/watch" or original.username or original.password or original.port not in (None, 80, 443) or original.fragment or parse_qsl(original.query,keep_blank_values=True) != [("v", video)]:
+        watch = original.path == "/watch" and parse_qsl(original.query,keep_blank_values=True) == [("v", video)]
+        shorts = original.scheme == "https" and original.path == "/shorts/"+video and not original.query and original.port in (None, 443)
+        if original.scheme not in ("https", "http") or original.hostname not in ("www.youtube.com", "youtube.com") or original.username or original.password or original.port not in (None, 80, 443) or original.fragment or not (watch or shorts):
             raise ValidationError("youtube_video_url_mismatch")
         url = "https://www.youtube.com/watch?"+urlencode({"v": video})
         thumbnails = []
         for node in item.findall(media+"group/"+media+"thumbnail")[:5]:
             image = safe_public_url(node.get("url"))
-            if image and urlsplit(image).hostname == "i.ytimg.com":
+            if image and urlsplit(image).hostname in ("i.ytimg.com", "i1.ytimg.com", "i2.ytimg.com", "i3.ytimg.com", "i4.ytimg.com"):
                 thumbnails.append(image)
         raw_item = {"channelId":channel, "videoId":video, "title":title, "description":content,
-                    "published":published, "updated":updated, "officialUrl":url, "thumbnailUrls":thumbnails}
+                    "published":published, "updated":updated, "officialUrl":url, "originalVideoUrl":links[0], "thumbnailUrls":thumbnails}
         hints = [kind for kind, patterns in TYPES.items() if any(re.search(pattern, title+"\n"+content, re.I) for pattern in patterns)]
         documents.append({"external_key":video, "raw_sha256":digest(raw_item), "raw_json":raw_item,
             "raw_publication_timestamp":published, "published_at":published_time.isoformat(), "source_updated_at":updated,
