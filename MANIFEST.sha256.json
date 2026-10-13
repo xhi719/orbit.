@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "recordedAt": "2026-10-13T13:06:52.230381+00:00",
+  "recordedAt": "2026-10-13T13:46:27.576043+00:00",
   "scope": "APPROVED_PUBLIC_WORKER_EXPECTED_BYTES",
-  "sourceBaseCommit": "850c86552fa91343fc8322e9fb876e54dfdb94f1",
+  "sourceBaseCommit": "53bf8032c7ad7917cb1023524bca55235dd439ae",
   "files": [
     {
       "path": ".github/workflows/firebase-free-collector.yml",
@@ -81,8 +81,8 @@
     },
     {
       "path": "services/firebase/notifications.py",
-      "bytes": 21747,
-      "sha256": "c6f3b0794a7ce03a5a41f10789490c9ee0f01af527e07c0a9683f8a468825d14"
+      "bytes": 28354,
+      "sha256": "4ee7faa6a1c3bd252a23e02a28a7d214df2f83ab49c6c80b54e6f0a353e7891c"
     },
     {
       "path": "services/firebase/requirements.txt",
@@ -96,8 +96,8 @@
     },
     {
       "path": "services/firebase/tests/test_firebase.py",
-      "bytes": 99243,
-      "sha256": "bb1f3bb47f1a42153bcaecbcf6c6d24f5e41647d76468cbb21e240829f4b7d92"
+      "bytes": 107100,
+      "sha256": "f57ddfef63a9a4a03179fc5467ae1d5cd42bc49b6e3e6786baa5eda0bb9ea8b5"
     }
   ],
   "payloadBytes": 888839,
