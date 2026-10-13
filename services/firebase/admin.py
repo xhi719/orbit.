@@ -14,11 +14,11 @@ from store import FirestoreStore,MemoryStore,SafetyError,timestamp
 
 FIELDS={
  "games":{"id","slug","names","aliases","developer","publisher","platforms","regions","officialWebsite","officialNoticeUrl","officialSocialUrls","serviceStatus","collectionSupport","dailyReset","weeklyReset","resetTimezone","officialIntegration","metadataStatus","nameProvenance","sourceEvidence","image","resetRules","verifiedResetRuleIds","resetRuleById","enabled","createdAt","updatedAt"},
- "gameSources":{"id","gameId","url","parser","steamAppid","enabled","accessStatus","approvedForStaging","termsUrl","termsCheckedAt","noticeHostsVerifiedAt","allowedNoticeHosts","feedAllowlist","intervalMinutes","serverRegion","serverLabel","health","lastCheckedAt","lastSuccessAt","lastErrorAt","lastReverifiedAt","nextRunAt","scheduleExtractionApproved","scheduleExtractionReviewedAt","scheduleExtractionEvidenceUrl","contentLanguage","highestCharacterRarity","imageReuse","sectionScheduleFormat","pairedRecruitmentPeriodApproved"},
+ "gameSources":{"id","gameId","url","parser","steamAppid","youtubeChannelId","publisherIdentityEvidenceUrl","publisherIdentityCheckedAt","enabled","accessStatus","approvedForStaging","termsUrl","termsCheckedAt","noticeHostsVerifiedAt","allowedNoticeHosts","feedAllowlist","intervalMinutes","serverRegion","serverLabel","health","lastCheckedAt","lastSuccessAt","lastErrorAt","lastReverifiedAt","nextRunAt","scheduleExtractionApproved","scheduleExtractionReviewedAt","scheduleExtractionEvidenceUrl","contentLanguage","highestCharacterRarity","imageReuse","sectionScheduleFormat","pairedRecruitmentPeriodApproved"},
  "gameEvents":{"id","sourceId","externalKey","gameIds","serverRegion","serverLabel","title","description","originalTitle","originalDescription","originalLanguage","officialUrl","publishedAt","sourceUpdatedAt","rawSha256","eventTypeCandidates","firstCheckedAt","lastCheckedAt","lastChangedAt","lastVerifiedAt","verificationStatus","revision","startsAt","endsAt","reservationStartsAt","reservationEndsAt","ticketSalesAt","originalTimezone","category","scheduleStatus","status","venue","imageRightsStatus","translations"},
  "pickupSchedules":{"id","eventId","gameId","serverRegion","serverLabel","officialUrl","verificationStatus","lastCheckedAt","firstCheckedAt","firstConfirmedAt","lastChangedAt","pickupKind","characters","weapons","outfits","startsAt","endsAt","lastVerifiedAt"},
 }
-TIME_FIELDS={"termsCheckedAt","noticeHostsVerifiedAt","lastCheckedAt","lastSuccessAt","lastErrorAt","lastReverifiedAt","nextRunAt","publishedAt","sourceUpdatedAt","firstCheckedAt","lastChangedAt","lastVerifiedAt","startsAt","endsAt","reservationStartsAt","reservationEndsAt","ticketSalesAt","firstConfirmedAt","createdAt","updatedAt"}
+TIME_FIELDS={"termsCheckedAt","noticeHostsVerifiedAt","publisherIdentityCheckedAt","lastCheckedAt","lastSuccessAt","lastErrorAt","lastReverifiedAt","nextRunAt","publishedAt","sourceUpdatedAt","firstCheckedAt","lastChangedAt","lastVerifiedAt","startsAt","endsAt","reservationStartsAt","reservationEndsAt","ticketSalesAt","firstConfirmedAt","createdAt","updatedAt"}
 
 
 def https(value):
@@ -61,10 +61,18 @@ def validate_change(collection,document_id,data,old=None):
   row['verifiedResetRuleIds']=ids
   row['resetRuleById']=by_id # Derived from reviewed rules; callers cannot substitute a different index.
  if collection=='gameSources':
-  if row.get('parser')!='steam_news' or not isinstance(row.get('steamAppid'),int) or not https(row.get('url')):raise SafetyError('reviewed_source_adapter_required')
+  if not https(row.get('url')):raise SafetyError('reviewed_source_adapter_required')
+  if row.get('parser')=='youtube_atom':
+   from collector import youtube_request,operating_source
+   try:youtube_request(operating_source({**row,'gameId':row.get('gameId','pending')}))
+   except Exception as error:raise SafetyError('reviewed_youtube_channel_feed_required') from error
+  elif row.get('parser')!='steam_news' or not isinstance(row.get('steamAppid'),int):raise SafetyError('reviewed_source_adapter_required')
   if row.get('intervalMinutes',0)<15:raise SafetyError('minimum_source_interval_15_minutes')
   if row.get('enabled') is True:
-   if row.get('accessStatus')!='approved' or not row.get('termsCheckedAt') or not row.get('noticeHostsVerifiedAt') or not https(row.get('termsUrl')) or row.get('feedAllowlist')!=['steam_community_announcements'] or not row.get('allowedNoticeHosts'):raise SafetyError('source_permission_evidence_required')
+   if row.get('parser')=='youtube_atom':
+    from collector import reviewed,operating_source
+    if not reviewed(operating_source({**row,'gameId':row.get('gameId','pending')})):raise SafetyError('source_permission_evidence_required')
+   elif row.get('accessStatus')!='approved' or not row.get('termsCheckedAt') or not row.get('noticeHostsVerifiedAt') or not https(row.get('termsUrl')) or row.get('feedAllowlist')!=['steam_community_announcements'] or not row.get('allowedNoticeHosts'):raise SafetyError('source_permission_evidence_required')
   if row.get('scheduleExtractionApproved') is True:
    if not https(row.get('scheduleExtractionEvidenceUrl')) or not row.get('scheduleExtractionReviewedAt') or row.get('serverRegion') not in ['KR','JP','GLOBAL','UNSPECIFIED']:raise SafetyError('schedule_extraction_review_and_region_required')
    row['scheduleExtractionReviewedAt']=timestamp(row['scheduleExtractionReviewedAt'])
