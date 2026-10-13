@@ -26,7 +26,7 @@ from backfill import retry_after_seconds
 from store import MemoryStore, FirestoreStore, SafetyError, timestamp
 
 UTC = timezone.utc
-EXTRACTION_VERSION = 4
+EXTRACTION_VERSION = 5
 YOUTUBE_CHANNEL_ID = re.compile(r"UC[A-Za-z0-9_-]{22}")
 YOUTUBE_VIDEO_ID = re.compile(r"[A-Za-z0-9_-]{11}")
 YOUTUBE_FEED_PATHS = ("/feeds/videos.xml", "/xml/feeds/videos.xml")
@@ -289,31 +289,188 @@ def section_documents(document,source):
         result.append({**document,"original_description":content,"_raw_original_description":document["original_description"],
             "_section_key":key,"_section_title":title,"_section_category":category,"_parent_event_id":event_identity(document,source),
             "event_type_candidates":["pickup"] if category=="recruitment" else [category],"pickups":pickups,
-            "_raw_character_names":chars})
+            "_raw_character_names":chars,"source_image_urls":[]})
     return result
 
 
-def image_candidates(document, source):
-    """Keep original URLs as evidence; never download, proxy or approve by origin.
+IMAGE_TAG = re.compile(r"\[img\](https://[^\[\s]+)\[/img\]|<img\b[^>]*>",re.I)
+PICKUP_IMAGE_WORDS = re.compile(r"\b(?:pickup|banner|recruitment|procurement|gacha)\b|픽업|모집|ピックアップ|募集",re.I)
+GENERIC_GAME_IMAGE = re.compile(r"(?:^|[ /_.-])(?:logo|icon|key[-_ ]?visual|app[-_ ]?icon|game[-_ ]?cover)(?:$|[ /_.-])",re.I)
 
-    Rendering approval requires a separately reviewed exact-host reuse policy.
-    Community images can be supported through that same explicit policy, never
-    through membership in a community or a search-engine result alone.
+
+def image_name(value):
+    return re.sub(r"\s+"," ",plain_notice(value)).strip().casefold()
+
+
+def image_mentions(text, name):
+    needle=image_name(name)
+    return bool(needle and re.search(r"(?<!\w)"+re.escape(needle)+r"(?!\w)",image_name(text)))
+
+
+def image_subject_evidence(document, source, label, nearby, image_count):
+    """Only local publisher labels establish what an image depicts.
+
+    Feed thumbnails and article-level image ordering cannot establish a pickup
+    banner. A reviewed isolated heading may supply its own single poster, but
+    parent images are never inherited by an unrelated section/character.
+    """
+    if not reviewed(source):return None
+    title=document.get("_section_title") or document["original_title"]
+    names=document.get("_raw_character_names",[])
+    hints=document.get("event_type_candidates",[])
+    pickup="pickup" in hints or document.get("_section_category")=="recruitment"
+    category=document.get("_section_category")
+    kind="pickup" if pickup else "event" if category in ("limited-event","login-reward","goods","offline","merchandise") else "notice"
+    # An explicit alt/title is stronger than proximity. A mismatched caption
+    # cannot be overridden by a nearby paragraph naming another character.
+    local=(label or nearby).strip()
+    method=None;proof=None
+    if label and image_mentions(label,title):
+        method="source_alt";proof=label
+    elif not label and document.get("_section_key") and source.get("section_schedule_format")=="heading_period_v1" and image_count==1:
+        method="source_section";proof=title+"\n"+nearby
+    elif names and all(image_mentions(local,name) for name in names) and PICKUP_IMAGE_WORDS.search(local):
+        method="source_alt" if label else "source_section";proof=local
+    elif pickup and PICKUP_IMAGE_WORDS.search(local):
+        targets=highest_rarity_targets(plain_notice(document["original_description"]),source)
+        labelled=[target for target in targets if image_mentions(local,target["name"])]
+        if len(labelled)==1:
+            names=[labelled[0]["name"]];method="source_alt" if label else "source_section";proof=local
+    if not method:return None
+    if names and not all(image_mentions(proof,name) for name in names):return None
+    return {"status":"MATCHED","eventId":event_identity(document,source),"officialUrl":document["official_url"],
+        "kind":kind,"method":method,"evidenceText":proof[:1000],"characterNames":names}
+
+
+def image_candidates(document, source):
+    """Retain rights and subject evidence independently; never pick the first art.
+
+    Exact-host reuse review grants only permission. Alt text or an isolated
+    reviewed publisher section must additionally match this event. Public image
+    URLs without semantic evidence remain candidates, never rendering fallback.
     """
     raw = document["original_description"]
-    found = re.findall(r"\[img\](https://[^\[\s]+)\[/img\]|<img\b[^>]*\bsrc=[\"'](https://[^\"']+)[\"']", raw, re.I)
-    found += [(url, "") for url in document.get("source_image_urls", [])[:5] if isinstance(url, str)]
+    found=[]
+    tags=list(IMAGE_TAG.finditer(raw))[:20]
+    for match in tags:
+        tag=match.group(0)
+        url=match.group(1)
+        if not url:
+            src=re.search(r"\bsrc\s*=\s*[\"'](https://[^\"']+)[\"']",tag,re.I)
+            if not src:continue
+            url=src.group(1)
+        labels=re.findall(r"\b(?:alt|title)\s*=\s*[\"']([^\"']*)[\"']",tag,re.I)
+        before=re.split(r"\n|\[/p\]|</p>|<br\s*/?>",raw[:match.start()],flags=re.I)
+        after=re.split(r"\n|\[p(?:\s[^\]]*)?\]|<p(?:\s[^>]*)?>|<br\s*/?>",raw[match.end():],flags=re.I)
+        # An adjacent different image terminates local context. Never borrow a
+        # character name from an earlier image in the same multi-banner post.
+        preceding=before[-1] if before else ""
+        following=after[0] if after else ""
+        nearby=plain_notice(preceding[-400:]+"\n"+following[:400])
+        nearby=re.sub(r"\[img\].*?\[/img\]","",nearby,flags=re.I)
+        found.append((url,html.unescape(" ".join(labels)),nearby))
+    if not document.get("_section_key"):
+        found += [(url, "", "") for url in document.get("source_image_urls", [])[:5] if isinstance(url, str)]
     policy = source.get("image_reuse") or {}
     approved = policy.get("rightsStatus") == "APPROVED" and safe_public_url(policy.get("evidenceUrl")) and policy.get("checkedAt")
     candidates = []
-    for pair in found[:20]:
-        url = safe_public_url(html.unescape(next(value for value in pair if value)))
+    for value,label,nearby in found[:20]:
+        url = safe_public_url(html.unescape(value))
         if not url or any(row["url"] == url for row in candidates):
             continue
         allowed = approved and urlsplit(url).hostname in policy.get("allowedHosts", [])
-        candidates.append({"url": url, "sourceUrl": document["official_url"], "kind": "PICKUP_ART" if "pickup" in document.get("event_type_candidates", []) else "NOTICE_ART",
-            "rightsStatus": "APPROVED" if allowed else "UNCONFIRMED", "rightsEvidenceUrl": policy.get("evidenceUrl") if allowed else None})
+        evidence=None if GENERIC_GAME_IMAGE.search(url+" "+label) else image_subject_evidence(document,source,label,nearby,len(tags))
+        image_kind="PICKUP_ART" if "pickup" in document.get("event_type_candidates", []) else "EVENT_ART" if evidence and evidence["kind"]=="event" else "NOTICE_ART"
+        candidates.append({"url": url, "sourceUrl": document["official_url"], "kind": image_kind,
+            "rightsStatus": "APPROVED" if allowed else "UNCONFIRMED", "rightsEvidenceUrl": policy.get("evidenceUrl") if allowed else None,
+            "subjectStatus":"MATCHED" if evidence else "UNCONFIRMED","subjectEvidence":evidence})
     return candidates
+
+
+def approved_subject_image(images):
+    matched=[image for image in images if image.get("rightsStatus")=="APPROVED" and image.get("subjectStatus")=="MATCHED"]
+    # Different posters all matching a broad heading still require review.
+    return matched[0] if len(matched)==1 else None
+
+
+def character_image(images, target, child_id):
+    """A split new/rerun character must have its own explicitly labelled banner."""
+    matches=[]
+    for image in images:
+        evidence=image.get("subjectEvidence") or {}
+        text=evidence.get("evidenceText","")
+        if evidence.get("kind")!="pickup" or not image_mentions(text,target["name"]) or not PICKUP_IMAGE_WORDS.search(text):continue
+        role_new=bool(re.search(r"\bnew\b|\bdebut\b|신규|新登場|新規",text,re.I))
+        role_rerun=bool(re.search(r"\bre[- ]?run\b|\breturn(?:ing|s)?\b|복각|復刻|再登場",text,re.I))
+        if role_new==role_rerun or ("new" if role_new else "rerun")!=target["announcementKind"]:continue
+        # The source label must not explicitly feature a different quoted target.
+        quoted=re.findall(r'[“"「『\[]([^”"」』\]\n]{1,100})[”"」』\]]',text)
+        if quoted and any(image_name(name)!=image_name(target["name"]) for name in quoted):continue
+        matches.append({**image,"subjectEvidence":{**evidence,"eventId":child_id,"characterNames":[target["name"]],"announcementKind":target["announcementKind"]}})
+    return matches,approved_subject_image(matches)
+
+
+def retained_source_reference(old, document, event_id, *, title=None, characters=None, announcement_kind=None):
+    """Keep a manually inspected exact publisher image until its notice changes.
+
+    This retains an UNCONFIRMED original URL reference, never licensing/reuse
+    approval. A source/policy reverify may not erase the inspected reference, but
+    a raw content/section/character/role change invalidates it immediately.
+    """
+    if not old:return None
+    image=old.get("image") or {}
+    if not isinstance(image,dict):return None
+    reference=image.get("sourceReference") or {}
+    evidence=image.get("subjectEvidence") or {};override=old.get("sourceImageOverride") or {}
+    if any(not isinstance(value,dict) for value in (image,reference,evidence,override)):return None
+    exact_title=title if title is not None else document.get("_section_title") or document["original_title"]
+    names=characters if characters is not None else document.get("_raw_character_names",[])
+    official=document["official_url"]
+    if (image.get("rightsStatus")!="UNCONFIRMED" or reference.get("mode")!="OFFICIAL_NOTICE_IMAGE"
+        or old.get("rawSha256")!=document["raw_sha256"] or override.get("rawSha256")!=document["raw_sha256"]
+        or override.get("exactTitle")!=exact_title or override.get("officialUrl")!=official
+        or image.get("sourceUrl")!=official or evidence.get("officialUrl")!=official
+        or evidence.get("status")!="MATCHED" or evidence.get("eventId")!=event_id
+        or evidence.get("method")!="reviewed_image" or not evidence.get("evidenceText")
+        or reference.get("allowedImageUrl")!=image.get("url") or override.get("allowedImageUrl")!=image.get("url")
+        or reference.get("sourceUrl")!=override.get("sourceUrl") or not safe_public_url(reference.get("sourceUrl"))
+        or not safe_public_url(image.get("url")) or not image["url"].startswith("https://")
+        or not reference["sourceUrl"].startswith("https://")):
+        return None
+    try:
+        if aware_timestamp(reference.get("checkedAt"))!=aware_timestamp(override.get("checkedAt")):return None
+    except (ValidationError,TypeError):return None
+    depicted=evidence.get("characterNames",[])
+    if not isinstance(depicted,list) or any(not isinstance(name,str) for name in depicted):return None
+    if {image_name(name) for name in names}!={image_name(name) for name in depicted}:return None
+    if announcement_kind and evidence.get("announcementKind")!=announcement_kind:return None
+    pickup="pickup" in document.get("event_type_candidates",[]) or bool(announcement_kind)
+    if pickup and (image.get("kind")!="PICKUP_ART" or evidence.get("kind")!="pickup"):return None
+    if not pickup and (image.get("kind") not in ("EVENT_ART","NOTICE_ART") or evidence.get("kind") not in ("event","notice")):return None
+    return image
+
+
+def notice_language(old, document, source):
+    """An editorial language review is bound to this exact official raw notice.
+
+    A feed-level language default is not a translation, and an arbitrary legacy
+    originalLanguage value supplies no verification. Changed notice bytes revoke
+    the per-article review rather than carrying it into a different source text.
+    """
+    fallback=source.get("content_language") or document.get("original_language") or "unknown"
+    if fallback not in ("ko","en","ja"):fallback="unknown"
+    if not old:return fallback,None
+    proof=old.get("languageEvidence")
+    if not isinstance(proof,dict):return fallback,None
+    language=proof.get("language")
+    if (proof.get("status")!="verified" or proof.get("method")!="editorial" or language not in ("ko","en","ja")
+        or old.get("originalLanguage")!=language or old.get("rawSha256")!=document["raw_sha256"]
+        or proof.get("sourceSha256")!=document["raw_sha256"] or proof.get("evidenceUrl")!=document["official_url"]
+        or not safe_public_url(proof.get("evidenceUrl")) or not proof["evidenceUrl"].startswith("https://")):
+        return fallback,None
+    try:aware_timestamp(proof.get("checkedAt"))
+    except (ValidationError,TypeError):return fallback,None
+    return language,proof
 
 
 def highest_rarity_targets(text, source):
@@ -383,7 +540,7 @@ def enrich_document(document, source):
     return {**document, "schedule": schedule, "schedule_verified": bool(verified), "category_candidate": category,
         "extraction_version": EXTRACTION_VERSION, "extraction_policy_sha256": digest(source_policy(source)),
         "schedule_reason_codes": list(dict.fromkeys(reasons)), "image_candidates": images,
-        "approved_image": next((image for image in images if image["rightsStatus"] == "APPROVED"), None),
+        "approved_image": approved_subject_image(images),
         "highest_rarity_targets": targets, "cancelled": cancelled,"section_documents":section_documents(document,source)}
 
 
@@ -536,6 +693,8 @@ def upsert_notice(store, source, document, observed):
                 if state!=old.get("status"):
                     return {**old,"status":state,"lastCheckedAt":observed,"lastChangedAt":observed,"revision":old.get("revision",0)+1},"updated"
             return None,"unchanged"
+        retained_image=retained_source_reference(old,document,event_id)
+        original_language,language_evidence=notice_language(old,document,source)
         row={**(old or {}),"id":event_id,"sourceId":source["id"],"externalKey":document["external_key"],
              "gameIds":[source["game_id"]],"serverRegion":document["server_region"],"serverLabel":document["server_label"],
              "title":document.get("_section_title") or document["original_title"],"description":document["original_description"],
@@ -543,7 +702,7 @@ def upsert_notice(store, source, document, observed):
              "sourceSectionKey":document.get("_section_key"),"parentEventId":document.get("_parent_event_id"),
              "characterNames":document.get("_raw_character_names",[]),
              "originalTitle":document["original_title"],"originalDescription":document.get("_raw_original_description") or document["original_description"],
-             "originalLanguage":source.get("content_language") or document["original_language"],"officialUrl":document["official_url"],
+             "originalLanguage":original_language,"languageEvidence":language_evidence,"officialUrl":document["official_url"],
              "publishedAt":timestamp(document["published_at"]) if document["published_at"] else None,
              "sourceUpdatedAt":timestamp(document["source_updated_at"]) if document["source_updated_at"] else None,
              "rawSha256":document["raw_sha256"],"eventTypeCandidates":document["event_type_candidates"],
@@ -556,7 +715,8 @@ def upsert_notice(store, source, document, observed):
              "candidateStartsAt":document["schedule"]["startsAt"] if region_pending_period(document) else None,
              "candidateEndsAt":document["schedule"]["endsAt"] if region_pending_period(document) else None,
              "candidateTimezone":document["schedule"]["originalTimezone"] if region_pending_period(document) else None,
-             "imageCandidates":document["image_candidates"],"image":document["approved_image"],
+             "imageCandidates":document["image_candidates"],"image":document["approved_image"] or retained_image,
+             "sourceImageOverride":old.get("sourceImageOverride") if retained_image and not document["approved_image"] else None,
              "announcementKind":"aggregate" if document["highest_rarity_targets"] else None,
              "derivedCharacterAnnouncements":len(document["highest_rarity_targets"]),
              "derivedSectionCount":len(document["section_documents"]),
@@ -590,10 +750,11 @@ def upsert_notice(store, source, document, observed):
         def update_pickup(old):
             if outcome == "unchanged" and old:
                 return None,False
+            current_event=store.get("gameEvents/"+event_id)
             row={**(old or {}),"id":pickup_id,"eventId":event_id,"gameId":source["game_id"],"sourceId":source["id"],
                  "serverRegion":pickup["server_region"],"serverLabel":pickup["server_label"],
                  "officialUrl":pickup["official_url"],"verificationStatus":"pending","lastCheckedAt":observed,
-                 "imageCandidates":document["image_candidates"],"image":document["approved_image"],
+                 "imageCandidates":document["image_candidates"],"image":current_event.get("image"),
                  "status":"cancelled" if document["cancelled"] else "unconfirmed",
                  "candidateStartsAt":document["schedule"]["startsAt"] if region_pending_period(document) else None,
                  "candidateEndsAt":document["schedule"]["endsAt"] if region_pending_period(document) else None,
@@ -618,26 +779,31 @@ def upsert_notice(store, source, document, observed):
             upsert_notice(store,source,section,observed)
         for target in document["highest_rarity_targets"]:
             child_id=digest({"parent":event_id,"announcementKind":target["announcementKind"],"character":target["name"]})
+            child_images,child_artwork=character_image(document["image_candidates"],target,child_id)
             active_children.add(child_id)
             def child_update(old):
                 title=target["name"]
+                retained_image=retained_source_reference(old,document,child_id,title=target["name"],characters=[target["name"]],announcement_kind=target["announcementKind"])
                 row={**parent,"id":child_id,"parentEventId":event_id,"announcementKind":target["announcementKind"],
                     "rarityLabel":target["rarityLabel"],"characters":[target["name"]],"characterEvidenceText":target["evidenceText"],
                     "title":title,"displayTitle":title,"characterNames":[target["name"]],"originalTitle":document["original_title"],"derivedCharacterAnnouncements":0,
+                    "imageCandidates":child_images,"image":child_artwork or retained_image,
+                    "sourceImageOverride":old.get("sourceImageOverride") if retained_image else None,
                     "firstCheckedAt":old.get("firstCheckedAt",observed) if old else observed,
                     "revision":old.get("revision",0)+1 if old else 1}
                 return row,True
             store.mutate("gameEvents/"+child_id,child_update)
             pickup_id=digest({"event":child_id,"kind":"character"})
             def child_pickup(old):
+                current_child=store.get("gameEvents/"+child_id)
                 row={"id":pickup_id,"eventId":child_id,"parentEventId":event_id,"gameId":source["game_id"],
                     "sourceId":source["id"],"serverRegion":parent["serverRegion"],"serverLabel":parent["serverLabel"],
                     "officialUrl":parent["officialUrl"],"pickupKind":"character","characters":[target["name"]],"weapons":[],
                     "announcementKind":target["announcementKind"],"rarityLabel":target["rarityLabel"],
                     "startsAt":parent.get("startsAt"),"endsAt":parent.get("endsAt"),"originalTimezone":parent.get("originalTimezone"),
                     "candidateStartsAt":parent.get("candidateStartsAt"),"candidateEndsAt":parent.get("candidateEndsAt"),"candidateTimezone":parent.get("candidateTimezone"),
-                    "verificationStatus":parent["verificationStatus"],"status":parent["status"],"image":document["approved_image"],
-                    "imageCandidates":document["image_candidates"],"lastCheckedAt":observed,"lastChangedAt":observed,
+                    "verificationStatus":parent["verificationStatus"],"status":parent["status"],"image":current_child.get("image"),
+                    "imageCandidates":child_images,"lastCheckedAt":observed,"lastChangedAt":observed,
                     "firstCheckedAt":old.get("firstCheckedAt",observed) if old else observed,
                     "lastVerifiedAt":parent.get("lastVerifiedAt"),"scheduleOrigin":"automatic"}
                 return row,True
