@@ -7,7 +7,8 @@ import unittest
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from store import MemoryStore,FirestoreStore,SafetyError,timestamp
-from collector import reviewed,seed_catalogue,event_identity,upsert_notice,claim_source,collect_one,run,enrich_document,extract_schedule,highest_rarity_targets,source_row,operating_source,section_documents,confirmed_window_overlap
+from collector import reviewed,seed_catalogue,event_identity,upsert_notice,claim_source,collect_one,run,enrich_document,extract_schedule,highest_rarity_targets,source_row,operating_source,section_documents,confirmed_window_overlap,youtube_request,parse_youtube_documents,YOUTUBE_FEED_DOCUMENTATION,source_policy
+from engine import ValidationError
 from notifications import quiet,eligible,plan_user,dispatch,fixed_payload,fcm_message,run as notification_run,reset_cycle,completed_cycle,attendance_context,plan_attendance_user
 from admin import validate_change,apply_requests,cleanup_accounts,cleanup_execution_retention
 from import_pending_pickups import validate_bundle,apply_bundle
@@ -66,6 +67,72 @@ class FirebaseCollectorTests(unittest.TestCase):
   s=MemoryStore();r=collect_one(s,SOURCE,NOW-timedelta(hours=72),NOW,fetch=lambda _: (200,response(feed='unofficial'),{}),sleep=lambda _:None,now=NOW);self.assertEqual(r['metrics']['created'],0)
  def test_no_credentials_live_staging_has_zero_remote_writes(self):
   r=run({'games':[{'gameId':'blue-archive','sources':[SOURCE]}]},MemoryStore(),NOW-timedelta(hours=72),NOW,fetch=lambda _:(200,response(),{}),sleep=lambda _:None);self.assertEqual(r['remoteFirestoreWrites'],0);self.assertEqual(r['fcmSends'],0)
+
+class FirebaseOfficialSocialFeedTests(unittest.TestCase):
+ CHANNEL='UC'+'a'*22
+ VIDEO='aBcD123_-xy'
+ def source(self,**changes):
+  return {**SOURCE,'parser':'youtube_atom','steam_appid':None,'youtube_channel_id':self.CHANNEL,
+   'url':'https://www.youtube.com/feeds/videos.xml?channel_id='+self.CHANNEL,'official_host':'www.youtube.com',
+   'terms_url':YOUTUBE_FEED_DOCUMENTATION,'allowed_notice_hosts':['www.youtube.com'],'feed_allowlist':['youtube_channel_videos'],
+   'publisher_identity_evidence_url':'https://official.example/social','publisher_identity_checked_at':NOW.isoformat(),**changes}
+ def feed(self,title='Official livestream',body='Announcement',published=None,updated=None,channel=None,link=None):
+  return (f'<feed xmlns="http://www.w3.org/2005/Atom" xmlns:yt="http://www.youtube.com/xml/schemas/2015" xmlns:media="http://search.yahoo.com/mrss/"><id>yt:channel:{self.CHANNEL}</id><entry><id>yt:video:{self.VIDEO}</id><yt:videoId>{self.VIDEO}</yt:videoId><yt:channelId>{channel or self.CHANNEL}</yt:channelId><title>{title}</title><published>{(published or NOW-timedelta(hours=1)).isoformat()}</published><updated>{(updated or NOW-timedelta(minutes=30)).isoformat()}</updated><link rel="alternate" href="{link or "https://www.youtube.com/watch?v="+self.VIDEO}"/><media:group><media:description>{body}</media:description><media:thumbnail url="https://i.ytimg.com/vi/{self.VIDEO}/hqdefault.jpg"/></media:group></entry></feed>').encode()
+ def test_review_requires_official_publisher_channel_evidence(self):
+  self.assertTrue(reviewed(self.source()));self.assertFalse(reviewed(self.source(publisher_identity_evidence_url=None)));self.assertFalse(reviewed(self.source(publisher_identity_checked_at=None)))
+ def test_unsupported_x_source_never_becomes_reviewed(self):
+  self.assertFalse(reviewed({**self.source(),'parser':'x_api','url':'https://api.x.com/2/users/example/tweets'}))
+ def test_review_requires_exact_feed_documentation_and_allowlist(self):
+  self.assertFalse(reviewed(self.source(terms_url='https://www.youtube.com/t/terms')));self.assertFalse(reviewed(self.source(feed_allowlist=['any'])));self.assertFalse(reviewed(self.source(allowed_notice_hosts=['youtube.com','www.youtube.com'])))
+ def test_channel_feed_request_never_calls_metered_api(self):
+  row=youtube_request(self.source());self.assertEqual(row['official_host'],'www.youtube.com');self.assertEqual(row['method'],'official_feed');self.assertNotIn('googleapis.com',row['url'])
+ def test_documented_xml_feed_path_is_supported(self):
+  self.assertTrue(youtube_request(self.source(url='https://www.youtube.com/xml/feeds/videos.xml?channel_id='+self.CHANNEL)))
+ def test_feed_request_rejects_other_paths_parameters_or_channels(self):
+  for url in ['https://www.youtube.com/@example','https://www.youtube.com/feeds/videos.xml?channel_id='+self.CHANNEL+'&key=secret','https://www.youtube.com/feeds/videos.xml?channel_id='+self.CHANNEL+'&other=','https://www.youtube.com/feeds/videos.xml?channel_id='+self.CHANNEL+'#fragment','https://www.youtube.com/feeds/videos.xml?channel_id=UC'+('b'*22),'https://evil.example/feeds/videos.xml?channel_id='+self.CHANNEL]:
+   with self.assertRaises(ValidationError):youtube_request(self.source(url=url))
+ def test_non_channel_handle_is_not_a_verified_channel_id(self):
+  with self.assertRaises(ValidationError):youtube_request(self.source(youtube_channel_id='@OfficialGame'))
+ def test_feed_parser_keeps_raw_publication_update_and_video_url(self):
+  docs,metrics=parse_youtube_documents(self.feed(),self.source(),NOW.isoformat());self.assertEqual(len(docs),1);self.assertEqual(docs[0]['official_url'],'https://www.youtube.com/watch?v='+self.VIDEO);self.assertTrue(docs[0]['source_updated_at']);self.assertEqual(docs[0]['original_description'],'Announcement');self.assertFalse(metrics['window_coverage_verified'])
+ def test_video_publication_is_never_an_event_schedule(self):
+  docs,_=parse_youtube_documents(self.feed(),self.source(),NOW.isoformat());row=enrich_document(docs[0],self.source());self.assertIsNone(row['schedule']['startsAt']);self.assertFalse(row['schedule_verified']);self.assertEqual(row['category_candidate'],'official_broadcast')
+ def test_thumbnails_remain_unapproved_source_evidence(self):
+  docs,_=parse_youtube_documents(self.feed(),self.source(),NOW.isoformat());row=enrich_document(docs[0],self.source());self.assertEqual(row['image_candidates'][0]['rightsStatus'],'UNCONFIRMED');self.assertIsNone(row['approved_image'])
+ def test_entry_from_another_channel_rejected(self):
+  with self.assertRaisesRegex(ValidationError,'entry_identity'):parse_youtube_documents(self.feed(channel='UC'+'b'*22),self.source(),NOW.isoformat())
+ def test_root_from_another_channel_rejected(self):
+  raw=self.feed().replace(('yt:channel:'+self.CHANNEL).encode(),('yt:channel:UC'+'b'*22).encode())
+  with self.assertRaisesRegex(ValidationError,'response_channel'):parse_youtube_documents(raw,self.source(),NOW.isoformat())
+ def test_video_link_from_external_site_or_wrong_video_rejected(self):
+  for url in ['https://evil.example/watch?v='+self.VIDEO,'https://www.youtube.com/watch?v=wrongvideo1','https://www.youtube.com/watch?v='+self.VIDEO+'#oops']:
+   with self.assertRaises(ValidationError):parse_youtube_documents(self.feed(link=url),self.source(),NOW.isoformat())
+ def test_documented_http_video_link_is_canonical_https(self):
+  docs,_=parse_youtube_documents(self.feed(link='http://www.youtube.com/watch?v='+self.VIDEO),self.source(),NOW.isoformat());self.assertTrue(docs[0]['official_url'].startswith('https://'))
+ def test_xml_dtd_and_entities_rejected(self):
+  with self.assertRaisesRegex(ValidationError,'xml_unsafe'):parse_youtube_documents(b'<!DOCTYPE feed [<!ENTITY x "test">]>'+self.feed(),self.source(),NOW.isoformat())
+  with self.assertRaisesRegex(ValidationError,'xml_unsafe'):parse_youtube_documents(self.feed().decode().encode('utf-16'),self.source(),NOW.isoformat())
+ def test_naive_or_reversed_timestamps_rejected(self):
+  with self.assertRaises(ValidationError):parse_youtube_documents(self.feed().replace(b'+00:00',b''),self.source(),NOW.isoformat())
+  with self.assertRaises(ValidationError):parse_youtube_documents(self.feed(updated=NOW-timedelta(days=1)),self.source(),NOW.isoformat())
+ def test_seed_and_operating_source_preserve_disabled_reviewed_youtube(self):
+  store=MemoryStore();source=self.source();seed_catalogue(store,[],{'games':[{'gameId':'blue-archive','sources':[source]}]});row=store.get('gameSources/source');self.assertFalse(row['enabled']);self.assertEqual(row['youtubeChannelId'],self.CHANNEL);self.assertTrue(reviewed(operating_source(row)))
+ def test_admin_can_enable_only_reviewed_channel_feed(self):
+  row=source_row(self.source(),'blue-archive');row.update(enabled=True);self.assertTrue(validate_change('gameSources','source',row)['enabled']);row['publisherIdentityEvidenceUrl']=None
+  with self.assertRaisesRegex(SafetyError,'permission_evidence'):validate_change('gameSources','source',row)
+ def test_collector_uses_one_bounded_feed_and_idempotent_storage(self):
+  store=MemoryStore();requests=[]
+  def fetch(source):requests.append(source['url']);return 200,self.feed(),{}
+  result=collect_one(store,self.source(),NOW-timedelta(hours=72),NOW,fetch=fetch,sleep=lambda _:None,now=NOW);self.assertEqual(result['status'],'success');self.assertEqual(result['metrics']['pagesFetched'],1);self.assertFalse(result['metrics']['windowCoverageVerified']);self.assertEqual(len(store.list('gameEvents')),1);self.assertEqual(len(requests),1)
+  writes=store.writes;doc,_=parse_youtube_documents(self.feed(),self.source(),NOW.isoformat());self.assertEqual(upsert_notice(store,self.source(),doc[0],NOW),'unchanged');self.assertEqual(store.writes,writes)
+ def test_recent_update_of_older_video_is_included_as_source_update(self):
+  raw=self.feed(published=NOW-timedelta(days=30),updated=NOW-timedelta(minutes=30));store=MemoryStore();result=collect_one(store,self.source(),NOW-timedelta(hours=72),NOW,fetch=lambda _:(200,raw,{}),sleep=lambda _:None,now=NOW);self.assertEqual(result['metrics']['created'],1);self.assertEqual(timestamp(store.list('gameEvents')[0][1]['publishedAt']),NOW-timedelta(days=30))
+ def test_unchanged_old_video_outside_window_is_not_inserted(self):
+  raw=self.feed(published=NOW-timedelta(days=30),updated=NOW-timedelta(days=29));store=MemoryStore();result=collect_one(store,self.source(),NOW-timedelta(hours=72),NOW,fetch=lambda _:(200,raw,{}),sleep=lambda _:None,now=NOW);self.assertEqual(result['metrics']['created'],0)
+ def test_steam_policy_hash_does_not_change_for_empty_youtube_fields(self):
+  self.assertEqual(source_policy(SOURCE),source_policy({**SOURCE,'youtube_channel_id':None,'publisher_identity_evidence_url':None,'publisher_identity_checked_at':None}))
+ def test_failed_youtube_feed_preserves_existing_events(self):
+  store=MemoryStore({'gameEvents/existing':{'title':'Keep'}});result=collect_one(store,self.source(),NOW-timedelta(hours=72),NOW,fetch=lambda _:(403,b'',{}),sleep=lambda _:None,now=NOW);self.assertEqual(result['status'],'FETCH_FAILED');self.assertEqual(store.get('gameEvents/existing')['title'],'Keep')
 
 class FirebaseNoticeEnrichmentTests(unittest.TestCase):
  def source(self,**changes):
