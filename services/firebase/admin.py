@@ -14,7 +14,7 @@ from store import FirestoreStore,MemoryStore,SafetyError,timestamp
 
 FIELDS={
  "games":{"id","slug","names","aliases","developer","publisher","platforms","regions","officialWebsite","officialNoticeUrl","officialSocialUrls","serviceStatus","collectionSupport","dailyReset","weeklyReset","resetTimezone","officialIntegration","metadataStatus","nameProvenance","sourceEvidence","image","resetRules","verifiedResetRuleIds","resetRuleById","enabled","createdAt","updatedAt"},
- "gameSources":{"id","gameId","url","parser","steamAppid","enabled","accessStatus","approvedForStaging","termsUrl","termsCheckedAt","noticeHostsVerifiedAt","allowedNoticeHosts","feedAllowlist","intervalMinutes","serverRegion","serverLabel","health","lastCheckedAt","lastSuccessAt","lastErrorAt","lastReverifiedAt","nextRunAt"},
+ "gameSources":{"id","gameId","url","parser","steamAppid","enabled","accessStatus","approvedForStaging","termsUrl","termsCheckedAt","noticeHostsVerifiedAt","allowedNoticeHosts","feedAllowlist","intervalMinutes","serverRegion","serverLabel","health","lastCheckedAt","lastSuccessAt","lastErrorAt","lastReverifiedAt","nextRunAt","scheduleExtractionApproved","scheduleExtractionReviewedAt","scheduleExtractionEvidenceUrl","contentLanguage","highestCharacterRarity","imageReuse","sectionScheduleFormat","pairedRecruitmentPeriodApproved"},
  "gameEvents":{"id","sourceId","externalKey","gameIds","serverRegion","serverLabel","title","description","originalTitle","originalDescription","originalLanguage","officialUrl","publishedAt","sourceUpdatedAt","rawSha256","eventTypeCandidates","firstCheckedAt","lastCheckedAt","lastChangedAt","lastVerifiedAt","verificationStatus","revision","startsAt","endsAt","reservationStartsAt","reservationEndsAt","ticketSalesAt","originalTimezone","category","scheduleStatus","status","venue","imageRightsStatus","translations"},
  "pickupSchedules":{"id","eventId","gameId","serverRegion","serverLabel","officialUrl","verificationStatus","lastCheckedAt","firstCheckedAt","firstConfirmedAt","lastChangedAt","pickupKind","characters","weapons","outfits","startsAt","endsAt","lastVerifiedAt"},
 }
@@ -65,6 +65,27 @@ def validate_change(collection,document_id,data,old=None):
   if row.get('intervalMinutes',0)<15:raise SafetyError('minimum_source_interval_15_minutes')
   if row.get('enabled') is True:
    if row.get('accessStatus')!='approved' or not row.get('termsCheckedAt') or not row.get('noticeHostsVerifiedAt') or not https(row.get('termsUrl')) or row.get('feedAllowlist')!=['steam_community_announcements'] or not row.get('allowedNoticeHosts'):raise SafetyError('source_permission_evidence_required')
+  if row.get('scheduleExtractionApproved') is True:
+   if not https(row.get('scheduleExtractionEvidenceUrl')) or not row.get('scheduleExtractionReviewedAt') or row.get('serverRegion') not in ['KR','JP','GLOBAL','UNSPECIFIED']:raise SafetyError('schedule_extraction_review_and_region_required')
+   row['scheduleExtractionReviewedAt']=timestamp(row['scheduleExtractionReviewedAt'])
+  if row.get('contentLanguage') not in [None,'ko','en','ja']:raise SafetyError('supported_source_language_required')
+  if row.get('sectionScheduleFormat') not in [None,'heading_period_v1']:raise SafetyError('reviewed_section_format_required')
+  if row.get('pairedRecruitmentPeriodApproved') is True and (row.get('sectionScheduleFormat')!='heading_period_v1' or row.get('scheduleExtractionApproved') is not True):raise SafetyError('paired_recruitment_format_review_required')
+  rarity=row.get('highestCharacterRarity')
+  if rarity is not None:
+   if not isinstance(rarity,dict) or set(rarity)-{'labels','evidenceUrl','checkedAt'}:raise SafetyError('invalid_rarity_rule')
+   labels=rarity.get('labels')
+   if not isinstance(labels,list) or not 1<=len(labels)<=10 or any(not isinstance(label,str) or not 1<=len(label)<=30 for label in labels) or not https(rarity.get('evidenceUrl')) or not rarity.get('checkedAt'):raise SafetyError('official_highest_rarity_evidence_required')
+   rarity['checkedAt']=timestamp(rarity['checkedAt'])
+  images=row.get('imageReuse')
+  if images is not None:
+   if not isinstance(images,dict) or set(images)-{'rightsStatus','allowedHosts','evidenceUrl','checkedAt'}:raise SafetyError('invalid_image_reuse_policy')
+   if images.get('rightsStatus') not in ['APPROVED','UNCONFIRMED','REJECTED']:raise SafetyError('image_rights_status_required')
+   hosts=images.get('allowedHosts',[])
+   if not isinstance(hosts,list) or len(hosts)>20 or any(not isinstance(host,str) or not re.fullmatch(r'[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?',host) for host in hosts):raise SafetyError('exact_image_hosts_required')
+   if images.get('rightsStatus')=='APPROVED':
+    if not hosts or not https(images.get('evidenceUrl')) or not images.get('checkedAt'):raise SafetyError('image_reuse_evidence_required')
+    images['checkedAt']=timestamp(images['checkedAt'])
  if collection in ['gameEvents','pickupSchedules']:
   if not https(row.get('officialUrl')):raise SafetyError('official_notice_https_required')
   if collection=='pickupSchedules':
