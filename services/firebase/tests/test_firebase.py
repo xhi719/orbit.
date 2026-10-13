@@ -162,6 +162,56 @@ class FirebaseNoticeEnrichmentTests(unittest.TestCase):
  def notice(self,body,**changes):
   return {**document(region='KR'),'original_description':body,'raw_json':{'title':'Official pickup','contents':body},'raw_sha256':'fixture-'+str(len(body)),**changes}
  def period(self):return 'Event Duration: 2026-10-13 10:00 - 2026-10-28 18:59 (UTC+8)'
+ def inspected_reference_store(self,notice=None):
+  source=self.source();notice=notice or self.notice(self.period());store=MemoryStore();upsert_notice(store,source,notice,NOW);key=event_identity(notice,source);row=store.records['gameEvents/'+key]
+  url='https://cdn.example/exact-publisher-banner.webp';origin='https://official.example/news';checked=NOW.isoformat()
+  row['extractionVersion']=4;row['image']={'url':url,'sourceUrl':notice['official_url'],'kind':'PICKUP_ART','rightsStatus':'UNCONFIRMED',
+   'sourceReference':{'mode':'OFFICIAL_NOTICE_IMAGE','sourceUrl':origin,'checkedAt':checked,'allowedImageUrl':url},
+   'subjectEvidence':{'status':'MATCHED','eventId':key,'officialUrl':notice['official_url'],'kind':'pickup','method':'reviewed_image','evidenceText':'Exact publisher banner inspected','characterNames':[]}}
+  row['sourceImageOverride']={'rawSha256':notice['raw_sha256'],'exactTitle':notice['original_title'],'officialUrl':notice['official_url'],'sourceUrl':origin,'allowedImageUrl':url,'checkedAt':checked}
+  return source,notice,store,key
+ def test_manual_original_source_reference_survives_extraction_reverify_without_rights_promotion(self):
+  source,notice,store,key=self.inspected_reference_store();upsert_notice(store,source,notice,NOW);row=store.get('gameEvents/'+key)
+  self.assertEqual(row['image']['rightsStatus'],'UNCONFIRMED');self.assertEqual(row['image']['sourceReference']['mode'],'OFFICIAL_NOTICE_IMAGE');self.assertIsNotNone(row['sourceImageOverride'])
+  self.assertEqual(store.list('pickupSchedules')[0][1]['image'],row['image'])
+ def test_source_reference_removed_if_raw_notice_changes(self):
+  source,notice,store,key=self.inspected_reference_store();upsert_notice(store,source,{**notice,'raw_sha256':'revised-source'},NOW);row=store.get('gameEvents/'+key);self.assertIsNone(row['image']);self.assertIsNone(row['sourceImageOverride'])
+ def test_source_reference_removed_for_different_title_url_or_event(self):
+  for field,value in [('exactTitle','Wrong poster title'),('allowedImageUrl','https://cdn.example/different.webp'),('officialUrl','https://steamcommunity.com/announcement/another')]:
+   source,notice,store,key=self.inspected_reference_store();store.records['gameEvents/'+key]['sourceImageOverride'][field]=value;upsert_notice(store,source,notice,NOW);self.assertIsNone(store.get('gameEvents/'+key)['image'])
+  source,notice,store,key=self.inspected_reference_store();store.records['gameEvents/'+key]['image']['subjectEvidence']['eventId']='another-event';upsert_notice(store,source,notice,NOW);self.assertIsNone(store.get('gameEvents/'+key)['image'])
+ def test_source_reference_cannot_retain_rejected_image_or_missing_review(self):
+  for field,value in [('rightsStatus','REJECTED'),('sourceReference',None)]:
+   source,notice,store,key=self.inspected_reference_store();store.records['gameEvents/'+key]['image'][field]=value;upsert_notice(store,source,notice,NOW);self.assertIsNone(store.get('gameEvents/'+key)['image'])
+ def test_source_reference_cannot_retain_wrong_subject_character(self):
+  source,notice,store,key=self.inspected_reference_store();store.records['gameEvents/'+key]['image']['subjectEvidence']['characterNames']=['Different'];upsert_notice(store,source,notice,NOW);self.assertIsNone(store.get('gameEvents/'+key)['image'])
+ def test_source_reference_malformed_review_timestamp_fails_closed(self):
+  source,notice,store,key=self.inspected_reference_store();store.records['gameEvents/'+key]['image']['sourceReference']['checkedAt']='yesterday';upsert_notice(store,source,notice,NOW);self.assertIsNone(store.get('gameEvents/'+key)['image'])
+ def editorial_language_store(self,language='en',source_language=None):
+  source=self.source(content_language=source_language);notice=self.notice(self.period(),original_language='unknown');store=MemoryStore();upsert_notice(store,source,notice,NOW);key=event_identity(notice,source);row=store.records['gameEvents/'+key]
+  row.update(extractionVersion=4,originalLanguage=language,languageEvidence={'status':'verified','language':language,'method':'editorial','sourceSha256':notice['raw_sha256'],'checkedAt':NOW.isoformat(),'evidenceUrl':notice['official_url']})
+  return source,notice,store,key
+ def test_exact_editorial_article_language_survives_extraction_reverify(self):
+  for language in ('ko','en','ja'):
+   source,notice,store,key=self.editorial_language_store(language);upsert_notice(store,source,notice,NOW);row=store.get('gameEvents/'+key);self.assertEqual(row['originalLanguage'],language);self.assertEqual(row['languageEvidence']['language'],language)
+ def test_article_language_review_is_more_specific_than_feed_default(self):
+  source,notice,store,key=self.editorial_language_store('ja','en');upsert_notice(store,source,notice,NOW);self.assertEqual(store.get('gameEvents/'+key)['originalLanguage'],'ja')
+ def test_changed_raw_notice_revokes_editorial_article_language(self):
+  source,notice,store,key=self.editorial_language_store();upsert_notice(store,source,{**notice,'raw_sha256':'source-text-changed'},NOW);row=store.get('gameEvents/'+key);self.assertEqual(row['originalLanguage'],'unknown');self.assertIsNone(row['languageEvidence'])
+ def test_changed_raw_notice_uses_current_confirmed_feed_language(self):
+  source,notice,store,key=self.editorial_language_store('ja','en');upsert_notice(store,source,{**notice,'raw_sha256':'source-text-changed'},NOW);row=store.get('gameEvents/'+key);self.assertEqual(row['originalLanguage'],'en');self.assertIsNone(row['languageEvidence'])
+ def test_arbitrary_old_original_language_without_evidence_not_preserved(self):
+  source,notice,store,key=self.editorial_language_store();store.records['gameEvents/'+key].pop('languageEvidence');upsert_notice(store,source,notice,NOW);self.assertEqual(store.get('gameEvents/'+key)['originalLanguage'],'unknown')
+ def test_language_review_requires_exact_sha_official_url_and_editorial_method(self):
+  for field,value in [('status','pending'),('method','feed_guess'),('sourceSha256','another-sha'),('evidenceUrl','https://steamcommunity.com/announcement/another'),('language','fr'),('checkedAt','yesterday')]:
+   source,notice,store,key=self.editorial_language_store();store.records['gameEvents/'+key]['languageEvidence'][field]=value;upsert_notice(store,source,notice,NOW);row=store.get('gameEvents/'+key);self.assertEqual(row['originalLanguage'],'unknown');self.assertIsNone(row['languageEvidence'])
+ def test_language_review_and_stored_language_must_agree(self):
+  source,notice,store,key=self.editorial_language_store();store.records['gameEvents/'+key]['originalLanguage']='ja';upsert_notice(store,source,notice,NOW);self.assertEqual(store.get('gameEvents/'+key)['originalLanguage'],'unknown')
+ def test_valid_article_language_review_propagates_to_derived_character_only_for_same_raw_notice(self):
+  source=self.source(content_language=None);notice=self.notice(self.period()+'\nNew 5-star character "First" pickup',original_language='unknown');store=MemoryStore();upsert_notice(store,source,notice,NOW);key=event_identity(notice,source);row=store.records['gameEvents/'+key]
+  row.update(extractionVersion=4,originalLanguage='en',languageEvidence={'status':'verified','language':'en','method':'editorial','sourceSha256':notice['raw_sha256'],'checkedAt':NOW.isoformat(),'evidenceUrl':notice['official_url']})
+  upsert_notice(store,source,notice,NOW);children=[r for _,r in store.list('gameEvents')if r.get('announcementKind')=='new'];self.assertEqual(children[0]['originalLanguage'],'en');self.assertEqual(children[0]['languageEvidence']['sourceSha256'],notice['raw_sha256'])
+  upsert_notice(store,source,{**notice,'raw_sha256':'changed-parent-raw'},NOW);children=[r for _,r in store.list('gameEvents')if r.get('announcementKind')=='new'];self.assertEqual(children[0]['originalLanguage'],'unknown');self.assertIsNone(children[0]['languageEvidence'])
  def test_explicit_labelled_period_converts_offset(self):
   schedule=extract_schedule(self.period());self.assertEqual(schedule['startsAt'].isoformat(),'2026-10-13T02:00:00+00:00');self.assertEqual(schedule['endsAt'].isoformat(),'2026-10-28T10:59:00+00:00');self.assertEqual(schedule['reasonCodes'],[])
  def test_korean_and_japanese_complete_dates(self):
@@ -213,7 +263,57 @@ class FirebaseNoticeEnrichmentTests(unittest.TestCase):
  def test_reviewed_exact_host_can_allow_image_but_other_host_cannot(self):
   source=self.source(image_reuse={'rightsStatus':'APPROVED','allowedHosts':['cdn.example'],'evidenceUrl':'https://official.example/reuse','checkedAt':NOW.isoformat()})
   result=enrich_document(self.notice('<img src="https://cdn.example/banner.webp"><img src="https://evil.cdn.example/banner.webp">'),source)
-  self.assertEqual([r['rightsStatus']for r in result['image_candidates']],['APPROVED','UNCONFIRMED']);self.assertEqual(result['approved_image']['sourceUrl'],'https://steamcommunity.com/announcement/1')
+  self.assertEqual([r['rightsStatus']for r in result['image_candidates']],['APPROVED','UNCONFIRMED']);self.assertIsNone(result['approved_image'])
+ def test_reuse_permission_without_subject_evidence_never_displays_first_art(self):
+  source=self.source(image_reuse={'rightsStatus':'APPROVED','allowedHosts':['cdn.example'],'evidenceUrl':'https://official.example/reuse','checkedAt':NOW.isoformat()})
+  result=enrich_document(self.notice('<img src="https://cdn.example/another-game-banner.webp">'),source)
+  self.assertEqual(result['image_candidates'][0]['rightsStatus'],'APPROVED');self.assertEqual(result['image_candidates'][0]['subjectStatus'],'UNCONFIRMED');self.assertIsNone(result['approved_image'])
+ def test_image_alt_must_match_this_notice_not_different_event(self):
+  source=self.source(image_reuse={'rightsStatus':'APPROVED','allowedHosts':['cdn.example'],'evidenceUrl':'https://official.example/reuse','checkedAt':NOW.isoformat()})
+  notice=self.notice('<img src="https://cdn.example/another.webp" alt="Unrelated event"><img src="https://cdn.example/current.webp" alt="Official pickup">')
+  row=enrich_document(notice,source);self.assertEqual(row['approved_image']['url'],'https://cdn.example/current.webp');self.assertEqual(row['approved_image']['subjectEvidence']['eventId'],event_identity(notice,source))
+ def test_catalog_logo_and_icon_cannot_be_event_artwork_even_with_matching_alt(self):
+  source=self.source(image_reuse={'rightsStatus':'APPROVED','allowedHosts':['cdn.example'],'evidenceUrl':'https://official.example/reuse','checkedAt':NOW.isoformat()})
+  for name in ('logo.png','app-icon.webp','key-visual.jpg','game-cover.png'):
+   row=enrich_document(self.notice('<img src="https://cdn.example/'+name+'" alt="Official pickup">'),source);self.assertIsNone(row['approved_image'])
+ def test_two_matching_images_require_review_instead_of_first_image_selection(self):
+  source=self.source(image_reuse={'rightsStatus':'APPROVED','allowedHosts':['cdn.example'],'evidenceUrl':'https://official.example/reuse','checkedAt':NOW.isoformat()})
+  row=enrich_document(self.notice('<img src="https://cdn.example/one.webp" alt="Official pickup"><img src="https://cdn.example/two.webp" alt="Official pickup">'),source);self.assertIsNone(row['approved_image'])
+ def test_matched_image_still_requires_separate_reuse_review(self):
+  row=enrich_document(self.notice('<img src="https://cdn.example/current.webp" alt="Official pickup">'),self.source());self.assertEqual(row['image_candidates'][0]['subjectStatus'],'MATCHED');self.assertEqual(row['image_candidates'][0]['rightsStatus'],'UNCONFIRMED');self.assertIsNone(row['approved_image'])
+ def test_unreviewed_source_cannot_supply_image_subject_evidence(self):
+  row=enrich_document(self.notice('<img src="https://cdn.example/current.webp" alt="Official pickup">'),self.source(access_status='unknown'));self.assertIsNone(row['image_candidates'][0]['subjectEvidence'])
+ def test_youtube_thumbnail_not_promoted_to_pickup_banner_by_host_reuse_policy(self):
+  source=self.source(image_reuse={'rightsStatus':'APPROVED','allowedHosts':['i.ytimg.com'],'evidenceUrl':'https://official.example/reuse','checkedAt':NOW.isoformat()})
+  row=enrich_document(self.notice(self.period(),source_image_urls=['https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg']),source);self.assertIsNone(row['approved_image'])
+ def test_new_and_rerun_children_receive_only_own_labelled_image(self):
+  source=self.source(image_reuse={'rightsStatus':'APPROVED','allowedHosts':['cdn.example'],'evidenceUrl':'https://official.example/reuse','checkedAt':NOW.isoformat()})
+  body=self.period()+'\nNew 5-star character "First" pickup\n<img src="https://cdn.example/first.webp" alt="New First pickup banner">\nReturning 5-star character "Second" pickup\n<img src="https://cdn.example/second.webp" alt="Returning Second pickup banner">'
+  store=MemoryStore();upsert_notice(store,source,self.notice(body),NOW)
+  children={row['announcementKind']:row for _,row in store.list('gameEvents')if row.get('announcementKind')in('new','rerun')}
+  self.assertEqual(children['new']['image']['url'],'https://cdn.example/first.webp');self.assertEqual(children['rerun']['image']['url'],'https://cdn.example/second.webp')
+  for row in children.values():self.assertEqual(row['image']['subjectEvidence']['eventId'],row['id']);self.assertEqual(row['image']['subjectEvidence']['announcementKind'],row['announcementKind'])
+ def test_generic_parent_art_not_copied_to_new_or_rerun_children(self):
+  source=self.source(image_reuse={'rightsStatus':'APPROVED','allowedHosts':['cdn.example'],'evidenceUrl':'https://official.example/reuse','checkedAt':NOW.isoformat()})
+  body='<img src="https://cdn.example/post.webp" alt="Official pickup">\n'+self.period()+'\nNew 5-star character "First" pickup\nReturning 5-star character "Second" pickup'
+  store=MemoryStore();upsert_notice(store,source,self.notice(body),NOW)
+  self.assertTrue(all(row.get('image')is None for _,row in store.list('gameEvents')if row.get('announcementKind')in('new','rerun')))
+ def test_role_mismatched_character_banner_not_attached_to_child(self):
+  source=self.source(image_reuse={'rightsStatus':'APPROVED','allowedHosts':['cdn.example'],'evidenceUrl':'https://official.example/reuse','checkedAt':NOW.isoformat()})
+  body=self.period()+'\nNew 5-star character "First" pickup\n<img src="https://cdn.example/first.webp" alt="Returning First pickup banner">'
+  store=MemoryStore();upsert_notice(store,source,self.notice(body),NOW);row=[r for _,r in store.list('gameEvents')if r.get('announcementKind')=='new'][0];self.assertIsNone(row['image'])
+ def test_wrong_character_alt_not_overridden_by_correct_nearby_paragraph(self):
+  source=self.source(image_reuse={'rightsStatus':'APPROVED','allowedHosts':['cdn.example'],'evidenceUrl':'https://official.example/reuse','checkedAt':NOW.isoformat()})
+  body=self.period()+'\nNew 5-star character "First" pickup\n<img src="https://cdn.example/another.webp" alt="New Second pickup banner">'
+  store=MemoryStore();upsert_notice(store,source,self.notice(body),NOW);row=[r for _,r in store.list('gameEvents')if r.get('announcementKind')=='new'][0];self.assertIsNone(row['image'])
+ def test_character_name_substring_is_not_subject_match(self):
+  source=self.source(image_reuse={'rightsStatus':'APPROVED','allowedHosts':['cdn.example'],'evidenceUrl':'https://official.example/reuse','checkedAt':NOW.isoformat()})
+  body=self.period()+'\nNew 5-star character "First" pickup\n<img src="https://cdn.example/another.webp" alt="New Firstborn pickup banner">'
+  store=MemoryStore();upsert_notice(store,source,self.notice(body),NOW);row=[r for _,r in store.list('gameEvents')if r.get('announcementKind')=='new'][0];self.assertIsNone(row['image'])
+ def test_extraction_version_reverify_removes_legacy_approved_wrong_image(self):
+  source=self.source();notice=self.notice(self.period());key=event_identity(notice,source)
+  store=MemoryStore({'gameEvents/'+key:{'rawSha256':notice['raw_sha256'],'extractionVersion':4,'image':{'url':'https://cdn.example/wrong.webp','rightsStatus':'APPROVED'},'scheduleOrigin':'automatic'}})
+  upsert_notice(store,source,notice,NOW);row=store.get('gameEvents/'+key);self.assertEqual(row['extractionVersion'],5);self.assertIsNone(row['image'])
  def test_unsafe_image_candidates_are_not_preserved(self):
   result=enrich_document(self.notice('[img]https://127.0.0.1/banner.webp[/img][img]https://localhost/banner.webp[/img]'),self.source());self.assertEqual(result['image_candidates'],[])
  def test_verified_schedule_saved_only_with_source_review_and_region(self):
@@ -294,6 +394,24 @@ Brand-new outfit.
    'published_at':'2026-10-07T10:00:48+00:00','event_type_candidates':['update'],'pickups':[]}
  def test_period_label_on_immediate_next_line_has_explicit_dates(self):
   result=extract_schedule('▸Duration:\n2026/10/8 9:00 ~ 2026/10/28 18:59 (GMT+0)');self.assertEqual(result['startsAt'],datetime(2026,10,8,9,tzinfo=UTC));self.assertEqual(result['reasonCodes'],[])
+ def test_isolated_section_image_matches_only_its_own_event(self):
+  body=self.BODY.replace('■[Inverse Cipher]','[img]https://cdn.example/amber.webp[/img]\n\n■[Inverse Cipher]')
+  source=self.source(image_reuse={'rightsStatus':'APPROVED','allowedHosts':['cdn.example'],'evidenceUrl':'https://official.example/reuse','checkedAt':NOW.isoformat()})
+  sections=section_documents(self.notice(body),source)
+  first=enrich_document(sections[0],source);second=enrich_document(sections[1],source)
+  self.assertEqual(first['approved_image']['url'],'https://cdn.example/amber.webp');self.assertEqual(first['approved_image']['subjectEvidence']['kind'],'event');self.assertIsNone(second['approved_image'])
+ def test_parent_feed_images_never_inherited_by_section(self):
+  source=self.source(image_reuse={'rightsStatus':'APPROVED','allowedHosts':['cdn.example'],'evidenceUrl':'https://official.example/reuse','checkedAt':NOW.isoformat()})
+  sections=section_documents({**self.notice(),'source_image_urls':['https://cdn.example/parent.webp']},source)
+  self.assertTrue(all(enrich_document(section,source)['image_candidates']==[] for section in sections))
+ def test_multiple_section_images_without_local_labels_not_first_image(self):
+  body=self.BODY.replace('■[Inverse Cipher]','[img]https://cdn.example/one.webp[/img]\n[img]https://cdn.example/two.webp[/img]\n\n■[Inverse Cipher]')
+  source=self.source(image_reuse={'rightsStatus':'APPROVED','allowedHosts':['cdn.example'],'evidenceUrl':'https://official.example/reuse','checkedAt':NOW.isoformat()})
+  first=section_documents(self.notice(body),source)[0];self.assertIsNone(enrich_document(first,source)['approved_image'])
+ def test_isolated_heading_cannot_override_explicit_unrelated_image_alt(self):
+  body=self.BODY.replace('■[Inverse Cipher]','<img src="https://cdn.example/another.webp" alt="Unrelated poster">\n\n■[Inverse Cipher]')
+  source=self.source(image_reuse={'rightsStatus':'APPROVED','allowedHosts':['cdn.example'],'evidenceUrl':'https://official.example/reuse','checkedAt':NOW.isoformat()})
+  first=section_documents(self.notice(body),source)[0];self.assertIsNone(enrich_document(first,source)['approved_image'])
  def test_multiple_heading_sections_have_independent_periods(self):
   document=self.notice();source=self.source();parts=section_documents(document,source);self.assertEqual(len(parts),8)
   self.assertEqual(parts[0]['_section_title'],'Amber Reel of Moonlight');self.assertEqual(enrich_document(parts[0],source)['schedule']['startsAt'],datetime(2026,10,8,9,tzinfo=UTC))
