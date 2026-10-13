@@ -104,6 +104,26 @@ class FirebaseOfficialSocialFeedTests(unittest.TestCase):
  def test_root_from_another_channel_rejected(self):
   raw=self.feed().replace(('yt:channel:'+self.CHANNEL).encode(),('yt:channel:UC'+'b'*22).encode())
   with self.assertRaisesRegex(ValidationError,'response_channel'):parse_youtube_documents(raw,self.source(),NOW.isoformat())
+ def test_actual_uc_stripped_headers_accept_only_expected_channel(self):
+  raw=self.feed().replace(('yt:channel:'+self.CHANNEL).encode(),('yt:channel:'+self.CHANNEL[2:]).encode()).replace(b'<entry>',('<yt:channelId>'+self.CHANNEL[2:]+'</yt:channelId><entry>').encode())
+  docs,_=parse_youtube_documents(raw,self.source(),NOW.isoformat());self.assertEqual(docs[0]['raw_json']['channelId'],self.CHANNEL)
+ def test_full_header_and_full_root_channel_id_are_supported(self):
+  raw=self.feed().replace(b'<entry>',('<yt:channelId>'+self.CHANNEL+'</yt:channelId><entry>').encode())
+  self.assertEqual(len(parse_youtube_documents(raw,self.source(),NOW.isoformat())[0]),1)
+ def test_foreign_uc_stripped_root_header_and_channel_id_are_rejected(self):
+  for raw in [self.feed().replace(('yt:channel:'+self.CHANNEL).encode(),('yt:channel:'+('b'*22)).encode()),self.feed().replace(b'<entry>',('<yt:channelId>'+('b'*22)+'</yt:channelId><entry>').encode())]:
+   with self.assertRaisesRegex(ValidationError,'response_channel'):parse_youtube_documents(raw,self.source(),NOW.isoformat())
+ def test_uc_stripped_entry_channel_id_is_never_accepted(self):
+  with self.assertRaisesRegex(ValidationError,'entry_identity'):parse_youtube_documents(self.feed(channel=self.CHANNEL[2:]),self.source(),NOW.isoformat())
+ def test_shorts_url_has_stable_watch_identity_and_retains_original_evidence(self):
+  link='https://www.youtube.com/shorts/'+self.VIDEO;docs,_=parse_youtube_documents(self.feed(link=link),self.source(),NOW.isoformat())
+  self.assertEqual(docs[0]['official_url'],'https://www.youtube.com/watch?v='+self.VIDEO);self.assertEqual(docs[0]['raw_json']['originalVideoUrl'],link)
+ def test_shorts_cannot_smuggle_other_ids_paths_queries_hosts_or_fragments(self):
+  for link in ['https://www.youtube.com/shorts/wrongvideo1','https://www.youtube.com/shorts/'+self.VIDEO+'/extra','https://www.youtube.com/shorts/'+self.VIDEO+'?v=wrongvideo1','https://www.youtube.com/shorts/'+self.VIDEO+'?extra=','https://www.youtube.com/shorts/'+self.VIDEO+'#extra','https://evil.example/shorts/'+self.VIDEO,'http://www.youtube.com/shorts/'+self.VIDEO]:
+   with self.assertRaisesRegex(ValidationError,'video_url_mismatch'):parse_youtube_documents(self.feed(link=link),self.source(),NOW.isoformat())
+ def test_actual_numbered_thumbnail_hosts_are_evidence_only(self):
+  raw=self.feed().replace(b'i.ytimg.com',b'i3.ytimg.com');docs,_=parse_youtube_documents(raw,self.source(),NOW.isoformat());row=enrich_document(docs[0],self.source())
+  self.assertTrue(row['image_candidates'][0]['url'].startswith('https://i3.ytimg.com/'));self.assertEqual(row['image_candidates'][0]['rightsStatus'],'UNCONFIRMED');self.assertIsNone(row['approved_image'])
  def test_video_link_from_external_site_or_wrong_video_rejected(self):
   for url in ['https://evil.example/watch?v='+self.VIDEO,'https://www.youtube.com/watch?v=wrongvideo1','https://www.youtube.com/watch?v='+self.VIDEO+'#oops']:
    with self.assertRaises(ValidationError):parse_youtube_documents(self.feed(link=url),self.source(),NOW.isoformat())
