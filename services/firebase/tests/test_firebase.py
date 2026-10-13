@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from store import MemoryStore,FirestoreStore,SafetyError,timestamp
-from collector import reviewed,seed_catalogue,event_identity,upsert_notice,claim_source,collect_one,run,enrich_document,extract_schedule,highest_rarity_targets,source_row,operating_source,section_documents,confirmed_window_overlap,youtube_request,parse_youtube_documents,YOUTUBE_FEED_DOCUMENTATION,source_policy
+from collector import reviewed,seed_catalogue,event_identity,upsert_notice,claim_source,collect_one,run,enrich_document,extract_schedule,highest_rarity_targets,source_row,operating_source,section_documents,confirmed_window_overlap,youtube_request,parse_youtube_documents,YOUTUBE_FEED_DOCUMENTATION,source_policy,EXTRACTION_VERSION,parse_official_roster,refresh_localization_roster,GF2_ROSTER_URLS
 from engine import ValidationError
 from notifications import quiet,eligible,plan_user,dispatch,fixed_payload,fcm_message,run as notification_run,reset_cycle,completed_cycle,attendance_context,plan_attendance_user
 from admin import validate_change,apply_requests,cleanup_accounts,cleanup_execution_retention
@@ -313,7 +313,7 @@ class FirebaseNoticeEnrichmentTests(unittest.TestCase):
  def test_extraction_version_reverify_removes_legacy_approved_wrong_image(self):
   source=self.source();notice=self.notice(self.period());key=event_identity(notice,source)
   store=MemoryStore({'gameEvents/'+key:{'rawSha256':notice['raw_sha256'],'extractionVersion':4,'image':{'url':'https://cdn.example/wrong.webp','rightsStatus':'APPROVED'},'scheduleOrigin':'automatic'}})
-  upsert_notice(store,source,notice,NOW);row=store.get('gameEvents/'+key);self.assertEqual(row['extractionVersion'],5);self.assertIsNone(row['image'])
+  upsert_notice(store,source,notice,NOW);row=store.get('gameEvents/'+key);self.assertEqual(row['extractionVersion'],EXTRACTION_VERSION);self.assertIsNone(row['image'])
  def test_unsafe_image_candidates_are_not_preserved(self):
   result=enrich_document(self.notice('[img]https://127.0.0.1/banner.webp[/img][img]https://localhost/banner.webp[/img]'),self.source());self.assertEqual(result['image_candidates'],[])
  def test_verified_schedule_saved_only_with_source_review_and_region(self):
@@ -837,5 +837,187 @@ class FirebaseExecutionRetentionTests(unittest.TestCase):
   with self.assertRaisesRegex(SafetyError,'soft_budget'):store.list_cursor('users',None,20)
  def test_account_cleanup_includes_receipts_and_server_only_reminder_ledgers(self):
   store=MemoryStore({'users/alice':{'deletionRequestedAt':NOW},'users/alice/notificationReceipts/r':{'uid':'alice'},'users/alice/attendanceReminderLimits/r':{'uid':'alice'}});self.assertEqual(cleanup_accounts(store)['accountsDeleted'],1);self.assertEqual(store.list('users/alice/notificationReceipts'),[]);self.assertEqual(store.list('users/alice/attendanceReminderLimits'),[])
+
+class AutomaticReviewedLocalizationTests(unittest.TestCase):
+ def source(self,**changes):
+  evidence='https://official.example/paired-roster'
+  terms=[{'kind':'character','sourceName':'Mityl','names':{'ko':'미틸','ja':'ミティル'},'checkedAt':NOW.isoformat(),'evidenceUrl':evidence},
+   {'kind':'weapon','sourceName':'Synthetic Weapon','names':{'ko':'검증 무기'},'checkedAt':NOW.isoformat(),'evidenceUrl':evidence},
+   {'kind':'event','sourceName':'Synthetic Festival','names':{'ko':'검증 축제'},'checkedAt':NOW.isoformat(),'evidenceUrl':evidence}]
+  return {**SOURCE,'content_language':'en','content_localization':{'mode':'reviewed_templates_v1','version':1,'gameId':SOURCE['game_id'],
+   'sourceLanguage':'en','reviewedAt':NOW.isoformat(),'evidenceUrl':evidence,'terms':terms,'formats':['gf2_targeted_procurement_v1','gf2_military_upgrade_v1']},**changes}
+ def notice(self,name='Mityl',**changes):
+  return {**document('Targeted Procurement Event | '+name), 'original_description':'The drop rate for the Elite Doll ['+name+'] is increased in the Targeted Procurement!\nGenerous rewards are available.',**changes}
+ def event(self,source=None,notice=None):
+  source=source or self.source();notice=notice or self.notice();store=MemoryStore();upsert_notice(store,source,notice,NOW)
+  return store,store.get('gameEvents/'+event_identity(notice,source))
+ def test_known_official_names_generate_korean_and_japanese_without_boilerplate(self):
+  store,row=self.event();self.assertEqual(row['translations']['ko']['title'],'미틸 · 캐릭터 픽업');self.assertEqual(row['translations']['ja']['title'],'ミティル · キャラクターピックアップ')
+  self.assertEqual(row['translations']['ko']['description'],'');self.assertEqual(row['translations']['ko']['sourceTitle'],row['originalTitle']);self.assertEqual(row['translations']['ko']['sourceSha256'],row['rawSha256'])
+  self.assertEqual(row['contentLocalization']['languages'],['ko','ja']);self.assertEqual(row['originalDescription'],self.notice()['original_description'])
+  self.assertEqual(store.list('pickupSchedules')[0][1]['translations']['ko'],row['translations']['ko'])
+ def test_unknown_character_name_is_not_guessed_or_mislabeled_translated(self):
+  _,row=self.event(notice=self.notice('Unreviewed Character'));self.assertEqual(row['translations'],{});self.assertIsNone(row['contentLocalization'])
+ def test_character_title_cannot_use_a_different_body_target(self):
+  _,row=self.event(notice=self.notice(original_description='The drop rate for the Elite Doll [Different] is increased'));self.assertEqual(row['translations'],{})
+ def test_dictionary_review_and_game_binding_are_required(self):
+  for patch in ({'gameId':'different-game'},{'reviewedAt':'unknown'},{'evidenceUrl':'http://127.0.0.1/'},{'mode':'free_guess'}):
+   source=self.source();source['content_localization'].update(patch);_,row=self.event(source);self.assertEqual(row['translations'],{})
+ def test_unreviewed_source_cannot_activate_automatic_localization(self):
+  _,row=self.event(self.source(access_status='unknown'));self.assertEqual(row['translations'],{})
+ def test_dictionary_revision_reprocesses_unchanged_source_and_then_deduplicates(self):
+  source=self.source();notice=self.notice();store,row=self.event(source,notice);before=store.writes
+  self.assertEqual(upsert_notice(store,source,notice,NOW),'unchanged');self.assertEqual(store.writes,before)
+  source['content_localization']['version']=2;source['content_localization']['terms'][0]['names']['ko']='새 검증 이름'
+  self.assertEqual(upsert_notice(store,source,notice,NOW),'updated');changed=store.get('gameEvents/'+row['id'])
+  self.assertEqual(changed['translations']['ko']['title'],'새 검증 이름 · 캐릭터 픽업');self.assertEqual(changed['contentLocalization']['policyVersion'],2)
+ def test_changed_unknown_source_revokes_stale_previous_translation(self):
+  source=self.source();notice=self.notice();store,row=self.event(source,notice)
+  changed=self.notice('Unknown',raw_sha256='changed');upsert_notice(store,source,changed,NOW);updated=store.get('gameEvents/'+row['id'])
+  self.assertEqual(updated['translations'],{});self.assertEqual(updated['originalTitle'],changed['original_title'])
+ def test_weapon_templates_require_verified_weapon_dictionary_and_body_role(self):
+  notice=self.notice();notice.update(original_title='Military Upgrade | Synthetic Weapon',original_description='The drop rate for the Elite Weapon [Synthetic Weapon] is increased')
+  _,row=self.event(notice=notice);self.assertEqual(row['translations']['ko']['title'],'검증 무기 · 무기 픽업')
+  notice['original_description']='The drop rate for the Elite Doll [Synthetic Weapon] is increased';_,row=self.event(notice=notice);self.assertEqual(row['translations'],{})
+ def test_official_alphanumeric_weapon_model_name_is_preserved_as_a_name(self):
+  source=self.source();source['content_localization']['terms'].append({'kind':'weapon','sourceName':'6P33','names':{'ko':'6P33'},'checkedAt':NOW.isoformat(),'evidenceUrl':'https://official.example/model'})
+  notice=self.notice();notice.update(original_title='Military Upgrade | 6P33',original_description='The drop rate for the Elite Weapon [6P33] is increased')
+  _,row=self.event(source,notice);self.assertEqual(row['translations']['ko']['title'],'6P33 · 무기 픽업')
+ def test_official_unchanged_character_model_name_is_preserved(self):
+  source=self.source();source['content_localization']['terms'].append({'kind':'character','sourceName':'OTs-14','names':{'ko':'OTs-14'},'checkedAt':NOW.isoformat(),'evidenceUrl':'https://official.example/roster'})
+  _,row=self.event(source,self.notice('OTs-14'));self.assertEqual(row['translations']['ko']['title'],'OTs-14 · 캐릭터 픽업')
+ def test_known_event_title_generates_no_rewards_or_uncertainty_description(self):
+  notice=self.notice();notice.update(original_title='Synthetic Festival',event_type_candidates=['limited-event'],_section_category='limited-event',pickups=[])
+  _,row=self.event(notice=notice);self.assertEqual(row['translations']['ko']['title'],'검증 축제');self.assertEqual(row['translations']['ko']['description'],'')
+ def test_policy_fields_survive_firestore_roundtrip_and_reseed(self):
+  source=self.source(original_image_reference={'mode':'matched_original_link_v1','reviewedAt':NOW.isoformat(),'evidenceUrl':'https://official.example/image-link','allowedHosts':['cdn.example']})
+  row=source_row(source,SOURCE['game_id']);self.assertEqual(operating_source(row)['content_localization'],source['content_localization']);self.assertEqual(operating_source(row)['original_image_reference'],source['original_image_reference'])
+  row['enabled']=True;store=MemoryStore({'gameSources/source':row});seed_catalogue(store,[{'id':SOURCE['game_id']}],{'games':[{'gameId':SOURCE['game_id'],'sources':[SOURCE]}]})
+  self.assertEqual(store.get('gameSources/source')['contentLocalization'],source['content_localization'])
+ def image_source(self,**changes):
+  return self.source(original_image_reference={'mode':'matched_original_link_v1','reviewedAt':NOW.isoformat(),'evidenceUrl':'https://official.example/linked-images','allowedHosts':['cdn.example']},**changes)
+ def test_unique_actual_labelled_publisher_image_gets_an_original_link_without_reuse_rights(self):
+  notice=self.notice();notice['original_description']+='<img src="https://cdn.example/current.webp" alt="Targeted Procurement Event | Mityl pickup">'
+  _,row=self.event(self.image_source(),notice);self.assertEqual(row['image']['url'],'https://cdn.example/current.webp');self.assertEqual(row['image']['rightsStatus'],'UNCONFIRMED');self.assertEqual(row['image']['sourceReference']['allowedImageUrl'],row['image']['url'])
+ def test_unlabelled_wrong_character_or_multiple_images_never_become_fallback(self):
+  for markup in ('<img src="https://cdn.example/wrong.webp" alt="Different pickup">','<img src="https://cdn.example/unlabelled.webp">','<img src="https://cdn.example/a.webp" alt="Targeted Procurement Event | Mityl pickup"><img src="https://cdn.example/b.webp" alt="Targeted Procurement Event | Mityl pickup">'):
+   _,row=self.event(self.image_source(),self.notice(original_description=self.notice()['original_description']+markup));self.assertIsNone(row['image'])
+ def test_changed_notice_cannot_keep_old_automatic_image(self):
+  source=self.image_source();notice=self.notice();notice['original_description']+='<img src="https://cdn.example/current.webp" alt="Targeted Procurement Event | Mityl pickup">';store,row=self.event(source,notice)
+  upsert_notice(store,source,self.notice(raw_sha256='changed-source'),NOW);self.assertIsNone(store.get('gameEvents/'+row['id'])['image'])
+ def test_original_image_reference_optin_is_required(self):
+  notice=self.notice();notice['original_description']+='<img src="https://cdn.example/current.webp" alt="Targeted Procurement Event | Mityl pickup">';_,row=self.event(self.source(),notice);self.assertIsNone(row['image'])
+ def reviewed_reference(self,notice):
+  return {'sourceSha256':notice['raw_sha256'],'sourceTitle':notice.get('_section_title')or notice['original_title'],'officialUrl':notice['official_url'],
+   'url':'https://cdn.example/reviewed-current.webp','sourceUrl':'https://official.example/news','kind':'PICKUP_ART',
+   'characterNames':notice.get('_raw_character_names',[]),'evidenceText':'Exact reviewed current publisher poster','checkedAt':NOW.isoformat()}
+ def test_unlabelled_exact_reviewed_banner_policy_reapplies_only_to_bound_source(self):
+  notice=self.notice(_raw_character_names=['Mityl']);ref=self.reviewed_reference(notice);source=self.source(reviewed_notice_references={'mode':'exact_reviewed_notice_links_v1','references':[ref]})
+  store,row=self.event(source,notice);self.assertEqual(row['image']['url'],ref['url']);self.assertEqual(row['image']['rightsStatus'],'UNCONFIRMED')
+  changed={**notice,'raw_sha256':'changed'};upsert_notice(store,source,changed,NOW);self.assertIsNone(store.get('gameEvents/'+row['id'])['image'])
+ def test_exact_reference_title_and_subject_role_cannot_be_substituted(self):
+  notice=self.notice(_raw_character_names=['Mityl'])
+  for change in ({'sourceTitle':'Another pickup'},{'kind':'EVENT_ART'},{'characterNames':['Different']},{'officialUrl':'https://official.example/other'}):
+   ref={**self.reviewed_reference(notice),**change};_,row=self.event(self.source(reviewed_notice_references={'mode':'exact_reviewed_notice_links_v1','references':[ref]}),notice);self.assertIsNone(row['image'])
+ def test_competing_exact_reviewed_banner_references_do_not_pick_the_first(self):
+  notice=self.notice();ref=self.reviewed_reference(notice);_,row=self.event(self.source(reviewed_notice_references={'mode':'exact_reviewed_notice_links_v1','references':[ref,{**ref,'url':'https://cdn.example/second.webp'}]}),notice);self.assertIsNone(row['image'])
+ def test_reviewed_main_calendar_role_does_not_change_schedule_or_notification_approval(self):
+  notice=self.notice(_raw_character_names=['Mityl']);role={'sourceSha256':notice['raw_sha256'],'sourceTitle':notice['original_title'],'characterNames':['Mityl'],
+   'role':'main-character','evidenceUrl':'https://official.example/main-banner','checkedAt':NOW.isoformat()}
+  source=self.source(calendar_role_policy={'mode':'reviewed_main_roles_v1','roles':[role]});store,row=self.event(source,notice)
+  self.assertEqual(row['calendarRole'],'main-character');self.assertEqual(row['verificationStatus'],'pending');self.assertIsNone(row['startsAt']);self.assertEqual(row['serverRegion'],'UNSPECIFIED')
+  self.assertEqual(store.list('pickupSchedules')[0][1]['calendarRole'],'main-character')
+  upsert_notice(store,source,{**notice,'raw_sha256':'changed'},NOW);self.assertIsNone(store.get('gameEvents/'+row['id'])['calendarRole'])
+ def test_wrong_calendar_role_character_or_review_never_creates_main_calendar_item(self):
+  notice=self.notice(_raw_character_names=['Mityl'])
+  for patch in ({'sourceSha256':'wrong'},{'characterNames':['Other']},{'role':'main-event'},{'checkedAt':'unconfirmed'}):
+   role={'sourceSha256':notice['raw_sha256'],'sourceTitle':notice['original_title'],'characterNames':['Mityl'],'role':'main-character','evidenceUrl':'https://official.example/main','checkedAt':NOW.isoformat(),**patch}
+   _,row=self.event(self.source(calendar_role_policy={'mode':'reviewed_main_roles_v1','roles':[role]}),notice);self.assertIsNone(row['calendarRole'])
+
+class OfficialPairedRosterRefreshTests(unittest.TestCase):
+ def source(self):
+  source=AutomaticReviewedLocalizationTests().source();source['game_id']='girls-frontline-2';source['content_localization']['gameId']='girls-frontline-2'
+  source['localization_roster']={'mode':'gf2_paired_roster_v1','enabled':True,'gameId':'girls-frontline-2','sourceLanguage':'en',
+   'sourceUrl':GF2_ROSTER_URLS['en'],'targetUrls':{'ko':GF2_ROSTER_URLS['ko']},'accessStatus':'approved','termsUrl':'https://www.haoplay.com/services/?l=kr#terms',
+   'termsCheckedAt':NOW.isoformat(),'identityCheckedAt':NOW.isoformat()}
+  return source
+ def html(self,rows):
+  return ('<!doctype html><html><body>'+''.join('<a class="allroles-roles-main-div kv-change-all-div" href="./?role='+identity+'" target="_blank"><img src="https://portrait.example/1077.png"><div class="allroles-roles-name-name-div">'+name+'<div class="allroles-roles-name-icon-div"><img src="https://icon.example/ignore.png"></div></div></a>' for identity,name in rows)+'</body></html>').encode()
+ def fetcher(self,requests):
+  payloads={GF2_ROSTER_URLS['en']:self.html([('58','Mityl'),('53','Cheyanne')]),GF2_ROSTER_URLS['ko']:self.html([('53','샤이엔'),('58','미틸')])}
+  def fetch(request):requests.append(request);return 200,payloads[request['url']],{}
+  return fetch
+ def store(self,source):return MemoryStore({'gameSources/source':source_row(source,'girls-frontline-2')})
+ def test_names_are_paired_by_stable_role_id_without_reading_portrait_urls(self):
+  self.assertEqual(parse_official_roster(self.html([('58','미틸'),('53','샤이엔')]),GF2_ROSTER_URLS['ko']),{'58':'미틸','53':'샤이엔'})
+ def test_two_reviewed_pages_update_the_official_dictionary_and_no_image_is_fetched(self):
+  source=self.source();store=self.store(source);requests=[];updated,result=refresh_localization_roster(store,source,NOW,self.fetcher(requests),lambda _:None)
+  self.assertEqual(result['status'],'SUCCESS');self.assertEqual(result['dictionaryWrites'],1);self.assertEqual(result['pairedNames'],2);self.assertEqual(len(requests),2)
+  self.assertEqual({request['url'] for request in requests},set(GF2_ROSTER_URLS.values()));self.assertTrue(all(request['max_response_bytes']==1048576 and request['request_timeout_seconds']==10 for request in requests))
+  terms=updated['content_localization']['terms'];self.assertEqual(next(t for t in terms if t['sourceName']=='Cheyanne')['names']['ko'],'샤이엔');self.assertEqual(next(t for t in terms if t['sourceName']=='Mityl')['publisherUnitId'],'58')
+  self.assertEqual(updated['content_localization']['version'],2)
+ def test_identical_roster_recheck_does_not_write_or_change_dictionary_version(self):
+  source=self.source();store=self.store(source);updated,_=refresh_localization_roster(store,source,NOW,self.fetcher([]),lambda _:None);before=store.writes
+  again,result=refresh_localization_roster(store,updated,NOW+timedelta(minutes=15),self.fetcher([]),lambda _:None)
+  self.assertEqual(result['status'],'SUCCESS');self.assertEqual(result['dictionaryWrites'],0);self.assertEqual(store.writes,before);self.assertEqual(again,updated)
+ def test_unmatched_role_id_does_not_get_a_guessed_target_name(self):
+  source=self.source();store=self.store(source)
+  def fetch(request):return 200,self.html([('58','Mityl'),('99','Unknown')] if request['url']==GF2_ROSTER_URLS['en'] else [('58','미틸')]),{}
+  updated,result=refresh_localization_roster(store,source,NOW,fetch,lambda _:None)
+  self.assertEqual(result['unmatchedSourceUnits'],1);self.assertFalse(any(t['sourceName']=='Unknown' for t in updated['content_localization']['terms']))
+ def test_failed_roster_keeps_verified_dictionary_and_creates_no_dictionary_writes(self):
+  source=self.source();store=self.store(source);updated,result=refresh_localization_roster(store,source,NOW,lambda _:(503,b'',{}),lambda _:None)
+  self.assertEqual(result['status'],'FETCH_FAILED');self.assertEqual(updated,source);self.assertEqual(store.writes,0)
+ def test_unreviewed_or_arbitrary_roster_url_never_executes_a_request(self):
+  for patch in ({'accessStatus':'unknown'},{'termsCheckedAt':None},{'sourceUrl':'https://unrelated.example/allroles.html'},{'targetUrls':{'ko':'https://gf2.haoplay.com/kr/other.html'}}):
+   source=self.source();source['localization_roster'].update(patch);requests=[];updated,result=refresh_localization_roster(self.store(source),source,NOW,self.fetcher(requests),lambda _:None)
+   self.assertEqual(result['status'],'REVIEW_REQUIRED');self.assertEqual(requests,[]);self.assertEqual(updated,source)
+ def test_admin_policy_change_is_preserved_instead_of_overwritten(self):
+  source=self.source();store=self.store(source);store.records['gameSources/source']['contentLocalization']['version']=99
+  _,result=refresh_localization_roster(store,source,NOW,self.fetcher([]),lambda _:None)
+  self.assertEqual(result['status'],'SOURCE_POLICY_CHANGED');self.assertEqual(store.writes,0);self.assertEqual(store.get('gameSources/source')['contentLocalization']['version'],99)
+ def test_conflicting_or_missing_role_names_are_rejected(self):
+  for raw in (self.html([('58','Mityl'),('58','Different')]),b'<html><body>No named roster</body></html>',b'x'*1048577):
+   with self.assertRaises(ValidationError):parse_official_roster(raw,GF2_ROSTER_URLS['en'])
+ def test_roster_failure_isolated_from_successful_official_notice_collection(self):
+  source=self.source();store=self.store(source);requests=[]
+  def fetch(request):
+   requests.append(request['url'])
+   if request['url']in GF2_ROSTER_URLS.values():return 503,b'',{}
+   return 200,response(),{}
+  result=collect_one(store,source,NOW-timedelta(hours=72),NOW,fetch=fetch,sleep=lambda _:None,now=NOW)
+  self.assertEqual(result['status'],'success');self.assertEqual(result['metrics']['localizationRoster']['status'],'FETCH_FAILED');self.assertEqual(len(store.list('collectionErrors')),1);self.assertEqual(len(store.list('gameEvents')),1)
+ def test_active_source_lease_prevents_roster_and_notice_requests(self):
+  source=self.source();store=self.store(source);store.records['collectorLocks/source']={'leaseUntil':NOW+timedelta(minutes=5)};requests=[]
+  result=collect_one(store,source,NOW-timedelta(hours=72),NOW,fetch=self.fetcher(requests),sleep=lambda _:None,now=NOW)
+  self.assertEqual(result['status'],'DEFERRED');self.assertEqual(requests,[])
+
+class AdminEnrichmentPolicyTests(unittest.TestCase):
+ def test_admin_can_save_reviewed_localization_roster_and_original_link_metadata(self):
+  source=OfficialPairedRosterRefreshTests().source();source['original_image_reference']={'mode':'matched_original_link_v1','reviewedAt':NOW,'evidenceUrl':'https://official.example/links','allowedHosts':['cdn.example']}
+  source['content_localization']['reviewedAt']=NOW
+  source['content_localization']['terms'][0]['checkedAt']=NOW
+  result=validate_change('gameSources','source',source_row(source,'girls-frontline-2'))
+  self.assertEqual(result['localizationRoster']['targetUrls'],{'ko':GF2_ROSTER_URLS['ko']});self.assertEqual(result['contentLocalization']['terms'][0]['names']['ko'],'미틸')
+ def test_admin_rejects_unknown_or_wrong_game_localization_policy(self):
+  for change in ({'gameId':'other'},{'terms':[]},{'formats':['arbitrary_regex']},{'privateExtra':'value'}):
+   source=OfficialPairedRosterRefreshTests().source();source['content_localization'].update(change)
+   with self.assertRaises(SafetyError):validate_change('gameSources','source',source_row(source,'girls-frontline-2'))
+ def test_admin_rejects_private_secret_fields_in_nested_name_policy(self):
+  source=OfficialPairedRosterRefreshTests().source();source['content_localization']['terms'][0]['privateKey']='not-a-real-key'
+  with self.assertRaisesRegex(SafetyError,'secret_field_forbidden'):validate_change('gameSources','source',source_row(source,'girls-frontline-2'))
+ def test_admin_original_links_cannot_claim_reuse_rights_or_arbitrary_hosts(self):
+  for policy in ({'mode':'matched_original_link_v1','reviewedAt':NOW,'evidenceUrl':'https://official.example/links','allowedHosts':['localhost']},
+   {'mode':'matched_original_link_v1','reviewedAt':NOW,'evidenceUrl':'https://official.example/links','allowedHosts':['cdn.example'],'rightsStatus':'APPROVED'}):
+   source=OfficialPairedRosterRefreshTests().source();source['original_image_reference']=policy
+   with self.assertRaises(SafetyError):validate_change('gameSources','source',source_row(source,'girls-frontline-2'))
+ def test_admin_rejects_unbound_reviewed_banner_and_calendar_role_snapshots(self):
+  for field,value in [('reviewed_notice_references',{'mode':'exact_reviewed_notice_links_v1','references':[{'sourceSha256':'invalid'}]}),
+   ('calendar_role_policy',{'mode':'reviewed_main_roles_v1','roles':[{'sourceSha256':'a'*64,'sourceTitle':'Official','role':'guessed','evidenceUrl':'https://official.example/role','checkedAt':NOW}]})]:
+   source=OfficialPairedRosterRefreshTests().source();source[field]=value
+   with self.assertRaises(SafetyError):validate_change('gameSources','source',source_row(source,'girls-frontline-2'))
+ def test_admin_rejects_unreviewed_or_replaced_roster_endpoint(self):
+  source=OfficialPairedRosterRefreshTests().source();source['localization_roster']['targetUrls']['ko']='https://other.example/allroles.html'
+  with self.assertRaisesRegex(SafetyError,'exact_paired_roster_policy_required'):validate_change('gameSources','source',source_row(source,'girls-frontline-2'))
 
 if __name__=='__main__':unittest.main()
