@@ -71,8 +71,54 @@
       },
       "officialWebsite": "https://gf2.haoplay.com/kr/",
       "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "reasonCode": "REVIEWED_PUBLISHER_FEED_SERVER_UNCONFIRMED",
+      "sources": [
+        {
+          "id": "d641c1f0-5226-58e7-b5d2-d26a85604d29",
+          "game_id": "d8330cbb-9541-551a-b0e0-6c20cfa401d9",
+          "game_slug": "girls-frontline-2",
+          "steam_appid": 3308670,
+          "url": "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=3308670",
+          "official_host": "api.steampowered.com",
+          "allowed_notice_hosts": [
+            "steamstore-a.akamaihd.net"
+          ],
+          "notice_hosts_verified_at": "2026-10-13T07:26:21.714286+00:00",
+          "parser": "steam_news",
+          "method": "official_api",
+          "enabled": false,
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://steamcommunity.com/dev/apiterms",
+          "terms_checked_at": "2026-10-13T07:26:21.714286+00:00",
+          "documentation_url": "https://partner.steamgames.com/doc/webapi/ISteamNews",
+          "feed_allowlist": [
+            "steam_community_announcements"
+          ],
+          "collection_interval_minutes": 15,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "server_region": "UNSPECIFIED",
+          "server_label": "HAOPLAY Steam · GMT+0",
+          "content_language": "en",
+          "schedule_extraction_approved": true,
+          "schedule_extraction_reviewed_at": "2026-10-13T07:26:21.714286+00:00",
+          "schedule_extraction_evidence_url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067925601",
+          "section_schedule_format": "heading_period_v1",
+          "paired_recruitment_period_approved": true,
+          "highest_character_rarity": null,
+          "image_reuse": null,
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/3308670/",
+            "verifiedFields": [
+              "names.en"
+            ],
+            "observedAt": "2026-10-13T07:26:21.714286+00:00",
+            "notes": "HAOPLAY publisher channel; English/GMT+0 does not establish KR, JP, Asia or global server identity."
+          },
+          "notes": "Official bounded API only. Source dates remain pending while region is unconfirmed. No highest-rarity/new/rerun or image reuse inferred."
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
