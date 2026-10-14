@@ -28,7 +28,7 @@ from backfill import retry_after_seconds
 from store import MemoryStore, FirestoreStore, SafetyError, timestamp
 
 UTC = timezone.utc
-EXTRACTION_VERSION = 6
+EXTRACTION_VERSION = 7
 YOUTUBE_CHANNEL_ID = re.compile(r"UC[A-Za-z0-9_-]{22}")
 YOUTUBE_VIDEO_ID = re.compile(r"[A-Za-z0-9_-]{11}")
 YOUTUBE_FEED_PATHS = ("/feeds/videos.xml", "/xml/feeds/videos.xml")
@@ -623,8 +623,50 @@ def reviewed_notice_image(document,source,event_id):
     return matched[0] if len(matched)==1 else None
 
 
+def automatic_main_role_policy(source):
+    """A source format opt-in is separate from reading permission/date approval."""
+    policy=(source.get("calendar_role_policy") or {}).get("automaticRules")
+    if not reviewed(source) or not isinstance(policy,dict):return None
+    fields={"mode","gameId","parser","newHighestCharacter","mainEventFormat","evidenceUrl","checkedAt"}
+    if (set(policy)-fields or policy.get("mode")!="explicit_main_role_extraction_v1"
+        or policy.get("gameId")!=source.get("game_id") or policy.get("parser")!=source.get("parser")
+        or not isinstance(policy.get("newHighestCharacter"),bool) or policy.get("mainEventFormat") not in (None,"gf2_story_event_v1")
+        or not safe_public_url(policy.get("evidenceUrl")) or not policy["evidenceUrl"].startswith("https://")):return None
+    if policy.get("mainEventFormat") and (source.get("game_id")!="girls-frontline-2" or source.get("parser")!="steam_news" or source.get("section_schedule_format")!="heading_period_v1"):return None
+    try:policy_timestamp(policy.get("checkedAt"))
+    except (ValidationError,TypeError):return None
+    return policy
+
+
+def automatic_main_role(row,source):
+    policy=automatic_main_role_policy(source)
+    if not policy:return None
+    selected=row.get("displayTitle") or row.get("sourceSectionTitle") or row.get("originalTitle") or row.get("title")
+    text=plain_notice(row.get("originalDescription") or "")
+    if policy["newHighestCharacter"] and row.get("announcementKind")=="new" and row.get("categoryCandidate")=="recruitment":
+        highest=source.get("highest_character_rarity") or {}
+        try:policy_timestamp(highest.get("checkedAt"))
+        except (ValidationError,TypeError):return None
+        if not safe_public_url(highest.get("evidenceUrl")) or not highest["evidenceUrl"].startswith("https://"):return None
+        # Re-extract the actual original paragraph. Neither a roster position nor
+        # a Targeted Procurement heading establishes a character's debut.
+        matched=[target for target in highest_rarity_targets(text,source) if target["announcementKind"]=="new"
+            and row.get("characterNames")==[target["name"]] and row.get("characters")==[target["name"]]]
+        if len(matched)==1 and selected==matched[0]["name"] and row.get("characterEvidenceText")==matched[0]["evidenceText"]:
+            return "main-character",matched[0]["evidenceText"]
+    if policy.get("mainEventFormat")=="gf2_story_event_v1" and row.get("sourceSectionKey") and row.get("categoryCandidate")=="limited-event" and not row.get("characterNames"):
+        # The reviewed GF2 publisher grammar explicitly calls the same named
+        # section a Time-Limited Event with its own Game Modes. Generic rewards,
+        # login, shop, supply and other heading blocks never satisfy this rule.
+        prefix="During the Time-Limited Event ["+str(selected)+"],"
+        lines=[line.strip() for line in text.splitlines() if line.strip().startswith(prefix)
+            and "by participating in event Game Modes." in line]
+        if len(lines)==1 and len(selected or "")<=150:return "main-event",lines[0][:1500]
+    return None
+
+
 def reviewed_calendar_role(row,source):
-    """Main versus secondary roles require an exact reviewed article snapshot."""
+    """Exact reviews or explicit separately reviewed publisher grammar only."""
     policy=source.get("calendar_role_policy")
     row={**row,"calendarRole":None,"calendarRoleEvidence":None}
     if not reviewed(source) or not isinstance(policy,dict) or policy.get("mode")!="reviewed_main_roles_v1":return row
@@ -639,8 +681,30 @@ def reviewed_calendar_role(row,source):
         try:checked=policy_timestamp(role.get("checkedAt")).isoformat()
         except (ValidationError,TypeError):continue
         row.update(calendarRole=role["role"],calendarRoleEvidence={"status":"verified","sourceSha256":row["rawSha256"],"sourceTitle":selected,"role":role["role"],"evidenceUrl":role["evidenceUrl"],"checkedAt":checked})
-        break
+        return row
+    automatic=automatic_main_role(row,source)
+    if automatic:
+        role,proof=automatic;rules=automatic_main_role_policy(source)
+        row.update(calendarRole=role,calendarRoleEvidence={"status":"verified","sourceSha256":row["rawSha256"],"sourceTitle":selected,
+            "role":role,"evidenceUrl":rules["evidenceUrl"],"checkedAt":rules["checkedAt"],"method":"explicit_source_main_role_v1",
+            "policySha256":digest(rules),"evidenceText":proof})
     return row
+
+
+def announcement_metadata(row,old,observed):
+    """Notice content revisions are independent of dates/extraction/translation."""
+    title=row.get("displayTitle") or row.get("sourceSectionTitle") or row.get("originalTitle") or row.get("title")
+    signature=digest([row.get("rawSha256"),title,row.get("characterNames",[])])
+    previous=(old or {}).get("announcementContentSha256")
+    changed=previous is not None and previous!=signature
+    published=row.get("publishedAt");updated=row.get("sourceUpdatedAt")
+    # Only the provider's explicit publication/update timestamp establishes when
+    # an announcement became public. Observation time never invents that fact.
+    try:
+        clock=timestamp(updated) if updated and published and timestamp(updated)>=timestamp(published) else timestamp(published) if published else None
+    except (ValueError,TypeError):clock=None
+    return {**row,"announcementContentSha256":signature,"announcementRevision":(old or {}).get("announcementRevision",1)+int(changed),
+        "announcementPublishedAt":clock,"announcementObservedAt":observed if changed or previous is None else old.get("announcementObservedAt",observed)}
 
 
 GF2_ROSTER_URLS={"en":"https://gf2.haoplay.com/en/roleinfo/allroles.html","ko":"https://gf2.haoplay.com/kr/roleinfo/allroles.html"}
@@ -960,7 +1024,7 @@ def upsert_notice(store, source, document, observed):
     store.mutate("collectionDocuments/"+proof_id,lambda old:(None,False) if old else
         ({"sourceId":source["id"],"externalKey":document["external_key"],"rawSha256":document["raw_sha256"],
           "rawJson":document["raw_json"],"publishedAt":timestamp(document["published_at"]) if document["published_at"] else None,
-          "rawPublicationTimestamp":document["raw_publication_timestamp"],"observedAt":observed,
+          "rawPublicationTimestamp":document["raw_publication_timestamp"],"sourceUpdatedAt":timestamp(document["source_updated_at"]) if document.get("source_updated_at") else None,"observedAt":observed,
           "officialUrl":document["official_url"]},True))
     def update(old):
         if old and old.get("rawSha256") == document["raw_sha256"] and old.get("extractionVersion")==EXTRACTION_VERSION and old.get("extractionPolicySha256")==document["extraction_policy_sha256"] and old.get("categoryCandidate")==document["category_candidate"]:
@@ -1017,7 +1081,7 @@ def upsert_notice(store, source, document, observed):
             row.update(startsAt=None,endsAt=None,originalTimezone=None,scheduleStatus="DATE_UNCONFIRMED",status="unconfirmed")
         if document["cancelled"]:
             row.update(status="cancelled",scheduleStatus="CANCELLED")
-        row=reviewed_calendar_role(localize_collected_row(row,source,observed),source)
+        row=announcement_metadata(reviewed_calendar_role(localize_collected_row(row,source,observed),source),old,observed)
         if len(json.dumps(row,ensure_ascii=False,default=lambda value:value.isoformat()).encode())>900000:
             raise SafetyError("event_document_exceeds_safe_firestore_size")
         return row,"updated" if old else "created"
@@ -1057,6 +1121,10 @@ def upsert_notice(store, source, document, observed):
         for section in document["section_documents"]:
             upsert_notice(store,source,section,observed)
         for target in document["highest_rarity_targets"]:
+            # A structured recruitment section will create its own independent
+            # character child. Do not create a second equivalent child from the
+            # same parent overview and send the same debut announcement twice.
+            if any(section.get("_section_category")=="recruitment" and target["name"] in section.get("_raw_character_names",[]) for section in document["section_documents"]):continue
             child_id=digest({"parent":event_id,"announcementKind":target["announcementKind"],"character":target["name"]})
             child_images,child_artwork=character_image(document["image_candidates"],target,child_id)
             active_children.add(child_id)
@@ -1070,7 +1138,7 @@ def upsert_notice(store, source, document, observed):
                     "sourceImageOverride":old.get("sourceImageOverride") if retained_image and not original_subject_image(child_images,source,document.get("observed_at")) else None,
                     "firstCheckedAt":old.get("firstCheckedAt",observed) if old else observed,
                     "revision":old.get("revision",0)+1 if old else 1}
-                return reviewed_calendar_role(localize_collected_row(row,source,observed),source),True
+                return announcement_metadata(reviewed_calendar_role(localize_collected_row(row,source,observed),source),old,observed),True
             store.mutate("gameEvents/"+child_id,child_update)
             pickup_id=digest({"event":child_id,"kind":"character"})
             def child_pickup(old):

@@ -40,7 +40,7 @@ def reject_secret_fields(value):
 
 def validate_enrichment_policies(row):
  """Source-specific localization/references are bounded admin-reviewed metadata."""
- from collector import operating_source,reviewed,reviewed_localization_policy,policy_timestamp,safe_public_url,GF2_ROSTER_URLS
+ from collector import operating_source,reviewed,reviewed_localization_policy,policy_timestamp,safe_public_url,GF2_ROSTER_URLS,automatic_main_role_policy
  source=operating_source(row)
  fields=['contentLocalization','originalImageReference','reviewedNoticeReferences','calendarRolePolicy','localizationRoster']
  if not any(row.get(field) is not None for field in fields):return
@@ -73,7 +73,8 @@ def validate_enrichment_policies(row):
    except Exception as error:raise SafetyError('exact_notice_reference_review_required') from error
  roles=row.get('calendarRolePolicy')
  if roles is not None:
-  if not isinstance(roles,dict) or set(roles)-{'mode','version','reviewedAt','evidenceUrl','roles'} or roles.get('mode')!='reviewed_main_roles_v1' or not isinstance(roles.get('roles'),list) or not 1<=len(roles['roles'])<=50:raise SafetyError('bounded_calendar_role_policy_required')
+  if not isinstance(roles,dict) or set(roles)-{'mode','version','reviewedAt','evidenceUrl','roles','automaticRules'} or roles.get('mode')!='reviewed_main_roles_v1' or not isinstance(roles.get('roles'),list) or not 0<=len(roles['roles'])<=50 or not roles['roles'] and not roles.get('automaticRules'):raise SafetyError('bounded_calendar_role_policy_required')
+  if roles.get('automaticRules') is not None and not automatic_main_role_policy(source):raise SafetyError('reviewed_explicit_main_role_policy_required')
   for role in roles['roles']:
    if not isinstance(role,dict) or set(role)-{'sourceSha256','sourceTitle','characterNames','role','evidenceUrl','checkedAt'} or not re.fullmatch(r'[a-f0-9]{64}',str(role.get('sourceSha256',''))) or role.get('role') not in ['main-character','main-event','other'] or not isinstance(role.get('sourceTitle'),str) or not 1<=len(role['sourceTitle'])<=500 or not safe_public_url(role.get('evidenceUrl')):raise SafetyError('exact_calendar_role_review_required')
    values=role.get('characterNames',[])
@@ -197,7 +198,7 @@ def apply_requests(store,max_requests=25):
  return result
 
 
-PRIVATE_COLLECTIONS=['userGames','attendanceDaily','executionRecords','deviceRegistrations','notificationSettings','notificationSubscriptions','notificationReceipts','attendanceReminderLimits','bookmarks','reports','notificationJobs','notifications','pushTestLimits']
+PRIVATE_COLLECTIONS=['userGames','attendanceDaily','executionRecords','deviceRegistrations','notificationSettings','notificationSubscriptions','notificationReceipts','attendanceReminderLimits','announcementNotificationState','bookmarks','reports','notificationJobs','notifications','pushTestLimits']
 
 def cleanup_execution_retention(store,now=None,max_users=20,max_documents=100):
  """Free worker deletion, not paid Firestore TTL. Cursor progresses fairly.

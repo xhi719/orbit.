@@ -13,11 +13,136 @@ from pathlib import Path
 import uuid
 import unicodedata
 from zoneinfo import ZoneInfo
-from collector import digest
+from collector import digest, operating_source, reviewed, reviewed_calendar_role, safe_public_url
+from urllib.parse import urlsplit
 from store import FirestoreStore, MemoryStore, SafetyError, timestamp
 
 UTC=timezone.utc
 OFFSETS={"7d":10080,"1d":1440,"1h":60,"start":0}
+ANNOUNCEMENT_KIND="announcement:published"
+ANNOUNCEMENT_LOOKBACK=timedelta(hours=72)
+
+
+def announcement_identity(store,event,now,source_cache=None):
+    """Current official source and source-bound main role, never date approval."""
+    if not event or event.get("calendarRole") not in ("main-character","main-event") or event.get("status") in ("cancelled","canceled","postponed","ended"):return None
+    source_id=event.get("sourceId");cache=source_cache if source_cache is not None else {}
+    if not isinstance(source_id,str) or not source_id or "/" in source_id:return None
+    if source_id not in cache:cache[source_id]=store.get("gameSources/"+source_id)
+    public=cache[source_id]
+    if not public or public.get("id",source_id)!=source_id or public.get("enabled") is not True:return None
+    source=operating_source({**public,"id":source_id})
+    if not reviewed(source) or source.get("game_id") not in event.get("gameIds",[]):return None
+    try:
+        if not safe_public_url(source.get("terms_url")) or any(timestamp(source.get(field))>now for field in ("terms_checked_at","notice_hosts_verified_at")):return None
+    except (ValueError,TypeError):return None
+    url=safe_public_url(event.get("officialUrl"))
+    if not url or not url.startswith("https://") or urlsplit(url).hostname not in source.get("allowed_notice_hosts",[]):return None
+    sha=event.get("rawSha256");selected=event.get("displayTitle") or event.get("sourceSectionTitle") or event.get("originalTitle") or event.get("title")
+    if not isinstance(sha,str) or len(sha)!=64 or any(char not in "0123456789abcdef" for char in sha) or not isinstance(selected,str) or not selected.strip():return None
+    external=event.get("externalKey")
+    if not isinstance(external,str) or not external:return None
+    raw_key=("raw",digest([source_id,external,sha]))
+    if raw_key not in cache:cache[raw_key]=store.get("collectionDocuments/"+raw_key[1])
+    raw=cache[raw_key] or {}
+    if any(raw.get(field)!=value for field,value in [("sourceId",source_id),("externalKey",external),("rawSha256",sha),("officialUrl",event.get("officialUrl"))]):return None
+    proof=event.get("calendarRoleEvidence") or {};verified=reviewed_calendar_role(dict(event),source)
+    if (proof.get("status")!="verified" or proof.get("sourceSha256")!=sha or proof.get("sourceTitle")!=selected
+        or proof.get("role")!=event["calendarRole"] or verified.get("calendarRole")!=event["calendarRole"]
+        or verified.get("calendarRoleEvidence")!=proof):return None
+    signature=digest([sha,selected,event.get("characterNames",[])])
+    revision=event.get("announcementRevision")
+    if event.get("announcementContentSha256")!=signature or not isinstance(revision,int) or isinstance(revision,bool) or not 1<=revision<=1000000:return None
+    try:
+        published=timestamp(event.get("publishedAt"));updated=timestamp(event["sourceUpdatedAt"]) if event.get("sourceUpdatedAt") else None
+        if timestamp(raw.get("publishedAt"))!=published or updated and timestamp(raw.get("sourceUpdatedAt"))!=updated:return None
+        clock=updated if updated and updated>=published else published
+        if timestamp(event.get("announcementPublishedAt"))!=clock or clock>now or clock<now-ANNOUNCEMENT_LOOKBACK:return None
+    except (ValueError,TypeError):return None
+    region=event.get("serverRegion")
+    if region not in ("KR","JP","GLOBAL","UNSPECIFIED") or region!=source.get("server_region"):return None
+    category=event.get("categoryCandidate") or event.get("category")
+    if event["calendarRole"]=="main-character" and category!="recruitment":return None
+    if event["calendarRole"]=="main-event" and category not in ("limited-event","login-reward"):return None
+    return {"gameId":source["game_id"],"sourceId":source_id,"sourceSha256":sha,"sourceTitle":selected,"role":event["calendarRole"],
+        "revision":revision,"publishedAt":clock,"category":category,"region":region,
+        "scope":"unscoped_official_notice" if region=="UNSPECIFIED" else "regional_official_notice"}
+
+
+def announcement_contexts(store,uid,now,game_ids=None,check_quiet=True):
+    profile=store.get("users/"+uid)
+    if not profile or profile.get("uid",uid)!=uid or profile.get("deletionRequestedAt") or profile.get("notificationsEnabled") is False:return {}
+    global_settings=store.get(f"users/{uid}/notificationSettings/global") or {}
+    def permitted(settings):
+        return (settings.get("uid",uid)==uid and settings.get("enabled",True) is not False and settings.get("announcementEnabled",True) is not False
+            and settings.get("eventEnabled",True) is not False and ("types" not in settings or "event" in settings["types"]))
+    if not permitted(global_settings):return {}
+    if check_quiet and (quiet({"quietStart":profile.get("dndStart"),"quietEnd":profile.get("dndEnd"),"timezone":profile.get("timezone","UTC")},now) or quiet(global_settings,now)):return {}
+    selections=[(game_id,store.get(f"users/{uid}/userGames/{game_id}")) for game_id in game_ids] if game_ids is not None else store.list(f"users/{uid}/userGames",100)
+    contexts={}
+    for game_id,selected in selections:
+        if not isinstance(game_id,str) or "/" in game_id or not selected or selected.get("uid")!=uid or selected.get("gameId",game_id)!=game_id or selected.get("enabled") is not True:continue
+        settings=store.get(f"users/{uid}/notificationSettings/{game_id}") or global_settings
+        if not permitted(settings) or check_quiet and quiet(settings,now):continue
+        try:
+            activation=[timestamp(value) for value in [global_settings.get("announcementSubscribedAt"),settings.get("announcementSubscribedAt"),selected.get("createdAt")] if value is not None]
+            if any(value>now for value in activation):continue
+        except (ValueError,TypeError):continue
+        contexts[game_id]={"profile":profile,"global":global_settings,"settings":settings,"selected":selected,"activationAt":max(activation) if activation else None}
+    return contexts
+
+
+def announcement_region_allowed(context,proof):
+    global_settings=context["global"];settings=context["settings"];profile=context["profile"]
+    if proof["region"]=="UNSPECIFIED":
+        if global_settings.get("globalAnnouncementsEnabled") is not True or settings.get("globalAnnouncementsEnabled",global_settings.get("globalAnnouncementsEnabled")) is not True:return False
+    elif any(proof["region"] not in regions for regions in [profile.get("regions",[]),global_settings.get("regions",profile.get("regions",[])),settings.get("regions",profile.get("regions",[]))]):return False
+    for preferences in (global_settings,settings):
+        categories=preferences.get("eventCategories",["all"])
+        if "all" not in categories and proof["category"] not in categories:return False
+    return True
+
+
+def announcement_state_eligible(store,uid,game_id,context,proof):
+    state=store.get(f"users/{uid}/announcementNotificationState/{game_id}")
+    if not state or state.get("uid")!=uid or state.get("gameId")!=game_id or state.get("active") is not True:return False
+    try:
+        baseline=timestamp(state["baselineAt"]);activation=context["activationAt"]
+        return (not activation or activation<=baseline) and baseline<proof["publishedAt"]
+    except (ValueError,TypeError,KeyError):return False
+
+
+def eligible_announcement_games(store,uid,event,now,source_cache=None):
+    proof=announcement_identity(store,event,now,source_cache)
+    if not proof:return []
+    contexts=announcement_contexts(store,uid,now,[proof["gameId"]])
+    return [game_id for game_id,context in contexts.items() if announcement_region_allowed(context,proof) and announcement_state_eligible(store,uid,game_id,context,proof)]
+
+
+def plan_announcement_user(store,uid,events,now,source_cache=None):
+    """First connection/re-enabling arms a baseline and never replays backfill."""
+    contexts=announcement_contexts(store,uid,now,check_quiet=False)
+    prior=dict(store.list(f"users/{uid}/announcementNotificationState",100));fresh=set()
+    for game_id,state in prior.items():
+        if state.get("active") is True and game_id not in contexts:
+            store.put(f"users/{uid}/announcementNotificationState/{game_id}",{**state,"active":False,"updatedAt":now})
+    for game_id,context in contexts.items():
+        state=prior.get(game_id);activation=context["activationAt"]
+        try:armed=bool(state and state.get("uid")==uid and state.get("gameId")==game_id and state.get("active") is True and (not activation or activation<=timestamp(state["baselineAt"])))
+        except (ValueError,TypeError,KeyError):armed=False
+        if not armed:
+            store.put(f"users/{uid}/announcementNotificationState/{game_id}",{"uid":uid,"gameId":game_id,"active":True,"baselineAt":now,
+                "createdAt":(state or {}).get("createdAt",now),"updatedAt":now});fresh.add(game_id)
+    planned=0
+    for event in events:
+        proof=announcement_identity(store,event,now,source_cache)
+        if not proof or proof["gameId"] in fresh or not eligible_announcement_games(store,uid,event,now,source_cache):continue
+        key=digest([uid,event["id"],proof["revision"],ANNOUNCEMENT_KIND])
+        row={"uid":uid,"kind":ANNOUNCEMENT_KIND,"eventId":event["id"],"announcementRevision":proof["revision"],
+            "sourceId":proof["sourceId"],"sourceSha256":proof["sourceSha256"],"sourceTitle":proof["sourceTitle"],"announcementRole":proof["role"],
+            "scope":proof["scope"],"category":proof["category"],"status":"requested","dueAt":now,"createdAt":now,"updatedAt":now,"dedupeKey":key,"attempts":0}
+        planned+=int(store.mutate(f"users/{uid}/notificationJobs/{key}",lambda old:(None,False) if old else (row,True)))
+    return planned
 TEXT={"ko":("푸시 알림 테스트","이 알림이 보이면 앱에서 수신 확인을 눌러 주세요."),
       "en":("Push notification test","If this notification appears, confirm receipt in the app."),
       "ja":("プッシュ通知テスト","この通知が表示されたら、アプリで受信を確認してください。")}
@@ -230,6 +355,7 @@ def quiet(settings,now):
 
 
 def eligible(store,uid,event,kind,now):
+    if kind==ANNOUNCEMENT_KIND:return bool(eligible_announcement_games(store,uid,event,now))
     profile=store.get("users/"+uid)
     if not profile or profile.get("deletionRequestedAt"):return False
     if kind in ["TASK_REMINDER","task_reminder","reminder"]:return False
@@ -309,13 +435,28 @@ def fixed_payload(store,uid,job,event=None,now=None):
                 "tag":"orbit-attendance-"+job["dedupeKey"],"kind":"attendance","gameId":job["gameId"],
                 "gameIds":[job["gameId"]],"category":"attendance","eventId":"","recipientUid":uid,
                 "cycleKey":context["cycleKey"],"resetRuleId":context["ruleId"]}
-    eligible_games=[game_id for game_id in event.get("gameIds",[])
+    eligible_games=eligible_announcement_games(store,uid,event,now) if job["kind"]==ANNOUNCEMENT_KIND else [game_id for game_id in event.get("gameIds",[])
                     if eligible(store,uid,{**event,"gameIds":[game_id]},job["kind"],now)]
-    title,body=localized_event_payload(event,lang)
-    return {"title":title[:200],"body":body[:500],
+    if job["kind"]==ANNOUNCEMENT_KIND and not eligible_games:raise SafetyError("announcement_became_ineligible")
+    presented={**event,"category":event.get("categoryCandidate") or event.get("category")} if job["kind"]==ANNOUNCEMENT_KIND else event
+    title,body=localized_event_payload(presented,lang)
+    if job["kind"]==ANNOUNCEMENT_KIND:
+        lead={"ko":"공식에서 새 공지를 게시했습니다.","en":"A new official announcement was published.","ja":"公式から新しいお知らせが公開されました。"}.get(lang,"A new official announcement was published.")
+        if event.get("serverRegion")=="UNSPECIFIED":lead+=" "+{"ko":"서버 지역이 확인되지 않은 소식입니다.","en":"The server region has not been confirmed.","ja":"サーバー地域は未確認です。"}.get(lang,"The server region has not been confirmed.")
+        body=lead+" "+body
+    payload={"title":title[:200],"body":body[:500],
             "url":"/events/"+event["id"],"jobId":job["id"],"tag":"orbit-event-"+job.get("dedupeKey",job["id"]),
             "kind":job["kind"],"gameId":eligible_games[0] if eligible_games else "",
-            "gameIds":eligible_games,"category":event.get("category",""),"eventId":event["id"],"recipientUid":uid}
+            "gameIds":eligible_games,"category":presented.get("category",""),"eventId":event["id"],"recipientUid":uid}
+    if job["kind"]==ANNOUNCEMENT_KIND:payload.update(scope=job["scope"],announcementRole=job["announcementRole"])
+    return payload
+
+
+def announcement_job_current(store,uid,job,event,now):
+    proof=announcement_identity(store,event,now)
+    return bool(proof and job.get("uid")==uid and job.get("announcementRevision")==proof["revision"]
+        and all(job.get(field)==proof[key] for field,key in [("sourceId","sourceId"),("sourceSha256","sourceSha256"),("sourceTitle","sourceTitle"),("announcementRole","role"),("scope","scope"),("category","category")])
+        and eligible_announcement_games(store,uid,event,now))
 
 
 def dispatch(store,uid,job_id,sender,now=None):
@@ -331,7 +472,8 @@ def dispatch(store,uid,job_id,sender,now=None):
     job={**job,"id":job_id}
     event=store.get("gameEvents/"+job["eventId"]) if job.get("eventId") else None
     if job["kind"]=="attendance":event={"gameIds":[job.get("gameId")],"cycleKey":job.get("cycleKey")}
-    if job.get("eventId") and event and job.get("eventRevision")!=event.get("revision",1) or not eligible(store,uid,event,job["kind"],now):
+    valid_revision=announcement_job_current(store,uid,job,event,now) if job["kind"]==ANNOUNCEMENT_KIND else not (job.get("eventId") and event and job.get("eventRevision")!=event.get("revision",1))
+    if not valid_revision or not eligible(store,uid,event,job["kind"],now):
         store.put(path,{**store.get(path),"status":"cancelled","reasonCode":"INELIGIBLE_AT_SEND","updatedAt":now});return "cancelled"
     try:payload=fixed_payload(store,uid,job,event,now)
     except SafetyError:
@@ -343,8 +485,13 @@ def dispatch(store,uid,job_id,sender,now=None):
         if sub.get("expiresAt") and timestamp(sub["expiresAt"])<=now:continue
         if sub.get("platform") not in ["android","web"]:continue  # Native Windows FCM SDK unsupported
         devices.append((device_id,sub))
-    accepted,failed,ambiguous=0,0,0
+    accepted,failed,ambiguous,withheld=0,0,0,0
     for device_id,sub in devices:
+        if job["kind"]==ANNOUNCEMENT_KIND:
+            latest_event=store.get("gameEvents/"+job["eventId"]);latest_sub=store.get(f"users/{uid}/notificationSubscriptions/{device_id}") or {}
+            if (not announcement_job_current(store,uid,job,latest_event,now) or latest_sub.get("uid")!=uid
+                or latest_sub.get("enabled") is not True or latest_sub.get("transport")!="fcm" or latest_sub.get("token")!=sub.get("token")):
+                withheld+=1;continue
         try:
             provider_id=sender(sub["token"],payload)
             accepted+=1
@@ -355,19 +502,24 @@ def dispatch(store,uid,job_id,sender,now=None):
             # Never log token or provider exception bodies, which may contain credentials.
             store.put("notificationLogs/"+digest([uid,job_id,device_id]),{"uid":uid,"jobId":job_id,"deviceId":device_id,
                       "status":"delivery_unconfirmed","reasonCode":type(error).__name__,"createdAt":now})
-    status="partially_accepted" if accepted and failed else "provider_accepted" if accepted else "delivery_unconfirmed" if ambiguous else "in_app_only"
+    status="partially_accepted" if accepted and (failed or withheld) else "provider_accepted" if accepted else "delivery_unconfirmed" if ambiguous else "cancelled" if withheld else "in_app_only"
     final={**store.get(path),"status":status,"leaseToken":None,"acceptedDeviceCount":accepted,"failedDeviceCount":failed,"updatedAt":now,"humanConfirmedAt":None}
+    if withheld:final.update(withheldDeviceCount=withheld,reasonCode="INELIGIBLE_BEFORE_PROVIDER")
     store.put(path,final)
+    if status=="cancelled":return status
     store.put(f"users/{uid}/notifications/{job_id}",{"uid":uid,"title":payload["title"],"body":payload["body"],"url":payload["url"],"status":status,"readAt":None,"createdAt":now})
     return status
 
 
 def run(store,sender,now=None,max_users=50):
     now=now or datetime.now(UTC);events=[value for _,value in store.list("gameEvents",200)]
-    stats={"users":0,"planned":0,"attendancePlanned":0,"providerAcceptedJobs":0,"inAppOnly":0,"cancelled":0}
+    announcement_rows=store.list_since("gameEvents","announcementPublishedAt",now-ANNOUNCEMENT_LOOKBACK,200)
+    announcements=[value for _,value in announcement_rows];source_cache={}
+    stats={"users":0,"planned":0,"announcementPlanned":0,"announcementScanned":len(announcements),"announcementScanLimitReached":len(announcement_rows)==200,"attendancePlanned":0,"providerAcceptedJobs":0,"inAppOnly":0,"cancelled":0}
     for uid,profile in store.list("users",max_users):
         if profile.get("deletionRequestedAt"):continue
         stats["users"]+=1;stats["planned"]+=plan_user(store,uid,events,now)
+        stats["announcementPlanned"]+=plan_announcement_user(store,uid,announcements,now,source_cache)
         stats["attendancePlanned"]+=plan_attendance_user(store,uid,now)
         for job_id,job in store.list(f"users/{uid}/notificationJobs",100):
             if job.get("status")=="sending" and timestamp(job["updatedAt"])<now-timedelta(minutes=12):
@@ -390,6 +542,7 @@ def fcm_message(messaging,token,payload):
           "gameId":payload.get("gameId",""),"gameIds":json.dumps(payload.get("gameIds",[]),ensure_ascii=False),
           "category":payload.get("category",""),"eventId":payload.get("eventId","")}
     if payload.get("kind")=="attendance":data.update({"cycleKey":payload["cycleKey"],"resetRuleId":payload["resetRuleId"]})
+    if payload.get("kind")==ANNOUNCEMENT_KIND:data.update({"scope":payload["scope"],"announcementRole":payload["announcementRole"]})
     # FCM data payloads have a 4096-byte ceiling. Preserve routing/filter fields,
     # then shorten only text; never reinterpret an omitted game as a global event.
     if len(json.dumps(data,ensure_ascii=False).encode())>3500:

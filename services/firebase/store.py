@@ -80,6 +80,17 @@ class MemoryStore:
                     if path.startswith(prefix) and "/" not in path[len(prefix):] and (after_id is None or path[len(prefix):]>after_id))[:limit]
         self.reads+=max(1,len(rows));return rows
 
+    def list_since(self,collection,field,since,limit=200):
+        if collection!="gameEvents" or field!="announcementPublishedAt" or not 1<=limit<=200:raise SafetyError("bounded_announcement_query_required")
+        cutoff=timestamp(since);prefix=collection+"/";rows=[]
+        for path,value in self.records.items():
+            if not path.startswith(prefix) or "/" in path[len(prefix):] or not value.get(field):continue
+            try:clock=timestamp(value[field])
+            except (ValueError,TypeError):continue
+            if clock>=cutoff:rows.append((path[len(prefix):],deepcopy(value)))
+        rows=sorted(rows,key=lambda item:(timestamp(item[1][field]),item[0]),reverse=True)[:limit]
+        self.reads+=max(1,len(rows));return rows
+
 
 def verify_no_billing(project_id, credentials, opener=urlopen):
     """Never attach/detach billing. Any unavailable/ambiguous response fails closed."""
@@ -200,6 +211,15 @@ class FirestoreStore:
         query=parent.order_by("__name__")
         if after_id is not None:query=query.start_after([parent.document(after_id)])
         rows=[(document.id,document.to_dict()) for document in query.limit(remaining).stream(timeout=20)]
+        self.reads+=max(1,len(rows));return rows
+
+    def list_since(self,collection,field,since,limit=200):
+        self.guard()
+        if collection!="gameEvents" or field!="announcementPublishedAt" or not 1<=limit<=200:raise SafetyError("bounded_announcement_query_required")
+        from google.cloud.firestore_v1.base_query import FieldFilter
+        remaining=min(limit,self.max_reads-self.reads)
+        query=self.db.collection(collection).where(filter=FieldFilter(field,">=",timestamp(since))).order_by(field,direction="DESCENDING").limit(remaining)
+        rows=[(document.id,document.to_dict()) for document in query.stream(timeout=20)]
         self.reads+=max(1,len(rows));return rows
 
     def finish_usage(self):
