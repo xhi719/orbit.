@@ -47,6 +47,7 @@ YOUTUBE_NOTICE_IMAGE_POLICY_VERSION = 3
 CONTENT_CLASSIFICATION_VERSION = 1
 NEWS_ONLY_KINDS = frozenset({"character-pv", "event-pv"})
 CALENDAR_PREVIEW_KINDS = frozenset({"broadcast-preview", "offline-preview", "pickup-preview", "event-preview"})
+YOUTUBE_ADMITTED_NEWS_KINDS = NEWS_ONLY_KINDS | CALENDAR_PREVIEW_KINDS | frozenset({"goods-preview", "collaboration-preview", "game-notice"})
 
 # This allow list describes a post, not everything mentioned in its boilerplate
 # description. It is shared by new ingestion and the public-document migration.
@@ -1762,10 +1763,28 @@ def retire_derived_event(store,event_id,row,observed,depth=0):
 
 
 def upsert_notice(store, source, document, observed, *, image_fetch=None, deadline=None):
-    if store.remote and hasattr(store,"max_writes")and store.max_writes-store.writes<20:raise SafetyError("collector_free_quota_headroom")
     gate = content_publication_status(document.get("published_at"), observed)
     if gate != "INCLUDED": return "beforeContentCutoffSkipped" if gate == "PUBLISHED_BEFORE_CONTENT_CUTOFF" else "publicationUnconfirmedSkipped"
     if not source_document_allowed(source,document.get("original_title")):return "contentExcluded"
+    if source.get("parser")in YOUTUBE_PARSERS:
+        admission=classify_notice_content({"rawSha256":document.get("raw_sha256"),"originalTitle":document.get("original_title")})
+        if admission["status"]!="verified"or admission["kind"]not in YOUTUBE_ADMITTED_NEWS_KINDS:
+            # The loop and direct reviewed import entry point have the same
+            # admission rule. New unrelated uploads cause no snapshot/event
+            # write or thumbnail request. Existing public audit rows retain
+            # their original fields and receive an explicit stable exclusion.
+            path="gameEvents/"+event_identity(document,source)
+            existing=store.get(path)
+            if not existing:return "contentExcluded"
+            proof={"version":1,"method":"explicit_youtube_title_admission_v1","sourceId":source["id"],"videoId":document["external_key"],
+                "sourceSha256":document.get("raw_sha256"),"sourceTitle":document.get("original_title"),"classification":admission}
+            def exclude(old):
+                if (not old or old.get("sourceId")!=source["id"]or old.get("externalKey")!=document["external_key"]
+                    or old.get("sourceProvider")not in(None,"youtube")or old.get("officialUrl")!=document.get("official_url")):return None,False
+                if old.get("newsEligible")is False and old.get("calendarEligible")is False and old.get("contentIngestionState")=="excluded"and old.get("contentExclusionEvidence")==proof:return None,False
+                return {**old,"newsEligible":False,"calendarEligible":False,"contentIngestionState":"excluded", "contentExcludedAt":old.get("contentExcludedAt",observed),"contentExclusionEvidence":proof},True
+            return "contentSuppressedUpdated"if store.mutate(path,exclude)else "contentExcluded"
+    if store.remote and hasattr(store,"max_writes")and store.max_writes-store.writes<20:raise SafetyError("collector_free_quota_headroom")
     pair=source.get("paired_ticket_notice")or{}
     if pair and not document.get("_section_key")and document.get("official_url")==pair.get("parentArticleUrl"):
         try:
@@ -1784,7 +1803,7 @@ def upsert_notice(store, source, document, observed, *, image_fetch=None, deadli
     if source.get("parser")in YOUTUBE_PARSERS and not document.get("_section_key"):
         previous=store.get("gameEvents/"+event_id)
         same=bool(previous and previous.get("rawSha256")==document["raw_sha256"]and previous.get("extractionVersion")==EXTRACTION_VERSION
-            and previous.get("extractionPolicySha256")==document["extraction_policy_sha256"])
+            and previous.get("extractionPolicySha256")==document["extraction_policy_sha256"]and previous.get("contentIngestionState")!="excluded")
         try:image_probe_due=not same or not previous.get("metadataCheckedAt")or timestamp(previous["metadataCheckedAt"])<=observed-timedelta(hours=24)
         except (ValueError,TypeError):image_probe_due=True
         if image_probe_due:
@@ -1822,7 +1841,7 @@ def upsert_notice(store, source, document, observed, *, image_fetch=None, deadli
           "officialUrl":document["official_url"],**video_metadata},True
     store.mutate("collectionDocuments/"+proof_id,raw_update)
     def update(old):
-        if old and old.get("rawSha256") == document["raw_sha256"] and old.get("extractionVersion")==EXTRACTION_VERSION and old.get("extractionPolicySha256")==document["extraction_policy_sha256"] and old.get("categoryCandidate")==document["category_candidate"] and old.get("pairedTicketNoticeState")==document.get("_paired_ticket_state"):
+        if old and old.get("rawSha256") == document["raw_sha256"] and old.get("extractionVersion")==EXTRACTION_VERSION and old.get("extractionPolicySha256")==document["extraction_policy_sha256"] and old.get("categoryCandidate")==document["category_candidate"] and old.get("pairedTicketNoticeState")==document.get("_paired_ticket_state")and not(source.get("parser")in YOUTUBE_PARSERS and old.get("contentIngestionState")=="excluded"):
             if old.get("verificationStatus")=="verified" and old.get("status") not in ("cancelled","postponed") and old.get("startsAt") and old.get("endsAt"):
                 state="ended" if timestamp(old["endsAt"])<=observed else "ongoing" if timestamp(old["startsAt"])<=observed else "upcoming"
                 if state!=old.get("status"):
@@ -1871,6 +1890,7 @@ def upsert_notice(store, source, document, observed, *, image_fetch=None, deadli
              "pairedTicketNoticeState":document.get("_paired_ticket_state"),
              "regionBasis":document.get("region_basis"),"gameServerRegion":document.get("game_server_region"),
              "revision":(old.get("revision",0) if old else 0)+1}
+        if source.get("parser")in YOUTUBE_PARSERS:row["contentIngestionState"]="admitted"
         # Raw notices do not erase manual dates/categories; changes revoke approval.
         for key,default in {"startsAt":None,"endsAt":None,"reservationStartsAt":None,"reservationEndsAt":None,
                             "ticketSalesAt":None,"originalTimezone":None,"category":"unclassified",
@@ -2221,14 +2241,9 @@ def collect_one(store, source, start, end, mode="backfill", fetch=fetch_source, 
                         document=attach_official_rss_article(article_raw,source,document)
                     if ongoing_old:metrics["ongoingOlderIncluded"]+=1
                     classification=classify_notice_content({"rawSha256":document["raw_sha256"],"originalTitle":document["original_title"]})
-                    if source["parser"]in YOUTUBE_PARSERS and classification["kind"]=="other":
+                    if source["parser"]in YOUTUBE_PARSERS and (classification["status"]!="verified"or classification["kind"]not in YOUTUBE_ADMITTED_NEWS_KINDS):
                         metrics["contentExcluded"]+=1
-                        existing_path="gameEvents/"+event_identity(document,source)
-                        def suppress(old):
-                            if not old:return None,False
-                            amended=apply_notice_content_policy(old,observed)
-                            return (None,False)if amended==old else(amended,True)
-                        metrics["contentSuppressedUpdated"]+=int(bool(store.mutate(existing_path,suppress)))
+                        metrics["contentSuppressedUpdated"]+=int(upsert_notice(store,source,document,observed)=="contentSuppressedUpdated")
                         continue
                     outcome=upsert_notice(store,source,document,observed,image_fetch=fetch,deadline=deadline)
                     metrics[outcome]+=1
