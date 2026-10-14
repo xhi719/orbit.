@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from store import MemoryStore,FirestoreStore,SafetyError,timestamp
-from collector import reviewed,seed_catalogue,event_identity,upsert_notice,claim_source,collect_one,run,enrich_document,extract_schedule,highest_rarity_targets,source_row,operating_source,section_documents,confirmed_window_overlap,youtube_request,parse_youtube_documents,YOUTUBE_FEED_DOCUMENTATION,source_policy,EXTRACTION_VERSION,parse_official_roster,refresh_localization_roster,GF2_ROSTER_URLS
+from collector import reviewed,seed_catalogue,event_identity,upsert_notice,claim_source,collect_one,run,enrich_document,extract_schedule,highest_rarity_targets,source_row,operating_source,section_documents,confirmed_window_overlap,youtube_request,parse_youtube_documents,YOUTUBE_FEED_DOCUMENTATION,source_policy,EXTRACTION_VERSION,parse_official_roster,refresh_localization_roster,GF2_ROSTER_URLS,new_doll_block_targets,plain_notice
 from engine import ValidationError
 from notifications import quiet,eligible,plan_user,dispatch,fixed_payload,fcm_message,run as notification_run,reset_cycle,completed_cycle,attendance_context,plan_attendance_user,plan_announcement_user,announcement_identity,ANNOUNCEMENT_KIND
 from admin import validate_change,apply_requests,cleanup_accounts,cleanup_execution_retention
@@ -1227,5 +1227,81 @@ class OfficialAnnouncementNotificationTests(unittest.TestCase):
  def test_auto_debut_role_needs_valid_highest_rarity_review_clock_and_https(self):
   for changes in ({'checkedAt':'not-verified'},{'evidenceUrl':'http://official.example/tiers'}):
    s,source=self.fixture();source['highest_character_rarity'].update(changes);self.assertEqual(self.publish(s,source),[])
+ def new_block_fixture(self):
+  s,source=self.fixture();source['calendar_role_policy']['automaticRules']['newCharacterFormat']='gf2_new_doll_block_v1'
+  s.put('gameSources/source',{**source_row(source,self.GAME),'enabled':True});return s,source
+ def new_block_text(self,name='Fresh'):
+  return ('[h3]- New Doll -[/h3][p]■ Elite Doll \\['+name+'][/p][h3]- New Weapons -[/h3][p]■ Elite Weapon [Synthetic Weapon][/p]'
+   '[h3]- New Contents -[/h3][p]■ Rate Up Event [Targeted Procurement] and [Military Upgrade].[/p]'
+   '[p]・ During the event, the drop rate for Elite Doll ['+name+'] and Elite Weapon [Synthetic Weapon] will be increased.[/p]')
+ def test_approved_new_doll_block_creates_one_debut_pickup_without_dates(self):
+  s,source=self.new_block_fixture();rows=self.publish(s,source,text=self.new_block_text());self.assertEqual(len(rows),1);e=rows[0]
+  self.assertEqual(e['displayTitle'],'Fresh');self.assertEqual(e['announcementKind'],'new');self.assertEqual(e['characterEvidenceMethod'],'gf2_new_doll_block_v1')
+  self.assertEqual(e['calendarRoleEvidence']['evidenceText'],e['characterEvidenceText']);self.assertEqual(e['verificationStatus'],'pending');self.assertIsNone(e['startsAt']);self.job(s,rows)
+ def test_new_doll_block_requires_independent_source_format_opt_in(self):
+  s,source=self.fixture();self.assertEqual(self.publish(s,source,text=self.new_block_text()),[])
+ def test_new_doll_block_requires_exact_highest_tier_not_assumed_ssr_alias(self):
+  for highest in [None,{'labels':['SSR'],'checkedAt':NOW,'evidenceUrl':'https://official.example/tier'},{'labels':['Elite'],'checkedAt':'unknown','evidenceUrl':'https://official.example/tier'}]:
+   s,source=self.new_block_fixture();source['highest_character_rarity']=highest;self.assertEqual(self.publish(s,source,text=self.new_block_text()),[])
+ def test_new_doll_block_does_not_accept_reruns_weapons_standard_or_mixed_items(self):
+  for text in [self.new_block_text().replace('- New Doll -','- Returning Doll -'),self.new_block_text().replace('- New Doll -','- New and Returning Dolls -'),
+   self.new_block_text().replace('■ Elite Doll \\[Fresh]','■ Elite Weapon [Fresh]'),self.new_block_text().replace('■ Elite Doll \\[Fresh]','■ Standard Doll [Fresh]'),
+   self.new_block_text().replace('■ Elite Doll \\[Fresh]','■ Elite Doll [Fresh] and [Other]')]:
+   s,source=self.new_block_fixture();self.assertEqual(self.publish(s,source,text=text),[])
+ def test_new_doll_heading_never_scans_past_unrelated_next_line(self):
+  s,source=self.new_block_fixture();text=self.new_block_text().replace('- New Doll -[/h3]','- New Doll -[/h3][p]Unrelated text[/p]')
+  self.assertEqual(self.publish(s,source,text=text),[])
+ def test_new_doll_block_requires_exact_named_pickup_not_only_a_new_unit(self):
+  s,source=self.new_block_fixture();text=self.new_block_text().replace('drop rate for Elite Doll [Fresh]','drop rate for Elite Doll [Other]')
+  self.assertEqual(self.publish(s,source,text=text),[])
+ def test_new_doll_without_procurement_does_not_infer_gacha_from_mod_release(self):
+  s,source=self.new_block_fixture();text='- New Doll -\n■ Elite Doll [Fresh]\nThis unit is obtainable via MOD.'
+  self.assertEqual(self.publish(s,source,text=text),[])
+ def test_new_doll_parser_can_corroborate_exact_haoplay_procurement_sentence(self):
+  s,source=self.new_block_fixture();text='- New Doll -\n■ Elite Doll [Fresh]\n- New Contents -\n■Targeted Procurement Event | Fresh\nThe drop rate for the Elite Doll [Fresh] is increased in the Targeted Procurement!'
+  self.assertEqual(len(self.publish(s,source,text=text)),1)
+ def test_two_explicit_new_dolls_get_separate_jobs_and_no_parent_duplicate(self):
+  s,source=self.new_block_fixture();text=self.new_block_text().replace('- New Doll -','- New Dolls -').replace('\\[Fresh][/p]','\\[Fresh][/p][p]■ Elite Doll [Other][/p]')
+  text+='[p]・ During the event, the drop rate for Elite Doll [Other] and Elite Weapon [Synthetic Weapon] will be increased.[/p]'
+  rows=self.publish(s,source,text=text);self.assertEqual({row['displayTitle'] for row in rows},{'Fresh','Other'})
+  self.assertEqual(plan_announcement_user(s,'alice',rows,NOW+timedelta(minutes=2)),2);self.assertEqual(len(s.list('users/alice/notificationJobs')),2)
+ def test_new_doll_block_does_not_borrow_parent_story_event_dates(self):
+  s,source=self.new_block_fixture();source.update(schedule_extraction_approved=True,schedule_extraction_reviewed_at=NOW.isoformat(),schedule_extraction_evidence_url='https://steamcommunity.com/announcement/format')
+  text=self.new_block_text()+'[p]Event Duration: 2026-10-12 10:00 - 2026-10-20 18:00 (UTC)[/p]';rows=self.publish(s,source,text=text)
+  self.assertIsNone(rows[0]['startsAt']);self.assertIsNone(rows[0]['endsAt']);self.assertIsNone(rows[0]['candidateStartsAt']);self.assertEqual(rows[0]['verificationStatus'],'pending')
+ def test_new_doll_format_does_not_reuse_gf2_grammar_for_other_games(self):
+  s,source=self.new_block_fixture();source['game_id']='other';source['calendar_role_policy']['automaticRules'].update(gameId='other',mainEventFormat=None)
+  self.assertEqual(self.publish(s,source,text=self.new_block_text()),[])
+ def test_new_doll_block_handles_publisher_bbcode_without_changing_original(self):
+  s,source=self.new_block_fixture();body=self.new_block_text();targets=new_doll_block_targets(plain_notice(body),source)
+  self.assertEqual([target['name'] for target in targets],['Fresh']);rows=self.publish(s,source,text=body);self.assertEqual(rows[0]['originalDescription'],body)
+ def test_new_doll_pickup_role_does_not_depend_on_generic_pickup_keyword_guess(self):
+  s,source=self.new_block_fixture();body=self.new_block_text();clock=NOW+timedelta(minutes=1)
+  notice={**document(region='KR',sha='d'*64),'original_description':body,'event_type_candidates':['update'],'published_at':clock.isoformat(),'pickups':[]}
+  upsert_notice(s,source,notice,clock);rows=[row for _,row in s.list('gameEvents') if row.get('calendarRole')=='main-character']
+  self.assertEqual(len(rows),1);self.assertEqual(rows[0]['categoryCandidate'],'recruitment');self.assertTrue(eligible(s,'alice',rows[0],ANNOUNCEMENT_KIND,NOW+timedelta(minutes=2)))
+ def test_verified_story_period_never_becomes_new_doll_pickup_schedule(self):
+  s,source=self.new_block_fixture();source.update(schedule_extraction_approved=True,schedule_extraction_reviewed_at=NOW.isoformat(),schedule_extraction_evidence_url='https://steamcommunity.com/announcement/format')
+  rows=self.publish(s,source,text=self.new_block_text()+'[p]Event Duration: 2026-10-12 10:00 - 2026-10-20 18:00 (UTC)[/p]')
+  parent=s.get('gameEvents/'+rows[0]['parentEventId']);self.assertEqual(parent['verificationStatus'],'verified');self.assertIsNotNone(parent['startsAt'])
+  pickup=next(row for _,row in s.list('pickupSchedules') if row['eventId']==rows[0]['id'])
+  for key in ['startsAt','endsAt','originalTimezone','candidateStartsAt','candidateEndsAt','candidateTimezone','lastVerifiedAt','scheduleOrigin']:self.assertIsNone(pickup.get(key),key)
+  self.assertEqual(pickup['verificationStatus'],'pending');self.assertEqual(pickup['status'],'unconfirmed')
+ def test_unscoped_story_candidate_period_never_becomes_new_doll_pickup_period(self):
+  s,source=self.new_block_fixture();source['server_region']='UNSPECIFIED';source.update(schedule_extraction_approved=True,schedule_extraction_reviewed_at=NOW.isoformat(),schedule_extraction_evidence_url='https://steamcommunity.com/announcement/format')
+  rows=self.publish(s,source,text=self.new_block_text()+'[p]Event Duration: 2026-10-12 10:00 - 2026-10-20 18:00 (UTC)[/p]')
+  parent=s.get('gameEvents/'+rows[0]['parentEventId']);self.assertIsNotNone(parent['candidateStartsAt']);pickup=next(row for _,row in s.list('pickupSchedules') if row['eventId']==rows[0]['id'])
+  for key in ['startsAt','endsAt','originalTimezone','candidateStartsAt','candidateEndsAt','candidateTimezone']:self.assertIsNone(pickup.get(key),key)
+  self.assertEqual(pickup['serverRegion'],'UNSPECIFIED');self.assertEqual(pickup['verificationStatus'],'pending')
+ def test_inline_new_character_inside_main_story_does_not_copy_story_period(self):
+  s,source=self.fixture();source.update(schedule_extraction_approved=True,schedule_extraction_reviewed_at=NOW.isoformat(),schedule_extraction_evidence_url='https://steamcommunity.com/announcement/format')
+  clock=NOW+timedelta(minutes=1);body='New Elite Doll [Fresh] debuts in the pickup.\nEvent Duration: 2026-10-12 10:00 - 2026-10-20 18:00 (UTC)'
+  notice={**document(region='KR',sha='e'*64),'original_title':'Actual Story','original_description':body,'_section_key':'story','_section_title':'Actual Story','_section_category':'limited-event','published_at':clock.isoformat()}
+  upsert_notice(s,source,notice,clock);child=next(row for _,row in s.list('gameEvents') if row.get('announcementKind')=='new')
+  self.assertIsNotNone(s.get('gameEvents/'+child['parentEventId'])['startsAt']);self.assertEqual(child['categoryCandidate'],'recruitment');self.assertIsNone(child['startsAt']);self.assertEqual(child['verificationStatus'],'pending')
+  pickup=next(row for _,row in s.list('pickupSchedules') if row['eventId']==child['id']);self.assertIsNone(pickup['startsAt']);self.assertIsNone(pickup['candidateStartsAt']);self.assertEqual(pickup['verificationStatus'],'pending')
+ def test_new_doll_cancellation_is_preserved_when_story_period_is_removed(self):
+  s,source=self.new_block_fixture();rows=self.publish(s,source,text=self.new_block_text()+'[p]Event has been cancelled[/p]');self.assertEqual(rows[0]['status'],'cancelled')
+  pickup=next(row for _,row in s.list('pickupSchedules') if row['eventId']==rows[0]['id']);self.assertEqual(pickup['status'],'cancelled');self.assertFalse(eligible(s,'alice',rows[0],ANNOUNCEMENT_KIND,NOW+timedelta(minutes=2)))
 
 if __name__=='__main__':unittest.main()
