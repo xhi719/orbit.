@@ -2226,6 +2226,43 @@ class PairedOctoberFestivalTests(unittest.TestCase):
   for keys in [[],['not a date'],['2026-10-14']*9]:
    with self.assertRaisesRegex(SafetyError,'bounded_public_stage_date_query'):store.list_stage_dates(keys)
 
+class DirectYouTubeNewsAdmissionTests(unittest.TestCase):
+ """Same admission at direct import and scheduled collection entry points."""
+ def notice(self,title='Character PV: Alice'):
+  return ExactOfficialYoutubeThumbnailTests().notice(title)
+ def test_unrelated_ost_and_shorts_never_create_event_raw_or_thumbnail_request(self):
+  for title in ['Funny game moment','Character Theme Song','Character PV #shorts','스토리 PV 과거','캐릭터 공략 PV']:
+   source,doc=self.notice(title);store=MemoryStore()
+   with self.subTest(title=title):
+    self.assertEqual(upsert_notice(store,source,doc,NOW,image_fetch=lambda _:self.fail('excluded thumbnail request')),'contentExcluded');self.assertEqual(store.records,{});self.assertEqual(store.writes,0)
+ def test_description_keywords_cannot_admit_an_unrelated_video(self):
+  source,doc=self.notice('Funny game moment');doc['original_description']='Character PV\nOfficial Livestream\n픽업 예고'
+  store=MemoryStore();self.assertEqual(upsert_notice(store,source,doc,NOW,image_fetch=lambda _:self.fail('body-only thumbnail request')),'contentExcluded');self.assertEqual(store.writes,0)
+ def test_unverified_source_hash_does_not_create_public_news(self):
+  source,doc=self.notice();doc['raw_sha256']='not-a-source-hash';store=MemoryStore()
+  self.assertEqual(upsert_notice(store,source,doc,NOW,image_fetch=lambda _:self.fail('unverified hash thumbnail request')),'contentExcluded');self.assertEqual(store.records,{})
+ def test_character_and_event_pv_keep_only_title_thumbnail_link_without_description(self):
+  for title,kind in [('Character PV: Alice','character-pv'),('Summer Event PV','event-pv')]:
+   source,doc=self.notice(title);store=MemoryStore();self.assertEqual(upsert_notice(store,source,doc,NOW,image_fetch=synthetic_thumbnail_fetch),'created')
+   row=store.list('gameEvents')[0][1];raw=store.list('collectionDocuments')[0][1]
+   self.assertEqual(row['contentKind'],kind);self.assertTrue(row['newsEligible']);self.assertFalse(row['calendarEligible']);self.assertEqual(row['originalDescription'],'');self.assertEqual(row['description'],'');self.assertEqual(raw['rawJson']['description'],'');self.assertEqual(row['originalTitle'],title);self.assertEqual(row['noticeImage']['sourceUrl'],row['officialUrl'])
+ def test_existing_admitted_record_remains_unchanged_without_another_probe(self):
+  source,doc=self.notice();store=MemoryStore();upsert_notice(store,source,doc,NOW,image_fetch=synthetic_thumbnail_fetch);before=json.dumps(store.records,sort_keys=True,default=lambda value:value.isoformat());writes=store.writes
+  self.assertEqual(upsert_notice(store,source,doc,NOW+timedelta(minutes=15),image_fetch=lambda _:self.fail('unchanged thumbnail request')),'unchanged');self.assertEqual(store.writes,writes);self.assertEqual(json.dumps(store.records,sort_keys=True,default=lambda value:value.isoformat()),before)
+ def test_existing_excluded_video_is_audited_without_losing_provenance_and_can_recover(self):
+  source,doc=self.notice();store=MemoryStore();upsert_notice(store,source,doc,NOW,image_fetch=synthetic_thumbnail_fetch);key=event_identity(doc,source);old=store.get('gameEvents/'+key)
+  _,changed=self.notice('Character OST #shorts');self.assertEqual(upsert_notice(store,source,changed,NOW+timedelta(minutes=15),image_fetch=lambda _:self.fail('retired thumbnail request')),'contentSuppressedUpdated');row=store.get('gameEvents/'+key)
+  for field in ['id','originalTitle','originalDescription','publishedAt','rawSha256','image','startsAt','endsAt','officialUrl','revision']:self.assertEqual(row[field],old[field])
+  self.assertFalse(row['newsEligible']);self.assertFalse(row['calendarEligible']);self.assertEqual(row['contentIngestionState'],'excluded');self.assertEqual(row['contentExclusionEvidence']['sourceTitle'],changed['original_title']);self.assertEqual(len(store.list('collectionDocuments')),1);self.assertIsNone(announcement_identity(store,row,NOW+timedelta(minutes=15)))
+  self.assertEqual(upsert_notice(store,source,doc,NOW+timedelta(minutes=20),image_fetch=synthetic_thumbnail_fetch),'updated');self.assertTrue(store.get('gameEvents/'+key)['newsEligible']);self.assertEqual(store.get('gameEvents/'+key)['contentIngestionState'],'admitted')
+ def test_repeated_same_exclusion_does_not_rewrite_at_every_poll(self):
+  source,doc=self.notice();store=MemoryStore();upsert_notice(store,source,doc,NOW,image_fetch=synthetic_thumbnail_fetch);_,changed=self.notice('Funny game moment');upsert_notice(store,source,changed,NOW+timedelta(minutes=1));writes=store.writes
+  self.assertEqual(upsert_notice(store,source,changed,NOW+timedelta(minutes=20),image_fetch=lambda _:self.fail('repeated exclusion thumbnail request')),'contentExcluded');self.assertEqual(store.writes,writes)
+ def test_steam_parent_provenance_is_not_subject_to_youtube_admission(self):
+  from official_adapter import parse_steam_documents
+  doc=parse_steam_documents(response(title='Unknown publisher parent notice'),SOURCE,NOW.isoformat())[0][0];store=MemoryStore()
+  self.assertEqual(upsert_notice(store,SOURCE,doc,NOW),'created');self.assertEqual(len(store.list('gameEvents')),1);self.assertEqual(len(store.list('collectionDocuments')),1)
+
 class AdaptiveFreeWorkerBudgetTests(unittest.TestCase):
  def store(self,writes=14000,reads=35000):
   class BudgetStore(MemoryStore):remote=True
