@@ -3,28 +3,67 @@
   "label": "STAGING ONLY",
   "operatingDatabaseConnected": false,
   "socialCollectionPolicy": {
-    "reviewedAt": "2026-10-13",
-    "goalPlatforms": ["youtube", "x"],
+    "reviewedAt": "2026-10-14",
+    "goalPlatforms": [
+      "youtube",
+      "x"
+    ],
     "billingAllowedWon": 0,
     "youtube": {
       "adapter": "youtube_atom",
       "method": "official_channel_feed",
-      "status": "CAPABILITY_READY_CHANNEL_REVIEW_REQUIRED",
+      "status": "FIVE_KOREAN_DATA_API_SOURCES_REVIEWED_DISABLED",
       "documentationUrl": "https://developers.google.com/youtube/v3/guides/push_notifications",
       "channelIdentityRequired": true,
       "publisherLinkEvidenceRequired": true,
-      "apiKeyRequired": false,
+      "apiKeyRequired": true,
       "full72HourCoverageGuaranteed": false,
-      "thumbnailReuseRequiresSeparateReview": true
+      "thumbnailReuseRequiresSeparateReview": true,
+      "publisherLinkedChannelsReviewed": 5,
+      "liveChannelFeedsVerified": 0,
+      "feedFailureCode": "CHANNEL_FEED_HTTP_404",
+      "documentedTopicIdentifiesChannel": false,
+      "metadataRetentionDays": 30,
+      "metadataRetentionPolicy": "refresh_or_delete",
+      "noticeImageKind": "video_thumbnail",
+      "pickupBannerFromThumbnailAllowed": false,
+      "metadataPolicyUrl": "https://developers.google.com/youtube/terms/developer-policies",
+      "apiFallback": {
+        "adapter": "youtube_data_api",
+        "method": "official_api",
+        "status": "REVIEWED_DISABLED_PENDING_OPERATING_ACTIVATION",
+        "credentialMode": "server_secret_header",
+        "secretName": "YOUTUBE_API_KEY",
+        "keyInPublicConfig": false,
+        "channelAndUploadsPlaylistsVerified": 5,
+        "quotaUnitsPerPlaylistPage": 1,
+        "quotaDocumentationUrl": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+        "billingAccountRequired": false,
+        "billingStateEvidenceManagedByOperator": true,
+        "runtimeHtmlScrapingEnabled": false
+      },
+      "atomStatus": "CHANNEL_FEEDS_UNAVAILABLE_GENERIC_TOPICS_REJECTED"
     },
     "x": {
       "method": "manual_verified_source",
-      "status": "ACCESS_REQUIRES_COST_REVIEW",
+      "status": "AUTOMATIC_DISCOVERY_BLOCKED_BY_ZERO_WON_POLICY",
       "automaticReadsEnabled": false,
       "pricingUrl": "https://docs.x.com/x-api/getting-started/pricing",
       "reasonCode": "METERED_READ_API_BLOCKED_BY_ZERO_WON_POLICY",
-      "scrapingFallbackEnabled": false
-    }
+      "scrapingFallbackEnabled": false,
+      "discoveryEnabled": false,
+      "knownPostOembed": {
+        "status": "KNOWN_OFFICIAL_POST_RICH_EMBED_VERIFIED",
+        "endpoint": "https://publish.twitter.com/oembed",
+        "authenticationUsed": false,
+        "discoveryAvailable": false,
+        "imageAttachmentUrlAvailable": false,
+        "exampleUrl": "https://x.com/EXILIUMKR/status/2100118627085173026",
+        "examplePublishedBeforeCutoff": true
+      }
+    },
+    "contentPublishedNotBefore": "2026-10-01T00:00:00+09:00",
+    "publicationCutoffBasis": "original_published_at_only"
   },
   "reviewedAt": "2026-10-10T08:40:00Z",
   "window": {
@@ -51,9 +90,102 @@
       "officialWebsite": "https://bluearchive.nexon.com/home",
       "baselineStatus": "NO_SOURCE",
       "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "sources": [
+        {
+          "id": "85d40a4d-2fba-512b-b179-379ba6199662",
+          "game_id": "blue-archive",
+          "game_slug": "blue-archive",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCj0iColXMAjPA92rH-AXVGQ",
+          "youtube_uploads_playlist_id": "UUj0iColXMAjPA92rH-AXVGQ",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T03:23:29.425324+00:00",
+          "publisher_identity_evidence_url": "https://apps.apple.com/kr/app/id6443698027",
+          "publisher_identity_checked_at": "2026-10-14T03:09:07.240354+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T03:23:29.425324+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T03:23:29.425324+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "한국어 공식 YouTube · 서버 일정 별도 검증",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ko",
+          "highest_character_rarity": null,
+          "image_reuse": null,
+          "identity_evidence": {
+            "url": "https://apps.apple.com/kr/app/id6443698027",
+            "observedAt": "2026-10-14T03:09:07.240354+00:00",
+            "channelMetadataVerifiedAt": "2026-10-14T03:23:29.425324+00:00",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Publisher-linked Korean channel and actual uploads playlist API response; language does not certify a regional game-server schedule."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
-      "serverRegion": "UNSPECIFIED"
+      "serverRegion": "UNSPECIFIED",
+      "socialTargets": [
+        {
+          "publisher": "NEXON Korea Corporation",
+          "publisherIdentityEvidenceUrl": "https://apps.apple.com/kr/app/id6443698027",
+          "publisherIdentityCheckedAt": "2026-10-14T03:09:07.240354+00:00",
+          "enabled": false,
+          "serverRegion": "UNSPECIFIED",
+          "contentLanguage": "ko",
+          "platform": "youtube",
+          "url": "https://www.youtube.com/channel/UCj0iColXMAjPA92rH-AXVGQ",
+          "publisherLinkedUrl": "https://www.youtube.com/channel/UCj0iColXMAjPA92rH-AXVGQ",
+          "youtubeChannelId": "UCj0iColXMAjPA92rH-AXVGQ",
+          "channelIdentityEvidenceUrl": "https://www.youtube.com/channel/UCj0iColXMAjPA92rH-AXVGQ",
+          "channelIdentityCheckedAt": "2026-10-14T03:09:08.478924+00:00",
+          "status": "CHANNEL_AND_UPLOADS_PLAYLIST_VERIFIED_DATA_API_PREPARED",
+          "reasonCode": "CHANNEL_FEED_HTTP_404",
+          "feedProbe": {
+            "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCj0iColXMAjPA92rH-AXVGQ",
+            "httpStatus": 404,
+            "checkedAt": "2026-10-14T03:12:22.314457+00:00",
+            "channelDataVerified": false,
+            "documentedTopicUrl": "https://www.youtube.com/xml/feeds/videos.xml?channel_id=UCj0iColXMAjPA92rH-AXVGQ",
+            "topicHttpStatus": 200,
+            "topicCheckedAt": "2026-10-14T03:15:22.134368+00:00",
+            "topicChannelDataVerified": false
+          },
+          "youtubeUploadsPlaylistId": "UUj0iColXMAjPA92rH-AXVGQ",
+          "youtubeUploadsPlaylistVerifiedAt": "2026-10-14T03:23:29.425324+00:00",
+          "sourceParser": "youtube_data_api",
+          "sourceId": "85d40a4d-2fba-512b-b179-379ba6199662"
+        },
+        {
+          "publisher": "NEXON Korea Corporation",
+          "publisherIdentityEvidenceUrl": "https://apps.apple.com/kr/app/id6443698027",
+          "publisherIdentityCheckedAt": "2026-10-14T03:09:07.240354+00:00",
+          "enabled": false,
+          "serverRegion": "UNSPECIFIED",
+          "contentLanguage": "ko",
+          "platform": "x",
+          "url": "https://twitter.com/KR_BlueArchive",
+          "status": "AUTOMATIC_DISCOVERY_BLOCKED_BY_ZERO_WON_POLICY",
+          "reasonCode": "METERED_READ_API_BLOCKED_BY_ZERO_WON_POLICY",
+          "automaticReadsEnabled": false,
+          "scrapingFallbackEnabled": false
+        }
+      ]
     },
     {
       "gameId": "nikke",
@@ -66,9 +198,102 @@
       "officialWebsite": "https://nikke-en.com/",
       "baselineStatus": "NO_SOURCE",
       "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "sources": [
+        {
+          "id": "bb7b0508-b065-5743-87d3-8fa6c4160755",
+          "game_id": "nikke",
+          "game_slug": "nikke",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCzoVPjV8FF2om0Zj3XRPwVw",
+          "youtube_uploads_playlist_id": "UUzoVPjV8FF2om0Zj3XRPwVw",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T03:23:29.425324+00:00",
+          "publisher_identity_evidence_url": "https://nikke-kr.com/",
+          "publisher_identity_checked_at": "2026-10-14T03:09:08.221388+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T03:23:29.425324+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T03:23:29.425324+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "한국어 공식 YouTube · 서버 일정 별도 검증",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ko",
+          "highest_character_rarity": null,
+          "image_reuse": null,
+          "identity_evidence": {
+            "url": "https://nikke-kr.com/",
+            "observedAt": "2026-10-14T03:09:08.221388+00:00",
+            "channelMetadataVerifiedAt": "2026-10-14T03:23:29.425324+00:00",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Publisher-linked Korean channel and actual uploads playlist API response; language does not certify a regional game-server schedule."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
-      "serverRegion": "UNSPECIFIED"
+      "serverRegion": "UNSPECIFIED",
+      "socialTargets": [
+        {
+          "publisher": "Proxima Beta Pte. Limited",
+          "publisherIdentityEvidenceUrl": "https://nikke-kr.com/",
+          "publisherIdentityCheckedAt": "2026-10-14T03:09:08.221388+00:00",
+          "enabled": false,
+          "serverRegion": "UNSPECIFIED",
+          "contentLanguage": "ko",
+          "platform": "youtube",
+          "url": "https://www.youtube.com/c/nikkekr",
+          "publisherLinkedUrl": "https://www.youtube.com/c/nikkekr",
+          "youtubeChannelId": "UCzoVPjV8FF2om0Zj3XRPwVw",
+          "channelIdentityEvidenceUrl": "https://www.youtube.com/channel/UCzoVPjV8FF2om0Zj3XRPwVw",
+          "channelIdentityCheckedAt": "2026-10-14T03:09:09.380896+00:00",
+          "status": "CHANNEL_AND_UPLOADS_PLAYLIST_VERIFIED_DATA_API_PREPARED",
+          "reasonCode": "CHANNEL_FEED_HTTP_404",
+          "feedProbe": {
+            "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCzoVPjV8FF2om0Zj3XRPwVw",
+            "httpStatus": 404,
+            "checkedAt": "2026-10-14T03:12:22.557713+00:00",
+            "channelDataVerified": false,
+            "documentedTopicUrl": "https://www.youtube.com/xml/feeds/videos.xml?channel_id=UCzoVPjV8FF2om0Zj3XRPwVw",
+            "topicHttpStatus": 200,
+            "topicCheckedAt": "2026-10-14T03:15:22.487670+00:00",
+            "topicChannelDataVerified": false
+          },
+          "youtubeUploadsPlaylistId": "UUzoVPjV8FF2om0Zj3XRPwVw",
+          "youtubeUploadsPlaylistVerifiedAt": "2026-10-14T03:23:29.425324+00:00",
+          "sourceParser": "youtube_data_api",
+          "sourceId": "bb7b0508-b065-5743-87d3-8fa6c4160755"
+        },
+        {
+          "publisher": "Proxima Beta Pte. Limited",
+          "publisherIdentityEvidenceUrl": "https://nikke-kr.com/",
+          "publisherIdentityCheckedAt": "2026-10-14T03:09:08.221388+00:00",
+          "enabled": false,
+          "serverRegion": "UNSPECIFIED",
+          "contentLanguage": "ko",
+          "platform": "x",
+          "url": "https://twitter.com/NIKKE_kr",
+          "status": "AUTOMATIC_DISCOVERY_BLOCKED_BY_ZERO_WON_POLICY",
+          "reasonCode": "METERED_READ_API_BLOCKED_BY_ZERO_WON_POLICY",
+          "automaticReadsEnabled": false,
+          "scrapingFallbackEnabled": false
+        }
+      ]
     },
     {
       "gameId": "girls-frontline",
@@ -106,6 +331,50 @@
           "enabled": false,
           "serverRegion": "UNSPECIFIED",
           "contentLanguage": "en"
+        },
+        {
+          "publisher": "HAOPLAY Limited",
+          "publisherIdentityEvidenceUrl": "https://gf2.haoplay.com/kr/",
+          "publisherIdentityCheckedAt": "2026-10-14T03:09:07.879085+00:00",
+          "enabled": false,
+          "serverRegion": "UNSPECIFIED",
+          "contentLanguage": "ko",
+          "platform": "youtube",
+          "url": "https://www.youtube.com/@EXILIUMKR",
+          "publisherLinkedUrl": "https://www.youtube.com/@EXILIUMKR?sub_confirmation=1",
+          "youtubeChannelId": "UCjlbr88kuWy4sMtvLv6f5vQ",
+          "channelIdentityEvidenceUrl": "https://www.youtube.com/channel/UCjlbr88kuWy4sMtvLv6f5vQ",
+          "channelIdentityCheckedAt": "2026-10-14T03:12:20.366516+00:00",
+          "status": "CHANNEL_AND_UPLOADS_PLAYLIST_VERIFIED_DATA_API_PREPARED",
+          "reasonCode": "CHANNEL_FEED_HTTP_404",
+          "feedProbe": {
+            "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCjlbr88kuWy4sMtvLv6f5vQ",
+            "httpStatus": 404,
+            "checkedAt": "2026-10-14T03:12:22.557713+00:00",
+            "channelDataVerified": false,
+            "documentedTopicUrl": "https://www.youtube.com/xml/feeds/videos.xml?channel_id=UCjlbr88kuWy4sMtvLv6f5vQ",
+            "topicHttpStatus": 200,
+            "topicCheckedAt": "2026-10-14T03:15:22.487670+00:00",
+            "topicChannelDataVerified": false
+          },
+          "youtubeUploadsPlaylistId": "UUjlbr88kuWy4sMtvLv6f5vQ",
+          "youtubeUploadsPlaylistVerifiedAt": "2026-10-14T03:23:29.425324+00:00",
+          "sourceParser": "youtube_data_api",
+          "sourceId": "dba5b496-113f-5d8d-b59c-7ee3b9a2cc5a"
+        },
+        {
+          "publisher": "HAOPLAY Limited",
+          "publisherIdentityEvidenceUrl": "https://gf2.haoplay.com/kr/",
+          "publisherIdentityCheckedAt": "2026-10-14T03:09:07.879085+00:00",
+          "enabled": false,
+          "serverRegion": "UNSPECIFIED",
+          "contentLanguage": "ko",
+          "platform": "x",
+          "url": "https://x.com/EXILIUMKR",
+          "status": "AUTOMATIC_DISCOVERY_BLOCKED_BY_ZERO_WON_POLICY",
+          "reasonCode": "METERED_READ_API_BLOCKED_BY_ZERO_WON_POLICY",
+          "automaticReadsEnabled": false,
+          "scrapingFallbackEnabled": false
         }
       ],
       "baselineStatus": "NO_SOURCE",
@@ -155,6 +424,52 @@
             "notes": "HAOPLAY publisher channel; English/GMT+0 does not establish KR, JP, Asia or global server identity."
           },
           "notes": "Official bounded API only. Source dates remain pending while region is unconfirmed. No highest-rarity/new/rerun or image reuse inferred."
+        },
+        {
+          "id": "dba5b496-113f-5d8d-b59c-7ee3b9a2cc5a",
+          "game_id": "girls-frontline-2",
+          "game_slug": "girls-frontline-2",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCjlbr88kuWy4sMtvLv6f5vQ",
+          "youtube_uploads_playlist_id": "UUjlbr88kuWy4sMtvLv6f5vQ",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T03:23:29.425324+00:00",
+          "publisher_identity_evidence_url": "https://gf2.haoplay.com/kr/",
+          "publisher_identity_checked_at": "2026-10-14T03:09:07.879085+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T03:23:29.425324+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T03:23:29.425324+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "한국어 공식 YouTube · 서버 일정 별도 검증",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ko",
+          "highest_character_rarity": null,
+          "image_reuse": null,
+          "identity_evidence": {
+            "url": "https://gf2.haoplay.com/kr/",
+            "observedAt": "2026-10-14T03:09:07.879085+00:00",
+            "channelMetadataVerifiedAt": "2026-10-14T03:23:29.425324+00:00",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Publisher-linked Korean channel and actual uploads playlist API response; language does not certify a regional game-server schedule."
+          }
         }
       ],
       "serviceStatus": "UNKNOWN",
@@ -171,9 +486,102 @@
       "officialWebsite": "https://genshin.hoyoverse.com/en/home",
       "baselineStatus": "NO_SOURCE",
       "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "sources": [
+        {
+          "id": "8a4e40a6-71ce-52af-8f79-f11c2968b590",
+          "game_id": "genshin-impact",
+          "game_slug": "genshin-impact",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCcum1rCJ5GJeQ_xv0xrohqg",
+          "youtube_uploads_playlist_id": "UUcum1rCJ5GJeQ_xv0xrohqg",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T03:23:29.425324+00:00",
+          "publisher_identity_evidence_url": "https://apps.apple.com/kr/app/id1517783697",
+          "publisher_identity_checked_at": "2026-10-14T03:09:07.623678+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T03:23:29.425324+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T03:23:29.425324+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "한국어 공식 YouTube · 서버 일정 별도 검증",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ko",
+          "highest_character_rarity": null,
+          "image_reuse": null,
+          "identity_evidence": {
+            "url": "https://apps.apple.com/kr/app/id1517783697",
+            "observedAt": "2026-10-14T03:09:07.623678+00:00",
+            "channelMetadataVerifiedAt": "2026-10-14T03:23:29.425324+00:00",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Publisher-linked Korean channel and actual uploads playlist API response; language does not certify a regional game-server schedule."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
-      "serverRegion": "UNSPECIFIED"
+      "serverRegion": "UNSPECIFIED",
+      "socialTargets": [
+        {
+          "publisher": "COGNOSPHERE PTE. LTD.",
+          "publisherIdentityEvidenceUrl": "https://apps.apple.com/kr/app/id1517783697",
+          "publisherIdentityCheckedAt": "2026-10-14T03:09:07.623678+00:00",
+          "enabled": false,
+          "serverRegion": "UNSPECIFIED",
+          "contentLanguage": "ko",
+          "platform": "youtube",
+          "url": "https://www.youtube.com/c/%EC%9B%90%EC%8B%A0Official",
+          "publisherLinkedUrl": "http://www.youtube.com/c/원신Official",
+          "youtubeChannelId": "UCcum1rCJ5GJeQ_xv0xrohqg",
+          "channelIdentityEvidenceUrl": "https://www.youtube.com/channel/UCcum1rCJ5GJeQ_xv0xrohqg",
+          "channelIdentityCheckedAt": "2026-10-14T03:12:20.366516+00:00",
+          "status": "CHANNEL_AND_UPLOADS_PLAYLIST_VERIFIED_DATA_API_PREPARED",
+          "reasonCode": "CHANNEL_FEED_HTTP_404",
+          "feedProbe": {
+            "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCcum1rCJ5GJeQ_xv0xrohqg",
+            "httpStatus": 404,
+            "checkedAt": "2026-10-14T03:12:22.314457+00:00",
+            "channelDataVerified": false,
+            "documentedTopicUrl": "https://www.youtube.com/xml/feeds/videos.xml?channel_id=UCcum1rCJ5GJeQ_xv0xrohqg",
+            "topicHttpStatus": 200,
+            "topicCheckedAt": "2026-10-14T03:15:22.138886+00:00",
+            "topicChannelDataVerified": false
+          },
+          "youtubeUploadsPlaylistId": "UUcum1rCJ5GJeQ_xv0xrohqg",
+          "youtubeUploadsPlaylistVerifiedAt": "2026-10-14T03:23:29.425324+00:00",
+          "sourceParser": "youtube_data_api",
+          "sourceId": "8a4e40a6-71ce-52af-8f79-f11c2968b590"
+        },
+        {
+          "publisher": "COGNOSPHERE PTE. LTD.",
+          "publisherIdentityEvidenceUrl": "https://apps.apple.com/kr/app/id1517783697",
+          "publisherIdentityCheckedAt": "2026-10-14T03:09:07.623678+00:00",
+          "enabled": false,
+          "serverRegion": "UNSPECIFIED",
+          "contentLanguage": "ko",
+          "platform": "x",
+          "url": "https://twitter.com/genshinimpactkr",
+          "status": "AUTOMATIC_DISCOVERY_BLOCKED_BY_ZERO_WON_POLICY",
+          "reasonCode": "METERED_READ_API_BLOCKED_BY_ZERO_WON_POLICY",
+          "automaticReadsEnabled": false,
+          "scrapingFallbackEnabled": false
+        }
+      ]
     },
     {
       "gameId": "honkai-star-rail",
@@ -216,9 +624,103 @@
       "officialWebsite": "https://wutheringwaves.kurogames.com/",
       "baselineStatus": "NO_SOURCE",
       "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "sources": [
+        {
+          "id": "8a079815-decd-534e-b457-902ddb407e68",
+          "game_id": "wuthering-waves",
+          "game_slug": "wuthering-waves",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCKuq0c-RXYaulECSuu5hFug",
+          "youtube_uploads_playlist_id": "UUKuq0c-RXYaulECSuu5hFug",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T03:23:29.425324+00:00",
+          "publisher_identity_evidence_url": "https://play.google.com/store/apps/details?hl=ko&id=com.kurogame.wutheringwaves.global",
+          "publisher_identity_checked_at": "2026-10-14T03:32:27.882946+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T03:23:29.425324+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T03:23:29.425324+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "한국어 공식 YouTube · 서버 일정 별도 검증",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ko",
+          "highest_character_rarity": null,
+          "image_reuse": null,
+          "identity_evidence": {
+            "url": "https://play.google.com/store/apps/details?hl=ko&id=com.kurogame.wutheringwaves.global",
+            "observedAt": "2026-10-14T03:32:27.882946+00:00",
+            "channelMetadataVerifiedAt": "2026-10-14T03:23:29.425324+00:00",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Publisher-linked Korean channel and actual uploads playlist API response; language does not certify a regional game-server schedule."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
-      "serverRegion": "UNSPECIFIED"
+      "serverRegion": "UNSPECIFIED",
+      "socialTargets": [
+        {
+          "publisher": "HK KURO GAMES LIMITED",
+          "publisherIdentityEvidenceUrl": "https://play.google.com/store/apps/details?hl=ko&id=com.kurogame.wutheringwaves.global",
+          "publisherIdentityCheckedAt": "2026-10-14T03:32:27.882946+00:00",
+          "enabled": false,
+          "serverRegion": "UNSPECIFIED",
+          "contentLanguage": "ko",
+          "platform": "youtube",
+          "url": "https://www.youtube.com/@WW_KR_Official",
+          "publisherLinkedUrl": "https://www.youtube.com/@WW_KR_Official",
+          "youtubeChannelId": "UCKuq0c-RXYaulECSuu5hFug",
+          "channelIdentityEvidenceUrl": "https://www.youtube.com/channel/UCKuq0c-RXYaulECSuu5hFug",
+          "channelIdentityCheckedAt": "2026-10-14T03:12:21.125577+00:00",
+          "status": "CHANNEL_AND_UPLOADS_PLAYLIST_VERIFIED_DATA_API_PREPARED",
+          "reasonCode": "CHANNEL_FEED_HTTP_404",
+          "feedProbe": {
+            "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCKuq0c-RXYaulECSuu5hFug",
+            "httpStatus": 404,
+            "checkedAt": "2026-10-14T03:12:22.770634+00:00",
+            "channelDataVerified": false,
+            "documentedTopicUrl": "https://www.youtube.com/xml/feeds/videos.xml?channel_id=UCKuq0c-RXYaulECSuu5hFug",
+            "topicHttpStatus": 200,
+            "topicCheckedAt": "2026-10-14T03:15:22.684041+00:00",
+            "topicChannelDataVerified": false
+          },
+          "publisherIdentityReviewMethod": "primary_publisher_description_manual_review",
+          "youtubeUploadsPlaylistId": "UUKuq0c-RXYaulECSuu5hFug",
+          "youtubeUploadsPlaylistVerifiedAt": "2026-10-14T03:23:29.425324+00:00",
+          "sourceParser": "youtube_data_api",
+          "sourceId": "8a079815-decd-534e-b457-902ddb407e68"
+        },
+        {
+          "publisher": "HK KURO GAMES LIMITED",
+          "publisherIdentityEvidenceUrl": "https://play.google.com/store/apps/details?hl=ko&id=com.kurogame.wutheringwaves.global",
+          "publisherIdentityCheckedAt": "2026-10-14",
+          "enabled": false,
+          "serverRegion": "UNSPECIFIED",
+          "contentLanguage": "ko",
+          "platform": "x",
+          "url": "https://twitter.com/WW_KR_Official",
+          "status": "AUTOMATIC_DISCOVERY_BLOCKED_BY_ZERO_WON_POLICY",
+          "reasonCode": "METERED_READ_API_BLOCKED_BY_ZERO_WON_POLICY",
+          "automaticReadsEnabled": false,
+          "scrapingFallbackEnabled": false
+        }
+      ]
     },
     {
       "gameId": "zenless-zone-zero",
@@ -4868,5 +5370,6 @@
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     }
-  ]
+  ],
+  "contentPublishedNotBefore": "2026-10-01T00:00:00+09:00"
 }
