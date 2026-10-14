@@ -1992,6 +1992,16 @@ class OctoberCatalogueResumeTests(unittest.TestCase):
   from collector import classify_notice_content
   for title,kind in [('신규 굿즈 예약 판매 안내','goods-preview'),('게임 콜라보 공개','collaboration-preview'),('정기 점검 안내','game-notice'),('Targeted Procurement | Returning Doll','pickup-preview')]:
    with self.subTest(title=title):self.assertEqual(classify_notice_content({'originalTitle':title,'rawSha256':'a'*64})['kind'],kind)
+ def test_existing_verified_gs25_collaboration_is_reclassified_after_version_change(self):
+  from official_adapter import parse_official_html_article
+  source=OfficialPublisherArticleAdapterTests().source();title='넥슨 ‘블루 아카이브’, GS25와 3차 컬래버레이션 이벤트 실시!'
+  raw=('<span class="bo_v_tit">'+title+'</span><span class="header_date">2026.10.13</span><div id="bo_v_con"><p>GS25 컬래버레이션 안내</p><img src="https://www.nexongames.co.kr/data/editor/2610/collab.png"></div>').encode()
+  doc=parse_official_html_article(raw,source,'https://www.nexongames.co.kr/bbs/board.php?bo_table=media_event&wr_id=519',(NOW+timedelta(days=3)).isoformat())
+  store=MemoryStore();fetch=lambda _:synthetic_thumbnail_fetch({'url':'https://i.ytimg.com/vi/AbcDef_1234/hqdefault.jpg'})
+  upsert_notice(store,source,doc,NOW+timedelta(days=3),image_fetch=fetch);key=event_identity(doc,source);old=store.get('gameEvents/'+key)
+  store.put('gameEvents/'+key,{**old,'extractionVersion':EXTRACTION_VERSION-1,'newsEligible':False,'contentKind':'other','contentClassification':{**old['contentClassification'],'status':'unconfirmed','kind':'other'}})
+  self.assertNotEqual(upsert_notice(store,source,doc,NOW+timedelta(days=3,minutes=15),image_fetch=fetch),'unchanged');updated=store.get('gameEvents/'+key)
+  self.assertTrue(updated['newsEligible']);self.assertEqual(updated['contentKind'],'collaboration-preview');self.assertEqual(updated['extractionVersion'],EXTRACTION_VERSION)
  def test_malformed_page_budget_cannot_expand_unbounded_requests(self):
   for value in [0,201,True,None]:
    with self.subTest(value=value),self.assertRaisesRegex(SafetyError,'bounded_page_budget_required'):
@@ -2180,6 +2190,23 @@ class PairedOctoberFestivalTests(unittest.TestCase):
   with self.assertRaises(ValidationError):parse_paired_ticket_notice(ticket.replace('10월 15일'.encode(),'10월 17일'.encode()),source,doc)
  def test_unmodified_two_source_content_is_idempotent(self):
   store,source,doc,_,fetch=self.publish();writes=store.writes;self.assertEqual(upsert_notice(store,source,doc,self.OBSERVED+timedelta(minutes=20),image_fetch=fetch),'unchanged');self.assertEqual(store.writes,writes)
+ def test_exact_checked_small_ticket_poster_is_allowed_without_global_size_relaxation(self):
+  from collector import prepare_paired_ticket_sections
+  source,doc,ticket,_=self.fixture();pixels=b'\x89PNG\r\n\x1a\n'+b'\x00\x00\x00\rIHDR'+(200).to_bytes(4,'big')+(247).to_bytes(4,'big')
+  real_hash=hashlib.sha256
+  class CheckedHash:
+   def hexdigest(self):return '089c80ce7714a9dd862ac9e5a98a1925fcd1cb6628ee311e62387f78a05c4c7d'
+  def fetch(request):return (200,ticket,{})if request.get('parser')=='official_auxiliary_notice'else(200,pixels,{'content-type':'image/png'})
+  with patch('collector.hashlib.sha256',side_effect=lambda value:CheckedHash()if value==pixels else real_hash(value)):
+   image=prepare_paired_ticket_sections(source,doc,self.OBSERVED,fetch)[0]['_paired_ticket_section']['image']
+  self.assertEqual(image['imageVerification']['width'],200);self.assertEqual(image['imageVerification']['height'],247);self.assertEqual(image['imageVerification']['contentSha256'],CheckedHash().hexdigest())
+ def test_small_poster_changed_bytes_or_wrong_dimensions_fail_closed(self):
+  from collector import prepare_paired_ticket_sections
+  source,doc,ticket,_=self.fixture()
+  for width,height in [(200,247),(199,247),(200,246)]:
+   pixels=b'\x89PNG\r\n\x1a\n'+b'\x00\x00\x00\rIHDR'+width.to_bytes(4,'big')+height.to_bytes(4,'big')
+   def fetch(request):return (200,ticket,{})if request.get('parser')=='official_auxiliary_notice'else(200,pixels,{'content-type':'image/png'})
+   with self.subTest(width=width,height=height),self.assertRaisesRegex(ValidationError,'paired_festival_image_unconfirmed'):prepare_paired_ticket_sections(source,doc,self.OBSERVED,fetch)
  def test_round_specific_notification_has_one_key_and_respects_subscription(self):
   store,source,doc,child,_=self.publish();self.owner(store)
   self.assertEqual(plan_user(store,'alice',[child],self.OBSERVED),1);self.assertEqual(plan_user(store,'alice',[child],self.OBSERVED+timedelta(minutes=1)),0)
