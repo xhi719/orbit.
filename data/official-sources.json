@@ -837,6 +837,42 @@
             ],
             "notes": "Publisher-linked Korean channel and actual uploads playlist API response; language does not certify a regional game-server schedule."
           }
+        },
+        {
+          "id": "genshin-official-ko-cms",
+          "game_id": "genshin-impact",
+          "url": "https://sg-public-api-static.hoyoverse.com/content_v2_user/app/a1b1f9d3315447cc/getContentList",
+          "parser": "genshin_cms",
+          "enabled": false,
+          "content_language": "ko",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://genshin.hoyoverse.com/ko/company/terms",
+          "terms_checked_at": "2026-10-14T22:27:30.104598+00:00",
+          "publisher_identity_evidence_url": "https://genshin.hoyoverse.com/ko/home",
+          "publisher_identity_checked_at": "2026-10-14T22:27:30.104598+00:00",
+          "notice_hosts_verified_at": "2026-10-14T22:27:30.104598+00:00",
+          "allowed_notice_hosts": [
+            "genshin.hoyoverse.com"
+          ],
+          "feed_allowlist": [
+            "official_publisher_articles"
+          ],
+          "collection_interval_minutes": 15,
+          "server_region": "UNSPECIFIED",
+          "schedule_extraction_approved": false,
+          "news_scope": "relevant_game_news_v1",
+          "article_format": {
+            "mode": "genshin_cms_v1",
+            "version": 1,
+            "locale": "ko-kr",
+            "timezone": "Asia/Seoul",
+            "reviewedAt": "2026-10-14T22:27:30.104598+00:00",
+            "evidenceUrl": "https://genshin.hoyoverse.com/_nuxt/906b977.js",
+            "allowedImageHosts": [
+              "fastcdn.hoyoverse.com"
+            ]
+          }
         }
       ],
       "serviceStatus": "UNKNOWN",
@@ -1117,6 +1153,42 @@
               "youtubeUploadsPlaylistId"
             ],
             "notes": "Publisher-linked Korean channel and actual uploads playlist API response; language does not certify a regional game-server schedule."
+          }
+        },
+        {
+          "id": "wuthering-official-kr-cms",
+          "game_id": "wuthering-waves",
+          "url": "https://hw-media-cdn-mingchao.kurogame.com/akiwebsite/website2.0/json/G152/kr/ArticleMenu.json",
+          "parser": "kuro_cms",
+          "enabled": false,
+          "content_language": "ko",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://sdk-prod-cdn-aws.kurogame-service.com/pro/agreement/common/language_ko/terms_of_service.pdf",
+          "terms_checked_at": "2026-10-14T22:27:30.104598+00:00",
+          "publisher_identity_evidence_url": "https://wutheringwaves.kurogames.com/kr/main/news",
+          "publisher_identity_checked_at": "2026-10-14T22:27:30.104598+00:00",
+          "notice_hosts_verified_at": "2026-10-14T22:27:30.104598+00:00",
+          "allowed_notice_hosts": [
+            "wutheringwaves.kurogames.com"
+          ],
+          "feed_allowlist": [
+            "official_publisher_articles"
+          ],
+          "collection_interval_minutes": 15,
+          "server_region": "UNSPECIFIED",
+          "schedule_extraction_approved": false,
+          "news_scope": "relevant_game_news_v1",
+          "article_format": {
+            "mode": "kuro_cms_v1",
+            "version": 1,
+            "locale": "kr",
+            "timezone": "Asia/Seoul",
+            "reviewedAt": "2026-10-14T22:27:30.104598+00:00",
+            "evidenceUrl": "https://wutheringwaves.kurogames.com/static4.0/assets/index-3a7e0d27.js",
+            "allowedImageHosts": [
+              "hw-media-cdn-mingchao.kurogame.com"
+            ]
           }
         }
       ],
