@@ -13,20 +13,26 @@ from store import MemoryStore,FirestoreStore,SafetyError,timestamp
 from collector import reviewed,seed_catalogue,event_identity,upsert_notice,claim_source,collect_one,run,enrich_document,extract_schedule,highest_rarity_targets,source_row,operating_source,section_documents,confirmed_window_overlap,youtube_request,parse_youtube_documents,YOUTUBE_FEED_DOCUMENTATION,source_policy,EXTRACTION_VERSION,parse_official_roster,refresh_localization_roster,GF2_ROSTER_URLS,new_doll_block_targets,plain_notice,CONTENT_CUTOFF,CONTENT_PUBLISHED_NOT_BEFORE,content_publication_status,content_cleanup_plan,apply_content_cleanup,automatic_youtube_notice_image,youtube_metadata_expired,expire_youtube_metadata
 from store import document_fingerprint
 from official_adapter import youtube_api_request,parse_youtube_api_documents
-from engine import ValidationError,fetch_source
+from engine import ValidationError,fetch_source,image_dimensions
 from notifications import quiet,eligible,plan_user,dispatch,fixed_payload,fcm_message,run as notification_run,reset_cycle,completed_cycle,attendance_context,plan_attendance_user,plan_announcement_user,announcement_identity,ANNOUNCEMENT_KIND
 from admin import validate_change,apply_requests,cleanup_accounts,cleanup_execution_retention
 from import_pending_pickups import validate_bundle,apply_bundle
 
 NOW=datetime(2026,10,11,10,tzinfo=timezone.utc)
 UTC=timezone.utc
+def synthetic_thumbnail_fetch(request):
+ sizes={'maxresdefault.jpg':(1280,720),'sddefault.jpg':(640,480),'hqdefault.jpg':(480,360),'mqdefault.jpg':(320,180),
+  'default.jpg':(120,90),'fhddefault.jpg':(1920,1080),'qhddefault.jpg':(2560,1440),'uhddefault.jpg':(3840,2160)}
+ width,height=sizes[urlsplit(request['url']).path.rsplit('/',1)[-1].replace('_live.jpg','.jpg')]
+ pixels=b'\xff\xd8\xff\xe0\x00\x04AB\xff\xc0\x00\x08\x08'+height.to_bytes(2,'big')+width.to_bytes(2,'big')+b'\x03'
+ return 200,pixels,{'content-type':'image/jpeg'}
 SOURCE={'id':'source','game_id':'blue-archive','parser':'steam_news','steam_appid':123,'url':'https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=123','approved_for_staging':True,'access_status':'approved','terms_url':'https://steamcommunity.com/dev/apiterms','terms_checked_at':NOW.isoformat(),'notice_hosts_verified_at':NOW.isoformat(),'allowed_notice_hosts':['steamcommunity.com'],'feed_allowlist':['steam_community_announcements'],'server_region':'UNSPECIFIED','server_label':None,'collection_interval_minutes':15}
 def response(title='Official update',date=None,feed='steam_community_announcements',appid=123):
  return json.dumps({'appnews':{'appid':appid,'newsitems':[{'gid':'1','title':title,'contents':'Official publisher notice','url':'https://steamcommunity.com/announcement/1','appid':appid,'feedname':feed,'date':int((date or NOW-timedelta(hours=1)).timestamp())}]}}).encode()
 def document(title='Official pickup',region='UNSPECIFIED',sha='abc'):
  return {'external_key':'1','raw_sha256':sha,'raw_json':{'title':title},'raw_publication_timestamp':int(NOW.timestamp()),'published_at':NOW.isoformat(),'source_updated_at':None,'observed_at':NOW.isoformat(),'official_url':'https://steamcommunity.com/announcement/1','original_title':title,'original_description':'Official description','original_language':'unknown','server_region':region,'server_label':None,'event_type_candidates':['pickup'],'pickups':[{'server_region':region,'server_label':None,'pickup_kind':None,'official_url':'https://steamcommunity.com/announcement/1'}]}
 def owner_store():
- event={'id':'event','gameIds':['blue-archive'],'serverRegion':'KR','serverLabel':None,'verificationStatus':'verified','status':'upcoming','category':'recruitment','startsAt':NOW,'reservationStartsAt':NOW+timedelta(days=1),'revision':1,'title':'Official pickup','description':'Verified schedule'}
+ event={'id':'event','gameIds':['blue-archive'],'serverRegion':'KR','serverLabel':None,'verificationStatus':'verified','status':'upcoming','category':'recruitment','publishedAt':NOW,'startsAt':NOW,'reservationStartsAt':NOW+timedelta(days=1),'revision':1,'title':'Official pickup','description':'Verified schedule'}
  return MemoryStore({'users/alice':{'language':'ko','regions':['KR'],'timezone':'UTC'},'users/alice/userGames/blue-archive':{'enabled':True},'users/alice/notificationSettings/global':{'enabled':True,'regions':['KR'],'stages':['start','1d'],'eventCategories':['all'],'timezone':'UTC'},'users/alice/notificationSubscriptions/device':{'uid':'alice','transport':'fcm','token':'fake-test-token','platform':'android','enabled':True,'expiresAt':None},'gameEvents/event':event}),event
 
 class FirebaseCollectorTests(unittest.TestCase):
@@ -82,7 +88,7 @@ class FirebaseOfficialSocialFeedTests(unittest.TestCase):
    'terms_url':YOUTUBE_FEED_DOCUMENTATION,'allowed_notice_hosts':['www.youtube.com'],'feed_allowlist':['youtube_channel_videos'],
    'publisher_identity_evidence_url':'https://official.example/social','publisher_identity_checked_at':NOW.isoformat(),**changes}
  def feed(self,title='Official livestream',body='Announcement',published=None,updated=None,channel=None,link=None):
-  return (f'<feed xmlns="http://www.w3.org/2005/Atom" xmlns:yt="http://www.youtube.com/xml/schemas/2015" xmlns:media="http://search.yahoo.com/mrss/"><id>yt:channel:{self.CHANNEL}</id><entry><id>yt:video:{self.VIDEO}</id><yt:videoId>{self.VIDEO}</yt:videoId><yt:channelId>{channel or self.CHANNEL}</yt:channelId><title>{title}</title><published>{(published or NOW-timedelta(hours=1)).isoformat()}</published><updated>{(updated or NOW-timedelta(minutes=30)).isoformat()}</updated><link rel="alternate" href="{link or "https://www.youtube.com/watch?v="+self.VIDEO}"/><media:group><media:description>{body}</media:description><media:thumbnail url="https://i.ytimg.com/vi/{self.VIDEO}/hqdefault.jpg"/></media:group></entry></feed>').encode()
+  return (f'<feed xmlns="http://www.w3.org/2005/Atom" xmlns:yt="http://www.youtube.com/xml/schemas/2015" xmlns:media="http://search.yahoo.com/mrss/"><id>yt:channel:{self.CHANNEL}</id><entry><id>yt:video:{self.VIDEO}</id><yt:videoId>{self.VIDEO}</yt:videoId><yt:channelId>{channel or self.CHANNEL}</yt:channelId><title>{title}</title><published>{(published or NOW-timedelta(hours=1)).isoformat()}</published><updated>{(updated or NOW-timedelta(minutes=30)).isoformat()}</updated><link rel="alternate" href="{link or "https://www.youtube.com/watch?v="+self.VIDEO}"/><media:group><media:description>{body}</media:description><media:thumbnail url="https://i.ytimg.com/vi/{self.VIDEO}/hqdefault.jpg" width="480" height="360"/></media:group></entry></feed>').encode()
  def test_review_requires_official_publisher_channel_evidence(self):
   self.assertTrue(reviewed(self.source()));self.assertFalse(reviewed(self.source(publisher_identity_evidence_url=None)));self.assertFalse(reviewed(self.source(publisher_identity_checked_at=None)))
  def test_unsupported_x_source_never_becomes_reviewed(self):
@@ -147,7 +153,9 @@ class FirebaseOfficialSocialFeedTests(unittest.TestCase):
   with self.assertRaisesRegex(SafetyError,'permission_evidence'):validate_change('gameSources','source',row)
  def test_collector_uses_one_bounded_feed_and_idempotent_storage(self):
   store=MemoryStore();requests=[]
-  def fetch(source):requests.append(source['url']);return 200,self.feed(),{}
+  def fetch(source):
+   if source.get('parser')=='official_image_probe':return synthetic_thumbnail_fetch(source)
+   requests.append(source['url']);return 200,self.feed(),{}
   result=collect_one(store,self.source(),NOW-timedelta(hours=72),NOW,fetch=fetch,sleep=lambda _:None,now=NOW);self.assertEqual(result['status'],'success');self.assertEqual(result['metrics']['pagesFetched'],1);self.assertFalse(result['metrics']['windowCoverageVerified']);self.assertEqual(len(store.list('gameEvents')),1);self.assertEqual(len(requests),1)
   writes=store.writes;doc,_=parse_youtube_documents(self.feed(),self.source(),NOW.isoformat());self.assertEqual(upsert_notice(store,self.source(),doc[0],NOW),'unchanged');self.assertEqual(store.writes,writes)
  def test_recent_update_does_not_reintroduce_pre_cutoff_video(self):
@@ -1403,47 +1411,47 @@ class ExactOfficialYoutubeThumbnailTests(unittest.TestCase):
  def notice(self,title='Official livestream'):
   fixture=FirebaseOfficialSocialFeedTests();source=fixture.source();docs,_=parse_youtube_documents(fixture.feed(title=title),source,NOW.isoformat());return source,docs[0]
  def test_exact_feed_thumbnail_is_notice_reference_with_independent_root_ids(self):
-  source,notice=self.notice();store=MemoryStore();upsert_notice(store,source,notice,NOW);row=store.list('gameEvents')[0][1];image=row['noticeImage'];proof=image['subjectEvidence']
+  source,notice=self.notice();store=MemoryStore();upsert_notice(store,source,notice,NOW,image_fetch=synthetic_thumbnail_fetch);row=store.list('gameEvents')[0][1];image=row['noticeImage'];proof=image['subjectEvidence']
   self.assertEqual(row['image'],image);self.assertEqual(image['kind'],'NOTICE_ART');self.assertEqual(image['rightsStatus'],'UNCONFIRMED');self.assertEqual(proof['kind'],'notice');self.assertEqual(proof['method'],'source_post')
   self.assertEqual(proof['eventId'],row['id']);self.assertEqual(proof['channelId'],row['sourceChannelId']);self.assertEqual(proof['videoId'],row['sourceVideoId']);self.assertEqual(proof['rawSha256'],row['rawSha256']);self.assertEqual(proof['sourceTitle'],row['originalTitle']);self.assertEqual(row['metadataExpiresAt'],NOW+timedelta(days=30))
  def test_wrong_video_thumbnail_never_becomes_renderable_image(self):
   source,notice=self.notice();notice['raw_json']['thumbnailUrls']=['https://i.ytimg.com/vi/wrongvideo1/hqdefault.jpg'];notice['source_image_urls']=notice['raw_json']['thumbnailUrls']
   from collector import digest
-  notice['raw_sha256']=digest(notice['raw_json']);self.assertIsNone(automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW))
+  notice['raw_sha256']=digest(notice['raw_json']);self.assertIsNone(automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW,image_fetch=synthetic_thumbnail_fetch))
  def test_non_youtube_private_host_query_and_generic_art_are_rejected(self):
   from collector import digest
   for url in ['https://evil.example/vi/aBcD123_-xy/hqdefault.jpg','https://localhost/vi/aBcD123_-xy/hqdefault.jpg','https://i.ytimg.com/logo.jpg','https://i.ytimg.com/vi/aBcD123_-xy/hqdefault.jpg?unverified=1']:
-   source,notice=self.notice();notice['raw_json']['thumbnailUrls']=[url];notice['source_image_urls']=[url];notice['raw_sha256']=digest(notice['raw_json']);self.assertIsNone(automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW))
+   source,notice=self.notice();notice['raw_json']['thumbnailUrls']=[url];notice['source_image_urls']=[url];notice['source_image_metadata']={url:{'width':1280,'height':720,'quality':'maxres'}};notice['raw_json']['thumbnailMetadata']=notice['source_image_metadata'];notice['raw_sha256']=digest(notice['raw_json']);self.assertIsNone(automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW,image_fetch=synthetic_thumbnail_fetch))
  def test_external_key_channel_title_or_raw_hash_mismatch_invalidates_reference(self):
   for field,value in [('external_key','wrongvideo1'),('original_title','Another title'),('raw_sha256','a'*64)]:
-   source,notice=self.notice();notice[field]=value;self.assertIsNone(automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW))
-  source,notice=self.notice();source['youtube_channel_id']='UC'+'b'*22;source['url']='https://www.youtube.com/feeds/videos.xml?channel_id='+source['youtube_channel_id'];self.assertIsNone(automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW))
+   source,notice=self.notice();notice[field]=value;self.assertIsNone(automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW,image_fetch=synthetic_thumbnail_fetch))
+  source,notice=self.notice();source['youtube_channel_id']='UC'+'b'*22;source['url']='https://www.youtube.com/feeds/videos.xml?channel_id='+source['youtube_channel_id'];self.assertIsNone(automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW,image_fetch=synthetic_thumbnail_fetch))
  def test_unreviewed_channel_never_has_automatic_image(self):
-  source,notice=self.notice();source['publisher_identity_checked_at']=None;self.assertIsNone(automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW))
+  source,notice=self.notice();source['publisher_identity_checked_at']=None;self.assertIsNone(automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW,image_fetch=synthetic_thumbnail_fetch))
  def test_youtube_thumbnail_is_not_promoted_to_pickup_banner(self):
-  source,notice=self.notice('Official character pickup');store=MemoryStore();upsert_notice(store,source,notice,NOW);row=store.list('gameEvents')[0][1]
+  source,notice=self.notice('Official character pickup');store=MemoryStore();upsert_notice(store,source,notice,NOW,image_fetch=synthetic_thumbnail_fetch);row=store.list('gameEvents')[0][1]
   self.assertEqual(row['categoryCandidate'],'recruitment');self.assertIsNotNone(row['noticeImage']);self.assertIsNone(row['image']);self.assertEqual(row['noticeImage']['subjectEvidence']['kind'],'notice')
  def test_section_cannot_inherit_article_thumbnail(self):
   source,notice=self.notice();notice['_section_key']='independent';notice['_parent_event_id']='other'
-  self.assertIsNone(automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW))
+  self.assertIsNone(automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW,image_fetch=synthetic_thumbnail_fetch))
  def test_numbered_cdn_hosts_require_the_exact_video_path(self):
-  fixture=FirebaseOfficialSocialFeedTests();source=fixture.source();docs,_=parse_youtube_documents(fixture.feed().replace(b'i.ytimg.com',b'i3.ytimg.com'),source,NOW.isoformat());image=automatic_youtube_notice_image(docs[0],source,event_identity(docs[0],source),NOW)
+  fixture=FirebaseOfficialSocialFeedTests();source=fixture.source();docs,_=parse_youtube_documents(fixture.feed().replace(b'i.ytimg.com',b'i3.ytimg.com'),source,NOW.isoformat());image=automatic_youtube_notice_image(docs[0],source,event_identity(docs[0],source),NOW,image_fetch=synthetic_thumbnail_fetch)
   self.assertTrue(image['url'].startswith('https://i3.ytimg.com/vi/'+fixture.VIDEO+'/'))
  def test_refetch_refreshes_only_after_24h_and_preserves_content_revision(self):
-  source,notice=self.notice();store=MemoryStore();upsert_notice(store,source,notice,NOW);event=store.list('gameEvents')[0][1];writes=store.writes
-  self.assertEqual(upsert_notice(store,source,notice,NOW+timedelta(hours=23)),'unchanged');self.assertEqual(store.writes,writes)
-  self.assertEqual(upsert_notice(store,source,notice,NOW+timedelta(hours=24)),'updated');updated=store.get('gameEvents/'+event['id']);self.assertEqual(updated['revision'],event['revision']);self.assertEqual(updated['metadataExpiresAt'],NOW+timedelta(days=31))
+  source,notice=self.notice();store=MemoryStore();upsert_notice(store,source,notice,NOW,image_fetch=synthetic_thumbnail_fetch);event=store.list('gameEvents')[0][1];writes=store.writes
+  self.assertEqual(upsert_notice(store,source,notice,NOW+timedelta(hours=23),image_fetch=synthetic_thumbnail_fetch),'unchanged');self.assertEqual(store.writes,writes)
+  self.assertEqual(upsert_notice(store,source,notice,NOW+timedelta(hours=24),image_fetch=synthetic_thumbnail_fetch),'updated');updated=store.get('gameEvents/'+event['id']);self.assertEqual(updated['revision'],event['revision']);self.assertEqual(updated['metadataExpiresAt'],NOW+timedelta(days=31))
   raw=store.list('collectionDocuments')[0][1];self.assertEqual(raw['metadataExpiresAt'],updated['metadataExpiresAt'])
  def test_image_update_replaces_old_exact_thumbnail_without_other_post_fallback(self):
   from collector import digest
-  source,notice=self.notice();store=MemoryStore();upsert_notice(store,source,notice,NOW);url=notice['source_image_urls'][0].replace('hqdefault.jpg','maxresdefault.jpg');notice['raw_json']['thumbnailUrls']=[url];notice['source_image_urls']=[url];notice['raw_sha256']=digest(notice['raw_json'])
-  upsert_notice(store,source,notice,NOW+timedelta(minutes=1));row=store.list('gameEvents')[0][1];self.assertEqual(row['noticeImage']['url'],url);self.assertEqual(row['noticeImage']['subjectEvidence']['rawSha256'],notice['raw_sha256'])
+  source,notice=self.notice();store=MemoryStore();upsert_notice(store,source,notice,NOW,image_fetch=synthetic_thumbnail_fetch);url=notice['source_image_urls'][0].replace('hqdefault.jpg','maxresdefault.jpg');notice['raw_json']['thumbnailUrls']=[url];notice['source_image_urls']=[url];notice['source_image_metadata']={url:{'width':1280,'height':720,'quality':'maxres'}};notice['raw_json']['thumbnailMetadata']=notice['source_image_metadata'];notice['raw_sha256']=digest(notice['raw_json'])
+  upsert_notice(store,source,notice,NOW+timedelta(minutes=1),image_fetch=synthetic_thumbnail_fetch);row=store.list('gameEvents')[0][1];self.assertEqual(row['noticeImage']['url'],url);self.assertEqual(row['noticeImage']['subjectEvidence']['rawSha256'],notice['raw_sha256'])
  def test_expired_exact_youtube_event_and_raw_are_bounded_cleanup_candidates(self):
-  source,notice=self.notice();store=MemoryStore();upsert_notice(store,source,notice,NOW);late=NOW+timedelta(days=30)
+  source,notice=self.notice();store=MemoryStore();upsert_notice(store,source,notice,NOW,image_fetch=synthetic_thumbnail_fetch);late=NOW+timedelta(days=30)
   review=content_cleanup_plan(store,now=late);self.assertEqual({row['reasonCode']for row in review['candidates']},{'YOUTUBE_METADATA_EXPIRED'});self.assertEqual(len(review['candidates']),2)
   self.assertEqual(apply_content_cleanup(store,review,now=late)['documentsDeleted'],2);self.assertEqual(store.list('gameEvents'),[]);self.assertEqual(store.list('collectionDocuments'),[])
  def test_expiry_requires_positive_exact_provider_ids_and_30day_clocks(self):
-  source,notice=self.notice();store=MemoryStore();upsert_notice(store,source,notice,NOW);row=store.list('gameEvents')[0][1];late=NOW+timedelta(days=31)
+  source,notice=self.notice();store=MemoryStore();upsert_notice(store,source,notice,NOW,image_fetch=synthetic_thumbnail_fetch);row=store.list('gameEvents')[0][1];late=NOW+timedelta(days=31)
   self.assertTrue(youtube_metadata_expired(row,late))
   for field,value in [('sourceProvider','other'),('sourceChannelId','invalid'),('sourceVideoId','invalid'),('officialUrl','https://www.youtube.com/watch?v=wrongvideo1'),('metadataExpiresAt',NOW+timedelta(days=29)),('metadataCheckedAt',None)]:self.assertFalse(youtube_metadata_expired({**row,field:value},late))
 
@@ -1475,7 +1483,7 @@ def youtube_api_response():
     return {"kind":"youtube#playlistItemListResponse","nextPageToken":"next_2==","items":[{"kind":"youtube#playlistItem","id":"opaque_playlist_item_1",
         "snippet":{"channelId":YOUTUBE_API_FIXTURE_CHANNEL,"videoOwnerChannelId":YOUTUBE_API_FIXTURE_CHANNEL,"playlistId":YOUTUBE_API_FIXTURE_PLAYLIST,"title":"공식 신규 픽업 소식","description":"이 영상의 공식 안내입니다.",
             "publishedAt":"2026-09-25T10:00:00Z","resourceId":{"kind":"youtube#video","videoId":YOUTUBE_API_FIXTURE_VIDEO},
-            "thumbnails":{"high":{"url":f"https://i.ytimg.com/vi/{YOUTUBE_API_FIXTURE_VIDEO}/hqdefault.jpg"}}},
+            "thumbnails":{"high":{"url":f"https://i.ytimg.com/vi/{YOUTUBE_API_FIXTURE_VIDEO}/hqdefault.jpg","width":480,"height":360}}},
         "contentDetails":{"videoId":YOUTUBE_API_FIXTURE_VIDEO,"videoPublishedAt":"2026-10-10T09:00:00Z"}}]}
 def parse_youtube_api_fixture(payload):return parse_youtube_api_documents(json.dumps(payload).encode(),YOUTUBE_API_FIXTURE_SOURCE,"2026-10-14T03:00:00Z")
 class YouTubeApiAdapterTests(unittest.TestCase):
@@ -1533,8 +1541,11 @@ class FirebaseYouTubeDataApiCollectionTests(unittest.TestCase):
    'publisher_identity_checked_at':NOW.isoformat(),'youtube_uploads_playlist_verified_at':NOW.isoformat(),**changes}
  def payload(self,**changes):return {**youtube_api_response(),'nextPageToken':None,**changes}
  def collect(self,store=None,source=None,fetch=None,max_pages=10,mode='content-backfill'):
+  def mocked_fetch(request):
+   if request.get('parser')=='official_image_probe':return synthetic_thumbnail_fetch(request)
+   return fetch(request)if fetch else(200,json.dumps(self.payload()).encode(),{})
   with patch.dict('os.environ',{'YOUTUBE_API_KEY':'mock-only-nonproduction-key'}):
-   return collect_one(store or MemoryStore(),source or self.source(),CONTENT_CUTOFF,NOW,mode=mode,fetch=fetch or(lambda _:(200,json.dumps(self.payload()).encode(),{})),sleep=lambda _:None,now=NOW,max_pages=max_pages)
+   return collect_one(store or MemoryStore(),source or self.source(),CONTENT_CUTOFF,NOW,mode=mode,fetch=mocked_fetch,sleep=lambda _:None,now=NOW,max_pages=max_pages)
  def test_api_review_requires_separate_playlist_permission_and_identity_clock(self):
   self.assertTrue(reviewed(self.source()))
   for changes in [{'youtube_uploads_playlist_verified_at':None},{'youtube_uploads_playlist_id':None},{'publisher_identity_checked_at':None},
@@ -1662,9 +1673,9 @@ class DailyYoutubeMetadataRetentionTests(unittest.TestCase):
   apply_content_cleanup(store,content_cleanup_plan(store,now=NOW),now=NOW)
   self.assertEqual(dispatch(store,'alice','job',lambda _:self.fail('deleted-event FCM request'),NOW),'cancelled');self.assertEqual(store.get('users/alice/notificationJobs/job')['reasonCode'],'INELIGIBLE_AT_SEND')
  def test_real_api_high_definition_thumbnail_names_are_not_invented_or_discarded(self):
-  source,notice=ExactOfficialYoutubeThumbnailTests().notice();url=notice['source_image_urls'][0].replace('hqdefault.jpg','fhddefault.jpg');notice['raw_json']['thumbnailUrls']=[url];notice['source_image_urls']=[url]
+  source,notice=ExactOfficialYoutubeThumbnailTests().notice();url=notice['source_image_urls'][0].replace('hqdefault.jpg','fhddefault.jpg');notice['raw_json']['thumbnailUrls']=[url];notice['source_image_urls']=[url];notice['source_image_metadata']={url:{'width':1920,'height':1080,'quality':'fhd'}};notice['raw_json']['thumbnailMetadata']=notice['source_image_metadata']
   from collector import digest
-  notice['raw_sha256']=digest(notice['raw_json']);image=automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW);self.assertEqual(image['url'],url);self.assertEqual(image['kind'],'NOTICE_ART')
+  notice['raw_sha256']=digest(notice['raw_json']);image=automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW,image_fetch=synthetic_thumbnail_fetch);self.assertEqual(image['url'],url);self.assertEqual(image['kind'],'NOTICE_ART')
 
 class AnnouncementPublicationCutoffTests(unittest.TestCase):
  def test_pre_october_article_recently_updated_cannot_dispatch_or_create_a_new_job(self):
@@ -1678,5 +1689,112 @@ class AnnouncementPublicationCutoffTests(unittest.TestCase):
   for published in [None,'2026-10-11T10:01:00',datetime(2026,10,11,10,1)]:
    fixture=OfficialAnnouncementNotificationTests();store,source=fixture.fixture();rows=fixture.publish(store,source);event={**rows[0],'publishedAt':published,'sourceUpdatedAt':NOW+timedelta(minutes=1)}
    self.assertIsNone(announcement_identity(store,event,NOW+timedelta(minutes=2)));self.assertEqual(plan_announcement_user(store,'alice',[event],NOW+timedelta(minutes=2)),0);self.assertEqual(store.list('users/alice/notificationJobs'),[])
+
+class RasterHeaderTests(unittest.TestCase):
+    def jpeg(self,width,height,marker=0xC0):
+        return b'\xff\xd8\xff\xe0\x00\x04AB\xff'+bytes([marker])+b'\x00\x08\x08'+height.to_bytes(2,'big')+width.to_bytes(2,'big')+b'\x03'
+    def test_baseline_and_progressive_and_placeholder(self):
+        for width,height,marker in [(1280,720,0xC0),(480,360,0xC2),(120,90,0xC0)]:
+            with self.subTest(width=width):self.assertEqual(image_dimensions(self.jpeg(width,height,marker)),(width,height))
+    def test_png(self):
+        raw=b'\x89PNG\r\n\x1a\n'+b'\x00\x00\x00\rIHDR'+(1280).to_bytes(4,'big')+(720).to_bytes(4,'big')
+        self.assertEqual(image_dimensions(raw),(1280,720))
+    def test_webp_extended_and_lossy(self):
+        raw=b'RIFF'+b'\x00'*4+b'WEBPVP8X'+b'\x00'*8+(1279).to_bytes(3,'little')+(719).to_bytes(3,'little')
+        self.assertEqual(image_dimensions(raw),(1280,720))
+        raw=b'RIFF'+b'\x00'*4+b'WEBPVP8 '+b'\x00'*7+b'\x9d\x01\x2a'+(480).to_bytes(2,'little')+(360).to_bytes(2,'little')
+        self.assertEqual(image_dimensions(raw),(480,360))
+    def test_truncated_or_non_image_and_limits(self):
+        for raw in [b'',b'not image',b'\xff\xd8',b'\xff\xd8\xff\xe0\x00\x00',self.jpeg(0,90),self.jpeg(20000,10),self.jpeg(1280,720)[:-1],b'x'*2097153]:
+            with self.subTest(size=len(raw)):self.assertIsNone(image_dimensions(raw))
+    def test_repeated_markers_and_scan_before_dimensions_are_rejected(self):
+        self.assertIsNone(image_dimensions(b'\xff\xd8'+b'\xff\x01'*4100))
+        self.assertIsNone(image_dimensions(b'\xff\xd8\xff\xda\x00\x08abcdef'))
+
+
+class OfficialThumbnailPixelVerificationTests(unittest.TestCase):
+ def fixture(self,files=('fhddefault.jpg','maxresdefault.jpg')):
+  from collector import digest
+  source,notice=ExactOfficialYoutubeThumbnailTests().notice();base='https://i.ytimg.com/vi/'+FirebaseOfficialSocialFeedTests.VIDEO+'/'
+  sizes={'fhddefault.jpg':(1920,1080),'maxresdefault.jpg':(1280,720),'sddefault.jpg':(640,480),'hqdefault.jpg':(480,360),'mqdefault.jpg':(320,180),'default.jpg':(120,90),'qhddefault.jpg':(2560,1440)}
+  urls=[base+name for name in files];metadata={base+name:{'width':sizes[name][0],'height':sizes[name][1],'quality':'fixture'}for name in files}
+  notice['raw_json']['thumbnailUrls']=urls;notice['raw_json']['thumbnailMetadata']=metadata;notice['source_image_urls']=urls;notice['source_image_metadata']=metadata;notice['raw_sha256']=digest(notice['raw_json'])
+  return source,notice
+ def test_maxres_is_preferred_to_potential_placeholder_fhd_even_when_listed_last(self):
+  source,notice=self.fixture();calls=[]
+  def fetch(request):calls.append(request['url']);return synthetic_thumbnail_fetch(request)
+  image=automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW,image_fetch=fetch)
+  self.assertTrue(image['url'].endswith('/maxresdefault.jpg'));self.assertEqual(len(calls),1);self.assertEqual(image['imageVerification']['width'],1280);self.assertEqual(image['imageVerification']['height'],720)
+ def test_http200_placeholder_with_wrong_claimed_size_falls_back_only_to_supplied_poster(self):
+  source,notice=self.fixture(('maxresdefault.jpg','hqdefault.jpg'));calls=[];status={}
+  def fetch(request):
+   calls.append(request['url'])
+   if request['url'].endswith('/maxresdefault.jpg'):return synthetic_thumbnail_fetch({**request,'url':request['url'].replace('maxresdefault.jpg','default.jpg')})
+   return synthetic_thumbnail_fetch(request)
+  image=automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW,image_fetch=fetch,probe_status=status)
+  self.assertTrue(image['url'].endswith('/hqdefault.jpg'));self.assertEqual(status['requests'],2);self.assertIn('IMAGE_PROBE_DIMENSIONS_MISMATCH',status['reasonCodes']);self.assertEqual(set(calls),set(notice['source_image_urls']))
+ def test_all_invalid_images_are_hidden_without_generic_substitution(self):
+  source,notice=self.fixture();status={}
+  image=automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW,image_fetch=lambda _:(200,b'not an image',{'content-type':'image/jpeg'}),probe_status=status)
+  self.assertIsNone(image);self.assertEqual(status['requests'],2);self.assertIn('IMAGE_PROBE_DIMENSIONS_MISMATCH',status['reasonCodes'])
+ def test_probe_is_bounded_to_three_provided_candidates(self):
+  source,notice=self.fixture(('maxresdefault.jpg','sddefault.jpg','hqdefault.jpg','mqdefault.jpg','fhddefault.jpg','qhddefault.jpg'));status={}
+  self.assertIsNone(automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW,image_fetch=lambda _:(404,b'',{}),probe_status=status));self.assertEqual(status['requests'],3)
+ def test_passed_deadline_prevents_all_http_and_records_deferred(self):
+  source,notice=self.fixture();status={}
+  image=automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW,image_fetch=lambda _:self.fail('past-deadline image HTTP'),deadline=0,probe_status=status)
+  self.assertIsNone(image);self.assertEqual(status['requests'],0);self.assertEqual(status['status'],'deferred');self.assertIn('IMAGE_PROBE_DEADLINE_EXHAUSTED',status['reasonCodes'])
+ def test_missing_claimed_dimensions_never_permits_unverified_probe(self):
+  source,notice=self.fixture();notice.pop('source_image_metadata');status={}
+  self.assertIsNone(automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW,image_fetch=lambda _:self.fail('unclaimed-dimensions HTTP'),probe_status=status));self.assertEqual(status['requests'],0)
+ def test_below_minimum_height_and_default_placeholder_have_zero_requests(self):
+  from collector import digest
+  source,notice=self.fixture(('maxresdefault.jpg','default.jpg'));notice['source_image_metadata'][notice['source_image_urls'][0]]['height']=179;notice['raw_sha256']=digest(notice['raw_json']);status={}
+  self.assertIsNone(automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW,image_fetch=lambda _:self.fail('too-small candidate HTTP'),probe_status=status));self.assertEqual(status['requests'],0)
+ def test_bad_mime_or_oversized_body_is_never_displayed(self):
+  source,notice=self.fixture(('maxresdefault.jpg',))
+  for response in [(200,synthetic_thumbnail_fetch({'url':notice['source_image_urls'][0]})[1],{'content-type':'text/html'}),(200,b'x'*2097153,{'content-type':'image/jpeg'}),(500,b'',{})]:
+   self.assertIsNone(automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW,image_fetch=lambda _:response))
+ def test_policy_version_replaces_stale_same_hash_image_without_changing_original_date_or_title(self):
+  from collector import digest
+  source,notice=self.fixture();store=MemoryStore();upsert_notice(store,source,notice,NOW,image_fetch=synthetic_thumbnail_fetch);event_id=event_identity(notice,source);old=store.records['gameEvents/'+event_id]
+  policy=source_policy(source);policy.pop('youtubeNoticeImagePolicyVersion');old['extractionPolicySha256']=digest(policy);old['noticeImage']['url']=notice['source_image_urls'][0]
+  original={key:old[key]for key in ['publishedAt','sourceUpdatedAt','originalTitle','originalDescription','rawSha256','startsAt','endsAt','serverRegion']}
+  self.assertEqual(upsert_notice(store,source,notice,NOW+timedelta(minutes=1),image_fetch=synthetic_thumbnail_fetch),'updated');new=store.get('gameEvents/'+event_id)
+  self.assertTrue(new['noticeImage']['url'].endswith('/maxresdefault.jpg'));self.assertEqual({key:new[key]for key in original},original);self.assertEqual(new['noticeImage']['imageVerification']['status'],'verified')
+ def test_same_verified_content_under_24h_does_not_probe_again(self):
+  source,notice=self.fixture();store=MemoryStore();upsert_notice(store,source,notice,NOW,image_fetch=synthetic_thumbnail_fetch);writes=store.writes
+  self.assertEqual(upsert_notice(store,source,notice,NOW+timedelta(hours=23),image_fetch=lambda _:self.fail('unchanged-image HTTP')),'unchanged');self.assertEqual(store.writes,writes)
+ def test_24h_failed_recheck_clears_previous_photo_and_logs_without_bytes(self):
+  source,notice=self.fixture();store=MemoryStore();upsert_notice(store,source,notice,NOW,image_fetch=synthetic_thumbnail_fetch)
+  upsert_notice(store,source,notice,NOW+timedelta(hours=24),image_fetch=lambda _:(200,b'not image',{'content-type':'image/jpeg'}));event=store.list('gameEvents')[0][1]
+  self.assertIsNone(event['noticeImage']);self.assertIsNone(event['image']);self.assertEqual(event['noticeImageVerification']['requests'],2);self.assertEqual(len(store.list('collectionErrors')),1)
+  encoded=json.dumps(store.records,default=lambda value:value.isoformat());self.assertNotIn('not image',encoded);self.assertNotIn('\\ufffd',encoded)
+ def test_probe_request_never_contains_an_api_key_or_arbitrary_url(self):
+  source,notice=self.fixture();requests=[]
+  def fetch(request):requests.append(request);return synthetic_thumbnail_fetch(request)
+  automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW,image_fetch=fetch)
+  for request in requests:
+   self.assertEqual(request['parser'],'official_image_probe');self.assertIn(request['url'],notice['source_image_urls']);self.assertEqual(request['official_host'],'i.ytimg.com');self.assertEqual(request['max_response_bytes'],2097152);self.assertNotIn('key',request);self.assertNotIn('headers',request)
+ def test_exact_supplied_live_thumbnail_rechecks_v2_same_raw_hash_and_keeps_pixel_guards(self):
+  from collector import digest
+  source,notice=self.fixture(('maxresdefault.jpg',));old_url=notice['source_image_urls'][0];live_url=old_url.replace('maxresdefault.jpg','maxresdefault_live.jpg')
+  notice['source_image_urls']=[live_url];notice['raw_json']['thumbnailUrls']=[live_url];notice['source_image_metadata']={live_url:notice['source_image_metadata'][old_url]};notice['raw_json']['thumbnailMetadata']=notice['source_image_metadata'];notice['raw_sha256']=digest(notice['raw_json'])
+  store=MemoryStore();upsert_notice(store,source,notice,NOW,image_fetch=synthetic_thumbnail_fetch);event_id=event_identity(notice,source);old=store.records['gameEvents/'+event_id]
+  old_policy={**source_policy(source),'youtubeNoticeImagePolicyVersion':2};old['extractionPolicySha256']=digest(old_policy);old['noticeImage']=None;old['image']=None
+  self.assertEqual(upsert_notice(store,source,notice,NOW+timedelta(minutes=1),image_fetch=synthetic_thumbnail_fetch),'updated');event=store.get('gameEvents/'+event_id)
+  self.assertEqual(event['noticeImage']['url'],live_url);self.assertEqual(event['noticeImage']['subjectEvidence']['rawSha256'],notice['raw_sha256']);self.assertEqual(event['noticeImage']['imageVerification']['width'],1280);self.assertEqual(event['noticeImage']['imageVerification']['height'],720)
+  status={};self.assertIsNone(automatic_youtube_notice_image(notice,source,event_id,NOW,image_fetch=lambda _:(200,b'not an image',{'content-type':'image/jpeg'}),probe_status=status));self.assertEqual(status['requests'],1);self.assertIn('IMAGE_PROBE_DIMENSIONS_MISMATCH',status['reasonCodes'])
+
+class SchedulePublicationCutoffTests(unittest.TestCase):
+ def test_old_missing_or_future_original_publication_blocks_both_schedule_anchors(self):
+  for published in [CONTENT_CUTOFF-timedelta(seconds=1),None,NOW+timedelta(seconds=1)]:
+   store,event=owner_store();event={**event,'publishedAt':published,'sourceUpdatedAt':NOW}
+   self.assertFalse(eligible(store,'alice',event,'event:start',NOW));self.assertFalse(eligible(store,'alice',event,'reservation:1d',NOW));self.assertEqual(plan_user(store,'alice',[event],NOW),0)
+ def test_expired_missing_future_or_over_30day_youtube_metadata_cannot_dispatch_schedule(self):
+  store,event=owner_store();checked=NOW-timedelta(hours=1);video={**event,'sourceProvider':'youtube','sourceVideoId':FirebaseOfficialSocialFeedTests.VIDEO,'sourceChannelId':FirebaseOfficialSocialFeedTests.CHANNEL,'metadataCheckedAt':checked,'metadataExpiresAt':checked+timedelta(days=30)}
+  self.assertTrue(eligible(store,'alice',video,'event:start',NOW))
+  for patch_value in [{'metadataExpiresAt':NOW},{'metadataExpiresAt':None},{'metadataCheckedAt':None},{'metadataCheckedAt':NOW+timedelta(seconds=1)}, {'metadataExpiresAt':checked+timedelta(days=31)}]:
+   current={**video,**patch_value};self.assertFalse(eligible(store,'alice',current,'event:start',NOW));self.assertFalse(eligible(store,'alice',current,'reservation:1d',NOW));self.assertEqual(plan_user(store,'alice',[current],NOW),0)
 
 if __name__=='__main__':unittest.main()
