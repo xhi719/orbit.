@@ -13,7 +13,7 @@ from pathlib import Path
 import uuid
 import unicodedata
 from zoneinfo import ZoneInfo
-from collector import digest, operating_source, reviewed, reviewed_calendar_role, safe_public_url, content_publication_status
+from collector import digest, operating_source, reviewed, reviewed_calendar_role, safe_public_url, content_publication_status, apply_notice_content_policy
 from urllib.parse import urlsplit
 from store import FirestoreStore, MemoryStore, SafetyError, timestamp
 
@@ -23,9 +23,27 @@ ANNOUNCEMENT_KIND="announcement:published"
 ANNOUNCEMENT_LOOKBACK=timedelta(hours=72)
 
 
+def content_policy_allows(event, now, *, calendar=False):
+    """A classified or migrated public post cannot bypass its display policy.
+
+    Legacy independently reviewed notifications retain their existing source
+    checks. New metadata is recomputed rather than trusting a client-like flag.
+    Attendance and explicit test notifications do not use this public policy.
+    """
+    if not event:return False
+    if not any(key in event for key in ("contentKind","contentClassification","newsEligible","calendarEligible")):
+        return True
+    current=apply_notice_content_policy(event,now)
+    if (event.get("newsEligible") is not True or current.get("newsEligible") is not True
+        or event.get("contentKind")!=current.get("contentKind")
+        or event.get("contentClassification")!=current.get("contentClassification")):
+        return False
+    return not calendar or event.get("calendarEligible") is True and current.get("calendarEligible") is True
+
+
 def announcement_identity(store,event,now,source_cache=None):
     """Current official source and source-bound main role, never date approval."""
-    if not event or content_publication_status(event.get("publishedAt"),now)!="INCLUDED" or event.get("calendarRole") not in ("main-character","main-event") or event.get("status") in ("cancelled","canceled","postponed","ended"):return None
+    if not event or not content_policy_allows(event,now) or content_publication_status(event.get("publishedAt"),now)!="INCLUDED" or event.get("calendarRole") not in ("main-character","main-event") or event.get("status") in ("cancelled","canceled","postponed","ended"):return None
     source_id=event.get("sourceId");cache=source_cache if source_cache is not None else {}
     if not isinstance(source_id,str) or not source_id or "/" in source_id:return None
     if source_id not in cache:cache[source_id]=store.get("gameSources/"+source_id)
@@ -367,7 +385,7 @@ def eligible(store,uid,event,kind,now):
     if profile.get("notificationsEnabled") is False:return False
     if quiet({"quietStart":profile.get("dndStart"),"quietEnd":profile.get("dndEnd"),"timezone":profile.get("timezone","UTC")},now):return False
     if kind not in {anchor+":"+stage for anchor in ["event","reservation"] for stage in OFFSETS}:return False
-    if not event or content_publication_status(event.get("publishedAt"),now)!="INCLUDED" or event.get("verificationStatus")!="verified" or event.get("status") in ["cancelled","canceled","postponed","ended"]:return False
+    if not event or not content_policy_allows(event,now,calendar=True) or content_publication_status(event.get("publishedAt"),now)!="INCLUDED" or event.get("verificationStatus")!="verified" or event.get("status") in ["cancelled","canceled","postponed","ended"]:return False
     if event.get("sourceProvider")=="youtube" or event.get("sourceChannelId") or event.get("sourceVideoId"):
         try:
             checked,expires=timestamp(event.get("metadataCheckedAt")),timestamp(event.get("metadataExpiresAt"))

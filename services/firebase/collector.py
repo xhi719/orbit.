@@ -40,6 +40,187 @@ YOUTUBE_FEED_DOCUMENTATION = "https://developers.google.com/youtube/v3/guides/pu
 YOUTUBE_API_TERMS = "https://developers.google.com/youtube/terms/api-services-terms-of-service"
 YOUTUBE_PARSERS = frozenset({"youtube_atom","youtube_data_api"})
 YOUTUBE_NOTICE_IMAGE_POLICY_VERSION = 3
+CONTENT_CLASSIFICATION_VERSION = 1
+NEWS_ONLY_KINDS = frozenset({"character-pv", "event-pv"})
+CALENDAR_PREVIEW_KINDS = frozenset({"broadcast-preview", "offline-preview", "pickup-preview", "event-preview"})
+
+# This allow list describes a post, not everything mentioned in its boilerplate
+# description. It is shared by new ingestion and the public-document migration.
+CONTENT_EXCLUDED_TITLE = re.compile(r"\b(?:OST|soundtrack|music\s*video|song|cover|shorts|guide|tutorial|how\s*to|recap|highlights?)\b|#shorts|다시\s*보기|하이라이트|공략|가이드|쇼츠|음악(?!회)|커버|歌ってみた|攻略|解説|切り抜き", re.I)
+CONTENT_CHARACTER_PV = re.compile(r"(?:캐릭터|인형|에이전트|ニケ|キャラクター|人形|エージェント|character|doll|agent)\s*(?:[^\n|｜:：]{0,60}?\s*)?(?:(?<![A-Za-z])PV(?![A-Za-z])|프로모션\s*비디오|promotion\s*video|demo|trailer|teaser)|\b(?:PV|trailer|teaser)\b\s*(?:[-|:：]\s*)?(?:캐릭터|인형|キャラクター|character|doll)", re.I)
+CONTENT_EVENT_PV = re.compile(r"(?:이벤트|イベント|event)\s*(?:[^\n|｜:：]{0,60}?\s*)?(?:(?<![A-Za-z])PV(?![A-Za-z])|프로모션\s*비디오|promotion\s*video|trailer|teaser)|\b(?:PV|trailer|teaser)\b\s*(?:[-|:：]\s*)?(?:이벤트|イベント|event)", re.I)
+CONTENT_PREVIEW = re.compile(r"예고|안내|공지|사전\s*안내|소식|공개|시작|개최|신규|\b(?:new|preview|announcement|notice|coming|announced|starting|available|opens?|begins?|launch)\b|告知|予告|開催|開催決定|新規|新登場", re.I)
+CONTENT_BROADCAST = re.compile(r"특별\s*방송|공식\s*(?:생)?방송|개발자\s*방송|생방송|\b(?:special\s*(?:program|broadcast)|live\s*stream|livestream|developer\s*(?:stream|broadcast))\b|公式\s*生放送|特別番組|生放送", re.I)
+CONTENT_OFFLINE = re.compile(r"오프라인|콜라보\s*카페|팝업\s*스토어|전시회|콘서트|음악회|팬미팅|\b(?:offline|collab(?:oration)?\s*caf[eé]|pop[- ]?up|exhibition|concert|orchestra|fan\s*meeting)\b|コラボカフェ|ポップアップ|展覧会|コンサート|オフライン", re.I)
+CONTENT_PICKUP = re.compile(r"픽업|모집|한정\s*뽑기|\b(?:pick[- ]?up|banner|event\s*wishes|recruitment|targeted\s*procurement|military\s*upgrade)\b|ピックアップ|募集|召集", re.I)
+CONTENT_EVENT = re.compile(r"이벤트|\b(?:limited[- ]time\s*event|time[- ]limited\s*event|event)\b|イベント", re.I)
+
+
+def classify_notice_content(row):
+    """Classify only source-bound titles/reviewed roles, never body keywords.
+
+    A character/event PV is news-only even if the description repeats a game's
+    period. Music, guides, recaps and unrelated uploads are not game news here.
+    A source-bound main-role review can classify a named scoped publisher block.
+    """
+    selected = row.get("displayTitle") or row.get("sourceSectionTitle") or row.get("originalTitle") or row.get("title") or ""
+    title = plain_notice(selected) if isinstance(selected, str) else ""
+    raw_hash = row.get("rawSha256")
+    kind, status, method, evidence = "other", "unconfirmed", "explicit_notice_title_v1", title
+    # An OST concert announcement is an offline event, not an OST upload.
+    exclusion_title = re.sub(r"\b(?:OST|soundtrack)\b", "", title, flags=re.I) if CONTENT_OFFLINE.search(title) and CONTENT_PREVIEW.search(title) else title
+    if CONTENT_EXCLUDED_TITLE.search(exclusion_title):
+        status = "excluded"
+    else:
+        character, event = bool(CONTENT_CHARACTER_PV.search(title)), bool(CONTENT_EVENT_PV.search(title))
+        if character != event:
+            kind, status = ("character-pv" if character else "event-pv"), "verified"
+        elif not character:
+            if CONTENT_BROADCAST.search(title):
+                kind, status = "broadcast-preview", "verified"
+            elif CONTENT_PREVIEW.search(title):
+                for candidate, pattern in (("broadcast-preview", CONTENT_BROADCAST), ("offline-preview", CONTENT_OFFLINE), ("pickup-preview", CONTENT_PICKUP), ("event-preview", CONTENT_EVENT)):
+                    if pattern.search(title):
+                        kind, status = candidate, "verified"
+                        break
+            if kind == "other":
+                proof = row.get("calendarRoleEvidence") or {}
+                role = row.get("calendarRole")
+                if (isinstance(proof, dict) and proof.get("status") == "verified" and proof.get("sourceSha256") == raw_hash
+                    and proof.get("sourceTitle") == selected and proof.get("role") == role and role in ("main-character", "main-event")
+                    and safe_public_url(proof.get("evidenceUrl"))):
+                    kind, status, method = ("pickup-preview" if role == "main-character" else "event-preview"), "verified", "reviewed_main_role_v1"
+                    evidence = proof.get("evidenceText") or title
+    if not isinstance(raw_hash, str) or not re.fullmatch(r"[a-f0-9]{64}", raw_hash):
+        kind, status = "other", "unconfirmed"
+    return {"version": CONTENT_CLASSIFICATION_VERSION, "status": status, "method": method, "kind": kind,
+        "sourceTitle": selected, "sourceSha256": raw_hash, "evidenceText": evidence[:1500]}
+
+
+def notice_has_representative_image(row, observed=None):
+    """The exact current source image is required; game covers never substitute."""
+    for key in ("noticeImage", "image"):
+        image = row.get(key)
+        if not isinstance(image, dict) or image.get("subjectStatus") not in (None, "MATCHED") or not safe_public_url(image.get("url")) or GENERIC_GAME_IMAGE.search(image["url"]):
+            continue
+        proof, reference = image.get("subjectEvidence") or {}, image.get("sourceReference") or {}
+        if (not isinstance(proof, dict) or proof.get("status") != "MATCHED" or proof.get("eventId") != row.get("id")
+            or proof.get("officialUrl") != row.get("officialUrl") or image.get("sourceUrl") != row.get("officialUrl")):
+            continue
+        selected = row.get("displayTitle") or row.get("sourceSectionTitle") or row.get("originalTitle") or row.get("title")
+        override = row.get("sourceImageOverride") or {}
+        exact_subject = (proof.get("sourceSha256") == row.get("rawSha256") and proof.get("sourceTitle") == selected)
+        exact_override = (isinstance(override, dict) and override.get("rawSha256") == row.get("rawSha256") and override.get("exactTitle") == selected
+            and override.get("officialUrl") == row.get("officialUrl") and override.get("allowedImageUrl") == image.get("url"))
+        if image.get("rightsStatus") == "APPROVED" and safe_public_url(image.get("rightsEvidenceUrl")) and exact_subject:
+            return True
+        if (not isinstance(reference, dict) or reference.get("mode") != "OFFICIAL_NOTICE_IMAGE"
+            or reference.get("allowedImageUrl") != image.get("url") or not safe_public_url(reference.get("sourceUrl"))):
+            continue
+        if proof.get("method") == "source_post":
+            verification = image.get("imageVerification") or {}
+            if (row.get("sourceProvider") != "youtube" or proof.get("rawSha256") != row.get("rawSha256")
+                or proof.get("sourceTitle") != row.get("originalTitle") or proof.get("videoId") != row.get("sourceVideoId")
+                or proof.get("channelId") != row.get("sourceChannelId") or not isinstance(verification, dict)
+                or verification.get("status") != "verified" or verification.get("method") != "SOURCE_DIMENSIONS_MATCH"):
+                continue
+            video,channel=row.get("sourceVideoId"),row.get("sourceChannelId")
+            if (not isinstance(video,str)or not YOUTUBE_VIDEO_ID.fullmatch(video)or not isinstance(channel,str)or not YOUTUBE_CHANNEL_ID.fullmatch(channel)
+                or row.get("officialUrl")!="https://www.youtube.com/watch?"+urlencode({"v":video})):continue
+            if (type(verification.get("width")) is not int or type(verification.get("height")) is not int
+                or verification["width"] < 320 or verification["height"] < 180
+                or verification.get("width") != verification.get("expectedWidth") or verification.get("height") != verification.get("expectedHeight")
+                or not re.fullmatch(r"[a-f0-9]{64}", str(verification.get("contentSha256", "")))):
+                continue
+            try:
+                checked,expires=timestamp(row.get("metadataCheckedAt")),timestamp(row.get("metadataExpiresAt"))
+                if expires!=checked+timedelta(days=30) or timestamp(reference.get("expiresAt"))!=expires or timestamp(reference.get("checkedAt"))!=checked:continue
+                if observed is not None and (timestamp(reference.get("expiresAt")) <= timestamp(observed)
+                    or timestamp(reference.get("checkedAt")) > timestamp(observed)):
+                    continue
+            except (ValueError, TypeError):
+                continue
+            return True
+        if proof.get("method") in ("reviewed_image", "reviewed_notice_reference", "source_alt", "source_section"):
+            if not (exact_subject or exact_override):continue
+            if image.get("kind") not in ("PICKUP_ART", "EVENT_ART", "NOTICE_ART") or proof.get("kind") not in ("pickup", "event", "notice"):continue
+            try:
+                checked=timestamp(reference.get("checkedAt"))
+                if observed is not None and checked>timestamp(observed):continue
+                if reference.get("expiresAt")and observed is not None and timestamp(reference["expiresAt"])<=timestamp(observed):continue
+            except (ValueError,TypeError):continue
+            return True
+    return False
+
+
+def apply_notice_content_policy(row, observed=None, *, source=None):
+    """Idempotent public-only migration/ingestion policy; never changes dates."""
+    if source is not None and reviewed(source):
+        document = {"raw_sha256": row.get("rawSha256"), "original_title": row.get("originalTitle") or row.get("title"),
+            "official_url": row.get("officialUrl"), "_section_title": row.get("displayTitle") or row.get("sourceSectionTitle"),
+            "_raw_character_names": row.get("characterNames", []), "event_type_candidates": row.get("eventTypeCandidates", [])}
+        regenerated = reviewed_notice_image(document, source, row.get("id"))
+        if regenerated is not None:
+            row = {**row, "image": regenerated}
+    classification = classify_notice_content(row)
+    image = notice_has_representative_image(row, observed)
+    published = content_publication_status(row.get("publishedAt"), observed) == "INCLUDED"
+    news = classification["status"] == "verified" and classification["kind"] != "other" and image and published
+    calendar = False
+    global_broadcast = verified_youtube_broadcast_point(row)
+    if news and classification["kind"] in CALENDAR_PREVIEW_KINDS and row.get("verificationStatus") == "verified" and row.get("scheduleStatus") == "DATE_VERIFIED" and (row.get("serverRegion") in ("KR", "JP", "GLOBAL") or global_broadcast):
+        try:
+            starts, ends = timestamp(row.get("startsAt")), timestamp(row.get("endsAt"))
+            calendar = ends > starts or ends == starts and row.get("scheduleKind") == "point" and classification["kind"] in ("broadcast-preview", "offline-preview")
+        except (ValueError, TypeError):
+            pass
+    if classification["kind"]=="pickup-preview" and (row.get("announcementKind")in("rerun","aggregate")or row.get("pickupKind")=="weapon"
+        or row.get("derivedCharacterAnnouncements",0)>0 or row.get("derivedSectionCount",0)>0):
+        calendar=False
+    source_clock = news and verified_pending_main_role_clock(row, classification)
+    return {**row, "contentKind": classification["kind"], "contentClassification": classification, "newsEligible": news, "calendarEligible": bool(calendar or source_clock), "sourceClockOnly": bool(source_clock)}
+
+
+def verified_pending_main_role_clock(row, classification=None):
+    classification = classification or classify_notice_content(row)
+    evidence = row.get("scheduleEvidence") or {}
+    role = row.get("calendarRoleEvidence") or {}
+    selected = row.get("displayTitle") or row.get("sourceSectionTitle") or row.get("originalTitle") or row.get("title")
+    if (classification["kind"] not in ("pickup-preview", "event-preview") or row.get("verificationStatus") != "pending"
+        or row.get("scheduleStatus") not in ("DATE_UNCONFIRMED", "SERVER_REGION_UNCONFIRMED")
+        or not isinstance(evidence, dict) or evidence.get("reasonCodes") != ["SERVER_REGION_UNCONFIRMED"]
+        or evidence.get("method") != "explicit_labelled_timestamps" or not isinstance(evidence.get("evidenceText"), str)
+        or not isinstance(role, dict) or role.get("status") != "verified" or role.get("sourceSha256") != row.get("rawSha256")
+        or role.get("sourceTitle") != selected or role.get("role") != row.get("calendarRole")
+        or row.get("calendarRole") not in ("main-character", "main-event") or not safe_public_url(role.get("evidenceUrl"))):
+        return False
+    parsed = extract_schedule(evidence["evidenceText"])
+    if parsed["reasonCodes"]:return False
+    try:
+        return (timestamp(row.get("candidateStartsAt")) == parsed["startsAt"] and timestamp(row.get("candidateEndsAt")) == parsed["endsAt"]
+            and row.get("candidateTimezone") == parsed["originalTimezone"])
+    except (ValueError, TypeError):
+        return False
+
+
+def verified_youtube_broadcast_point(row):
+    proof = row.get("scheduleEvidence") or {}
+    selected = row.get("displayTitle") or row.get("sourceSectionTitle") or row.get("originalTitle") or row.get("title")
+    video,channel=row.get("sourceVideoId"),row.get("sourceChannelId")
+    if (row.get("sourceProvider") != "youtube" or not isinstance(video,str)or not YOUTUBE_VIDEO_ID.fullmatch(video)
+        or not isinstance(channel,str)or not YOUTUBE_CHANNEL_ID.fullmatch(channel)
+        or row.get("officialUrl")!="https://www.youtube.com/watch?"+urlencode({"v":video})
+        or classify_notice_content(row)["kind"] != "broadcast-preview" or row.get("scheduleKind") != "point"
+        or row.get("calendarAudience") != "GLOBAL_ANNOUNCEMENT" or not isinstance(proof, dict)
+        or proof.get("method") != "youtube_live_details_v1" or proof.get("sourceSha256") != row.get("rawSha256")
+        or proof.get("sourceTitle") != selected or proof.get("officialUrl") != row.get("officialUrl")
+        or proof.get("videoId") != row.get("sourceVideoId") or proof.get("channelId") != row.get("sourceChannelId")
+        or proof.get("providerField") not in ("liveStreamingDetails.actualStartTime", "liveStreamingDetails.scheduledStartTime")):
+        return False
+    try:
+        return timestamp(proof.get("providerValue")) == timestamp(row.get("startsAt")) == timestamp(row.get("endsAt"))
+    except (ValueError, TypeError):
+        return False
 
 
 def content_publication_status(value, observed=None):
@@ -235,6 +416,7 @@ def source_policy(source):
         policy.update({key:source.get(key) for key in ("youtube_channel_id", "publisher_identity_evidence_url", "publisher_identity_checked_at")})
         if source.get("parser")=="youtube_data_api":policy.update({key:source.get(key)for key in ("youtube_uploads_playlist_id","youtube_uploads_playlist_verified_at")})
     policy["contentPublishedNotBefore"] = CONTENT_PUBLISHED_NOT_BEFORE
+    policy["contentClassificationVersion"] = CONTENT_CLASSIFICATION_VERSION
     return policy
 
 
@@ -453,7 +635,7 @@ def image_subject_evidence(document, source, label, nearby, image_count):
     if not method:return None
     if names and not all(image_mentions(proof,name) for name in names):return None
     return {"status":"MATCHED","eventId":event_identity(document,source),"officialUrl":document["official_url"],
-        "kind":kind,"method":method,"evidenceText":proof[:1000],"characterNames":names}
+        "sourceSha256":document["raw_sha256"],"sourceTitle":title,"kind":kind,"method":method,"evidenceText":proof[:1000],"characterNames":names}
 
 
 def image_candidates(document, source):
@@ -520,7 +702,7 @@ def character_image(images, target, child_id):
         # The source label must not explicitly feature a different quoted target.
         quoted=re.findall(r'[“"「『\[]([^”"」』\]\n]{1,100})[”"」』\]]',text)
         if quoted and any(image_name(name)!=image_name(target["name"]) for name in quoted):continue
-        matches.append({**image,"subjectEvidence":{**evidence,"eventId":child_id,"characterNames":[target["name"]],"announcementKind":target["announcementKind"]}})
+        matches.append({**image,"subjectEvidence":{**evidence,"eventId":child_id,"sourceTitle":target["name"],"characterNames":[target["name"]],"announcementKind":target["announcementKind"]}})
     return matches,approved_subject_image(matches)
 
 
@@ -730,7 +912,7 @@ def reviewed_notice_image(document,source,event_id):
         matched.append({"url":ref["url"],"sourceUrl":document["official_url"],"kind":ref["kind"],"rightsStatus":"UNCONFIRMED",
             "sourceReference":{"mode":"OFFICIAL_NOTICE_IMAGE","sourceUrl":ref["sourceUrl"],"checkedAt":checked,"allowedImageUrl":ref["url"]},
             "subjectEvidence":{"status":"MATCHED","eventId":event_id,"officialUrl":document["official_url"],"kind":"pickup" if pickup else "event",
-                "method":"reviewed_image","evidenceText":ref["evidenceText"],"characterNames":names}})
+                "sourceSha256":document["raw_sha256"],"sourceTitle":selected,"method":"reviewed_image","evidenceText":ref["evidenceText"],"characterNames":names}})
     return matched[0] if len(matched)==1 else None
 
 
@@ -993,16 +1175,22 @@ def new_doll_block_targets(text,source):
 
 def enrich_document(document, source):
     text = plain_notice(document["original_title"] + "\n" + document["original_description"])
+    classification = classify_notice_content({"rawSha256": document["raw_sha256"], "originalTitle": document["original_title"], "displayTitle": document.get("_section_title")})
     schedule = extract_schedule(text)
+    schedule_kind = "interval"
+    live_point = youtube_broadcast_document_point(document, source, classification)
+    if live_point:
+        schedule = {"startsAt": live_point["clock"], "endsAt": live_point["clock"], "originalTimezone": "UTC", "evidenceText": live_point["providerField"] + ": " + live_point["providerValue"], "reasonCodes": []}
+        schedule_kind = "point"
     reasons = list(schedule["reasonCodes"])
     authorized = reviewed(source) and source.get("schedule_extraction_approved") is True and source.get("schedule_extraction_reviewed_at") and safe_public_url(source.get("schedule_extraction_evidence_url"))
     if urlsplit(document.get("official_url","")).hostname not in source.get("allowed_notice_hosts",[]):
         authorized=False
         reasons.append("OFFICIAL_NOTICE_HOST_UNCONFIRMED")
-    if not authorized:
+    if not authorized and not live_point:
         reasons.append("EXTRACTION_REVIEW_REQUIRED")
     region = document.get("server_region")
-    if region not in ("KR", "JP", "GLOBAL"):
+    if region not in ("KR", "JP", "GLOBAL") and not live_point:
         reasons.append("SERVER_REGION_UNCONFIRMED")
     # Explicit competing regional labels require a regional adapter, not merging.
     region_names={"kr":"KR","한국":"KR","jp":"JP","일본":"JP","global":"GLOBAL","글로벌":"GLOBAL"}
@@ -1012,17 +1200,37 @@ def enrich_document(document, source):
     hints = document.get("event_type_candidates", [])
     category = document.get("_section_category") or next((kind for kind in ("pickup", "login_reward", "maintenance", "update", "official_broadcast") if kind in hints), "unclassified")
     category = "recruitment" if category == "pickup" else category
-    verified = not reasons and category != "unclassified"
+    category = {"broadcast-preview": "official_broadcast", "offline-preview": "offline", "pickup-preview": "recruitment", "event-preview": "limited-event"}.get(classification["kind"], category)
+    if live_point: category = "official_broadcast"
+    verified = not reasons and category != "unclassified" and classification["kind"] not in NEWS_ONLY_KINDS
     images = image_candidates(document, source)
     targets = highest_rarity_targets(text, source) if "pickup" in hints and reviewed(source) else []
     for target in new_doll_block_targets(text,source):
         if not any(old['name']==target['name'] for old in targets):targets.append(target)
     cancelled = bool(re.search(r"\b(?:event|banner)\s+(?:is\s+|has\s+been\s+)?cancelled\b|(?:이벤트|픽업)\s*(?:가\s*)?취소|(?:イベント|ピックアップ).*中止", text, re.I))
-    return {**document, "schedule": schedule, "schedule_verified": bool(verified), "category_candidate": category,
+    return {**document, "schedule": schedule, "schedule_verified": bool(verified), "category_candidate": category, "schedule_kind": schedule_kind, "source_live_point": live_point,
         "extraction_version": EXTRACTION_VERSION, "extraction_policy_sha256": digest(source_policy(source)),
         "schedule_reason_codes": list(dict.fromkeys(reasons)), "image_candidates": images,
         "approved_image": approved_subject_image(images),"referenced_image":original_subject_image(images,source,document.get("observed_at")),
         "highest_rarity_targets": targets, "cancelled": cancelled,"section_documents":section_documents(document,source)}
+
+
+def youtube_broadcast_document_point(document, source, classification=None):
+    classification = classification or classify_notice_content({"rawSha256": document.get("raw_sha256"), "originalTitle": document.get("original_title")})
+    if classification["kind"] != "broadcast-preview" or source.get("parser") != "youtube_data_api" or not reviewed(source):
+        return None
+    raw = document.get("raw_json") or {}
+    details = document.get("source_live_details")
+    video = document.get("external_key")
+    if (not isinstance(raw, dict) or not isinstance(details, dict) or raw.get("liveStreamingDetails") != details
+        or raw.get("channelId") != source.get("youtube_channel_id") or raw.get("videoId") != video
+        or raw.get("title") != document.get("original_title") or digest(raw) != document.get("raw_sha256")
+        or raw.get("officialUrl") != document.get("official_url") or document.get("official_url") != "https://www.youtube.com/watch?" + urlencode({"v": video})):
+        return None
+    field = "actualStartTime" if details.get("actualStartTime") else "scheduledStartTime"
+    try: clock = aware_timestamp(details.get(field))
+    except (ValidationError, TypeError): return None
+    return {"clock": clock, "providerField": "liveStreamingDetails." + field, "providerValue": details[field]}
 
 
 def digest(value):
@@ -1416,14 +1624,14 @@ def upsert_notice(store, source, document, observed, *, image_fetch=None, deadli
             if old.get("verificationStatus")=="verified" and old.get("status") not in ("cancelled","postponed") and old.get("startsAt") and old.get("endsAt"):
                 state="ended" if timestamp(old["endsAt"])<=observed else "ongoing" if timestamp(old["startsAt"])<=observed else "upcoming"
                 if state!=old.get("status"):
-                    return {**old,"status":state,"lastCheckedAt":observed,"lastChangedAt":observed,"revision":old.get("revision",0)+1},"updated"
+                    return apply_notice_content_policy({**old,"status":state,"lastCheckedAt":observed,"lastChangedAt":observed,"revision":old.get("revision",0)+1},observed),"updated"
             if source.get("parser")in YOUTUBE_PARSERS:
                 checked=old.get("metadataCheckedAt")
                 try: refresh=checked is None or timestamp(checked)<=observed-timedelta(hours=24)
                 except (ValueError,TypeError): refresh=True
                 if refresh:
-                    return {**old,"noticeImage":notice_image,"image":notice_image if old.get("categoryCandidate")!="recruitment" and not old.get("derivedCharacterAnnouncements") else old.get("image"),
-                        "noticeImageVerification":notice_image_verification,**video_metadata,"lastCheckedAt":observed},"updated"
+                    return apply_notice_content_policy({**old,"noticeImage":notice_image,"image":notice_image if old.get("categoryCandidate")!="recruitment" and not old.get("derivedCharacterAnnouncements") else old.get("image"),
+                        "noticeImageVerification":notice_image_verification,**video_metadata,"lastCheckedAt":observed},observed),"updated"
             return None,"unchanged"
         retained_image=retained_source_reference(old,document,event_id)
         original_language,language_evidence=notice_language(old,document,source)
@@ -1476,7 +1684,18 @@ def upsert_notice(store, source, document, observed, *, image_fetch=None, deadli
             row.update(startsAt=None,endsAt=None,originalTimezone=None,scheduleStatus="DATE_UNCONFIRMED",status="unconfirmed")
         if document["cancelled"]:
             row.update(status="cancelled",scheduleStatus="CANCELLED")
-        row=announcement_metadata(reviewed_calendar_role(localize_collected_row(row,source,observed),source),old,observed)
+        row["scheduleKind"] = document["schedule_kind"]
+        if document.get("source_live_point") and row.get("verificationStatus") == "verified":
+            point = document["source_live_point"]
+            row.update(calendarAudience="GLOBAL_ANNOUNCEMENT",scheduleOrigin="automatic")
+            row["scheduleEvidence"] = {"method": "youtube_live_details_v1", "sourceSha256": row["rawSha256"],
+                "sourceTitle": row.get("displayTitle") or row.get("sourceSectionTitle") or row["originalTitle"],
+                "officialUrl": row["officialUrl"], "videoId": row["sourceVideoId"], "channelId": row["sourceChannelId"],
+                "providerField": point["providerField"], "providerValue": point["providerValue"], "reasonCodes": [],
+                "evidenceText": document["schedule"]["evidenceText"]}
+        else:
+            row["calendarAudience"] = None
+        row=apply_notice_content_policy(announcement_metadata(reviewed_calendar_role(localize_collected_row(row,source,observed),source),old,observed),observed)
         if len(json.dumps(row,ensure_ascii=False,default=lambda value:value.isoformat()).encode())>900000:
             raise SafetyError("event_document_exceeds_safe_firestore_size")
         return row,"updated" if old else "created"
@@ -1497,7 +1716,7 @@ def upsert_notice(store, source, document, observed, *, image_fetch=None, deadli
                  "candidateTimezone":document["schedule"]["originalTimezone"] if region_pending_period(document) else None,
                  "firstCheckedAt":old.get("firstCheckedAt",observed) if old else observed}
             row.update({key:current_event.get(key) for key in ("originalTitle","originalDescription","originalLanguage","rawSha256","revision",
-                "displayTitle","sourceSectionTitle","translations","contentLocalization","calendarRole","calendarRoleEvidence","publishedAt","sourceUpdatedAt")})
+                "displayTitle","sourceSectionTitle","translations","contentLocalization","calendarRole","calendarRoleEvidence","publishedAt","sourceUpdatedAt","contentKind","contentClassification","newsEligible","calendarEligible")})
             for key,default in {"pickupKind":None,"characters":[],"weapons":[],"startsAt":None,"endsAt":None}.items():
                 row.setdefault(key,default)
             if document.get("_section_key") and pickup.get("pickup_kind") and (pickup.get("characters") or pickup.get("weapons")):
@@ -1548,7 +1767,7 @@ def upsert_notice(store, source, document, observed, *, image_fetch=None, deadli
                         verificationStatus="pending",scheduleStatus="CANCELLED" if inactive in ("cancelled","canceled") else "DATE_UNCONFIRMED",status=inactive,scheduleOrigin=None,
                         scheduleEvidence={"method":"source_new_doll_block" if target.get("evidenceMethod")=="gf2_new_doll_block_v1" else "source_character_without_scoped_period",
                             "evidenceText":target["evidenceText"],"reasonCodes":["CHARACTER_RECRUITMENT_PERIOD_UNCONFIRMED"]})
-                return announcement_metadata(reviewed_calendar_role(localize_collected_row(row,source,observed),source),old,observed),True
+                return apply_notice_content_policy(announcement_metadata(reviewed_calendar_role(localize_collected_row(row,source,observed),source),old,observed),observed),True
             store.mutate("gameEvents/"+child_id,child_update)
             pickup_id=digest({"event":child_id,"kind":"character"})
             def child_pickup(old):
@@ -1564,7 +1783,7 @@ def upsert_notice(store, source, document, observed, *, image_fetch=None, deadli
                     "firstCheckedAt":old.get("firstCheckedAt",observed) if old else observed,
                     "lastVerifiedAt":current_child.get("lastVerifiedAt"),"scheduleOrigin":current_child.get("scheduleOrigin")}
                 row.update({key:current_child.get(key) for key in ("originalTitle","originalDescription","originalLanguage","rawSha256","revision",
-                    "displayTitle","sourceSectionTitle","translations","contentLocalization","calendarRole","calendarRoleEvidence","publishedAt","sourceUpdatedAt")})
+                    "displayTitle","sourceSectionTitle","translations","contentLocalization","calendarRole","calendarRoleEvidence","publishedAt","sourceUpdatedAt","contentKind","contentClassification","newsEligible","calendarEligible")})
                 return row,True
             store.mutate("pickupSchedules/"+pickup_id,child_pickup)
         # Changed text removing a target must stop its old automatic calendar/push.
@@ -1648,7 +1867,7 @@ def collect_one(store, source, start, end, mode="backfill", fetch=fetch_source, 
     metrics={"pagesFetched":0,"itemsSeen":0,"created":0,"updated":0,"unchanged":0,"verifiedSchedules":0,
              "knownEventsForReverify":0,"knownEventsQueryLimitReached":False,"olderUnseenSkipped":0,"ongoingOlderIncluded":0,
              "verifiedSectionSchedules":0,"derivedChildrenQueryLimitReached":False}
-    metrics.update(candidateSchedules=0,candidateSectionSchedules=0,beforeContentCutoffSkipped=0,publicationUnconfirmedSkipped=0)
+    metrics.update(candidateSchedules=0,candidateSectionSchedules=0,beforeContentCutoffSkipped=0,publicationUnconfirmedSkipped=0,contentExcluded=0,contentSuppressedUpdated=0,videoDetailsRequests=0,videoDetailsFailures=0)
     success,error,http_status,retry_after=False,None,None,0
     cursor=int(end.timestamp())+1;page_token=None;seen_page_tokens=set()
     try:
@@ -1677,10 +1896,26 @@ def collect_one(store, source, start, end, mode="backfill", fetch=fetch_source, 
                 metrics.update(windowCoverageVerified=False,coverageReason=parsed["coverage_reason"])
             metrics["itemsSeen"]+=parsed["items_seen"]
             if source["parser"]=="youtube_data_api":
-                metrics["apiUnitsEstimated"]=metrics["pagesFetched"]  # playlistItems.list costs 1 API quota unit/page.
+                metrics["apiUnitsEstimated"]=metrics.get("apiUnitsEstimated",0)+1  # playlistItems.list costs 1 API quota unit/page.
                 metrics["providerSkipped"]=metrics.get("providerSkipped",0)+parsed.get("items_skipped",0)
                 metrics["providerSkipReasons"]=list(dict.fromkeys(metrics.get("providerSkipReasons",[])+parsed.get("skip_reasons",[])))[:20]
                 metrics.update(windowCoverageVerified=False,coverageReason="PUBLIC_UPLOADS_PLAYLIST_BOUNDED_PAGES")
+                broadcast_documents=[document for document in documents if content_publication_status(document.get("published_at"),observed)=="INCLUDED"
+                    and classify_notice_content({"rawSha256":document["raw_sha256"],"originalTitle":document["original_title"]})["kind"]=="broadcast-preview"
+                    and (start<=aware_timestamp(document["published_at"])<end or mode=="reverify" and event_identity(document,source) in known_event_ids)]
+                if broadcast_documents and (deadline is None or time.monotonic()<deadline):
+                    from official_adapter import youtube_video_details_request,attach_youtube_video_details
+                    metrics["videoDetailsRequests"]+=1;metrics["apiUnitsEstimated"]+=1
+                    try:
+                        details_status,details_raw,_=fetch(youtube_video_details_request(source,[document["external_key"]for document in broadcast_documents]))
+                        if details_status!=200:raise ValidationError("youtube_video_details_http_"+str(details_status))
+                        attached=attach_youtube_video_details(details_raw,source,broadcast_documents)
+                        replacements={document["external_key"]:document for document in attached}
+                        documents=[replacements.get(document["external_key"],document)for document in documents]
+                    except Exception:
+                        metrics["videoDetailsFailures"]+=1
+                        error_key=digest([source["id"],run_id,"YOUTUBE_LIVE_DETAILS"])
+                        store.put("collectionErrors/"+error_key,{"sourceId":source["id"],"gameId":source["game_id"],"kind":"YOUTUBE_LIVE_DETAILS","reasonCode":"LIVE_DETAILS_UNCONFIRMED","createdAt":observed})
             dates=[]
             for document in documents:
                 gate=content_publication_status(document.get("published_at"),observed)
@@ -1698,6 +1933,16 @@ def collect_one(store, source, start, end, mode="backfill", fetch=fetch_source, 
                 changed=aware_timestamp(document["source_updated_at"]) if document.get("source_updated_at") else None
                 if start<=date<end or changed and start<=changed<end or ongoing_old or mode=="reverify" and event_identity(document,source) in known_event_ids:
                     if ongoing_old:metrics["ongoingOlderIncluded"]+=1
+                    classification=classify_notice_content({"rawSha256":document["raw_sha256"],"originalTitle":document["original_title"]})
+                    if source["parser"]in YOUTUBE_PARSERS and classification["kind"]=="other":
+                        metrics["contentExcluded"]+=1
+                        existing_path="gameEvents/"+event_identity(document,source)
+                        def suppress(old):
+                            if not old:return None,False
+                            amended=apply_notice_content_policy(old,observed)
+                            return (None,False)if amended==old else(amended,True)
+                        metrics["contentSuppressedUpdated"]+=int(bool(store.mutate(existing_path,suppress)))
+                        continue
                     outcome=upsert_notice(store,source,document,observed,image_fetch=fetch,deadline=deadline)
                     metrics[outcome]+=1
                     stored=store.get("gameEvents/"+event_identity(document,source))
