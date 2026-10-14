@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
-  "recordedAt": "2026-10-14T00:43:22.437Z",
+  "recordedAt": "2026-10-14T03:43:41.447Z",
   "scope": "APPROVED_PUBLIC_WORKER_EXPECTED_BYTES",
-  "sourceBaseCommit": "0bde754fffc7dfdd37cb82ecfebf799f5f92f175",
+  "sourceBaseCommit": "617e002717337a2cc3c5c309f6ef5e34f143b175",
   "files": [
     {
       "path": ".github/workflows/firebase-free-collector.yml",
-      "bytes": 2423,
-      "sha256": "35db0070ae8464e0c251a0cb4f77b8d45bc407d97c3cc0da74a8422f089ea14f"
+      "bytes": 2495,
+      "sha256": "383ad81ab5840a82f398cbf8da1b7906dbbce43ab3777355ecf41f356a1399cf"
     },
     {
       "path": ".gitignore",
@@ -21,13 +21,13 @@
     },
     {
       "path": "data/official-sources.json",
-      "bytes": 193587,
-      "sha256": "6e071cfa8ea838988746fe158768119bdbd28d05c10f3509bfaaff80055b2ed2"
+      "bytes": 218613,
+      "sha256": "d126f09046b9dadf0293cc5e44223dc2b1995a4ad96d451234029a063a9a730a"
     },
     {
       "path": "docs/github-free-runner-plan.md",
-      "bytes": 23933,
-      "sha256": "07dfce87aa5dcf642c4ec9fd14ca64e28167906e83dba76cd2c9a6af0abdac57"
+      "bytes": 28003,
+      "sha256": "a48f3cb00a25b1bf1cee48fe414c443ebafcf31da9377815cd8349bb44ed27d1"
     },
     {
       "path": "README.md",
@@ -41,13 +41,13 @@
     },
     {
       "path": "services/collector/engine.py",
-      "bytes": 16210,
-      "sha256": "d3ef305748d6e2901c8fadc6eeaaf1041c94afc228cf3dc346e38f830cd8af87"
+      "bytes": 17084,
+      "sha256": "6a34693b9ea11e60162320c2489c3379dd9c228324f0eba3100e15e831f7b876"
     },
     {
       "path": "services/collector/official_adapter.py",
-      "bytes": 7293,
-      "sha256": "5ece0ffed5e3ca6b3d2819f3a7b5e66f8bb7f82e9dfbc220efe7e385890c48d0"
+      "bytes": 16169,
+      "sha256": "296bc4dc4dfe53d7cb77e5471cb8ad68eac2192770278f9bec14ffcb7146387c"
     },
     {
       "path": "services/collector/staging_store.py",
@@ -56,13 +56,13 @@
     },
     {
       "path": "services/firebase/admin.py",
-      "bytes": 25037,
-      "sha256": "b6982ea9d62978be509e46fdf356c90323fc61d7bf12f402d592c9567739907d"
+      "bytes": 25491,
+      "sha256": "468a68697eb38f9d38dc5c5640408b1ad555ce988d9d49e4197168334fcef8a3"
     },
     {
       "path": "services/firebase/collector.py",
-      "bytes": 102268,
-      "sha256": "7d3ced2058dcf9079d0682a1f450d4c8935425bdbd7f286bd5ccf38ed69dfa9d"
+      "bytes": 132069,
+      "sha256": "acd1629e17d93fee5ee50d0eb40a03e11ee0e88a3331933722f3ccc0a93a1dc8"
     },
     {
       "path": "services/firebase/iam/orbit-free-fcm-sender-role.json",
@@ -81,8 +81,8 @@
     },
     {
       "path": "services/firebase/notifications.py",
-      "bytes": 41179,
-      "sha256": "ccb66407397575d52105d1aa26a67632a9beecf0a3c6b846f99505693eff8435"
+      "bytes": 41279,
+      "sha256": "54de27aeb4f94c212bf294c8cc29869f6a864b10ccc34ed0578e54e1d5c3bd60"
     },
     {
       "path": "services/firebase/requirements.txt",
@@ -91,16 +91,16 @@
     },
     {
       "path": "services/firebase/store.py",
-      "bytes": 11831,
-      "sha256": "75c79ed8ec1dbb0bdc08b233b799da873a7bed90ff2c7faf592c31c3a02510e8"
+      "bytes": 16064,
+      "sha256": "d4e674c56bafdfaff80f69270fd7476b38aaddb000d202660fff284d307a3d7f"
     },
     {
       "path": "services/firebase/tests/test_firebase.py",
-      "bytes": 162704,
-      "sha256": "586fc4ff1c0b5014552f4a43216dce05db688750a80488924636f3d6bcb9037f"
+      "bytes": 207793,
+      "sha256": "2719745739ef480dc5e55fee81c1a5efd2b08a0109c978f97b171254fa9685d1"
     }
   ],
-  "payloadBytes": 1017460,
+  "payloadBytes": 1136055,
   "excluded": [
     "images",
     "native apps",
