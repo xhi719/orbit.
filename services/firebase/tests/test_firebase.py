@@ -2453,4 +2453,166 @@ class OfficialRSSPublicationWindowTests(unittest.TestCase):
         self.assertEqual(original, filtered)
 
 
+# Synthetic, public provider contract fixtures. These are not fetched game news,
+# verified schedules, secrets or device results. No work/ fixture dependency.
+from copy import deepcopy as genshin_contract_copy
+from official_adapter import genshin_cms_request,parse_genshin_cms_index,parse_genshin_cms_article,GENSHIN_CMS_BASE
+from collector import classify_notice_content
+
+GENSHIN_CONTRACT_SOURCE={**SOURCE,'id':'synthetic-genshin-source','game_id':'genshin-impact','parser':'genshin_cms',
+ 'url':GENSHIN_CMS_BASE+'getContentList','steam_appid':None,'content_language':'ko',
+ 'allowed_notice_hosts':['genshin.hoyoverse.com'],'server_region':'UNSPECIFIED','server_label':None,
+ 'feed_allowlist':['official_publisher_articles'],'terms_url':'https://genshin.hoyoverse.com/ko/',
+ 'publisher_identity_evidence_url':'https://genshin.hoyoverse.com/_nuxt/906b977.js','publisher_identity_checked_at':NOW.isoformat(),
+ 'article_format':{'mode':'genshin_cms_v1','version':1,'locale':'ko-kr','timezone':'Asia/Seoul',
+  'reviewedAt':NOW.isoformat(),'evidenceUrl':'https://genshin.hoyoverse.com/_nuxt/906b977.js','allowedImageHosts':['fastcdn.hoyoverse.com']}}
+GENSHIN_CONTRACT_ID=123456
+GENSHIN_CONTRACT_URL='https://genshin.hoyoverse.com/ko/news/detail/'+str(GENSHIN_CONTRACT_ID)
+GENSHIN_CONTRACT_ART='https://fastcdn.hoyoverse.com/content-v2/hk4e/'+str(GENSHIN_CONTRACT_ID)+'/synthetic-body.jpg'
+GENSHIN_CONTRACT_CROP='https://fastcdn.hoyoverse.com/content-v2/hk4e/'+str(GENSHIN_CONTRACT_ID)+'/synthetic-thumbnail.jpg'
+
+def genshin_contract_article_data(**changes):
+ return {'iInfoId':GENSHIN_CONTRACT_ID,'sChanId':['396'],'sTitle':'합성 이벤트 오픈',
+  'sContent':'<p>합성 테스트 안내</p><p><img src="'+GENSHIN_CONTRACT_ART+'"></p>',
+  'sExt':json.dumps({'banner':[{'url':GENSHIN_CONTRACT_CROP}]}),'dtStartTime':'2026-10-08 16:00:00',
+  'dtCreateTime':'2026-10-07 11:30:00',**changes}
+
+def genshin_contract_response(data=None,retcode=0):
+ return json.dumps({'retcode':retcode,'message':'synthetic','data':data if data is not None else genshin_contract_article_data()},ensure_ascii=False).encode('utf-8')
+
+class FirebaseGenshinCmsContractTests(unittest.TestCase):
+ def parse(self,raw=None,source=None,url=GENSHIN_CONTRACT_URL):
+  return parse_genshin_cms_article(raw if raw is not None else genshin_contract_response(),source if source is not None else GENSHIN_CONTRACT_SOURCE,url,NOW.isoformat())
+
+ def test_original_language_title_and_body_art_survive(self):
+  d=self.parse();self.assertEqual(d['original_title'],'합성 이벤트 오픈');self.assertEqual(d['original_language'],'ko');self.assertEqual(d['official_article_image_urls'],[GENSHIN_CONTRACT_ART])
+
+ def test_publication_day_bucket_never_claims_bare_cms_clock(self):
+  d=self.parse();self.assertEqual(d['publication_local_date'],'2026-10-08');self.assertEqual(d['publication_precision'],'day');self.assertEqual(d['published_at'],'2026-10-07T15:00:00+00:00');self.assertFalse(d['raw_json']['publicationClockVerified']);self.assertEqual(d['raw_publication_timestamp'],'2026-10-08 16:00:00')
+
+ def test_unknown_server_never_acquires_dates_main_role_or_pickups(self):
+  d=self.parse();self.assertEqual(d['server_region'],'UNSPECIFIED');self.assertEqual(d['pickups'],[]);self.assertNotIn('starts_at',d);self.assertNotIn('calendarRole',d)
+
+ def test_creation_clock_is_never_a_publication_fallback(self):
+  with self.assertRaises(ValidationError):self.parse(genshin_contract_response(genshin_contract_article_data(dtStartTime=None)))
+
+ def test_exact_article_url_identity_is_required(self):
+  with self.assertRaises(ValidationError):self.parse(url='https://genshin.hoyoverse.com/ko/news/detail/123457')
+
+ def test_cross_game_source_is_rejected(self):
+  with self.assertRaises(ValidationError):self.parse(source={**GENSHIN_CONTRACT_SOURCE,'game_id':'honkai-star-rail'})
+
+ def test_nonofficial_request_endpoint_is_rejected(self):
+  with self.assertRaises(ValidationError):self.parse(source={**GENSHIN_CONTRACT_SOURCE,'url':'https://example.invalid/getContentList'})
+
+ def test_credentials_are_not_accepted_on_public_source(self):
+  for field in ['headers','authorization','cookie','api_key','access_token']:
+   with self.subTest(field=field),self.assertRaises(ValidationError):genshin_cms_request({**GENSHIN_CONTRACT_SOURCE,field:'synthetic-never-send'})
+
+ def test_error_response_is_not_an_article(self):
+  with self.assertRaises(ValidationError):self.parse(genshin_contract_response(retcode=-1))
+
+ def test_public_request_is_fixed_app_channel_locale(self):
+  request=genshin_cms_request(GENSHIN_CONTRACT_SOURCE);parameters=parse_qs(urlsplit(request['url']).query)
+  self.assertEqual(parameters,{'iAppId':['32'],'sLangKey':['ko-kr'],'iChanId':['395'],'iPageSize':['50'],'iPage':['1']});self.assertEqual(request['method'],'public_page')
+
+ def test_boolean_or_unbounded_article_ids_are_rejected(self):
+  for identifier in [True,0,-1,1000000000,'123456']:
+   with self.subTest(identifier=identifier),self.assertRaises(ValidationError):genshin_cms_request(GENSHIN_CONTRACT_SOURCE,article_id=identifier)
+
+ def test_boolean_or_unbounded_pages_are_rejected(self):
+  for page in [True,0,21]:
+   with self.subTest(page=page),self.assertRaises(ValidationError):genshin_cms_request(GENSHIN_CONTRACT_SOURCE,page=page)
+
+ def test_malformed_source_and_policy_fail_closed(self):
+  for source in [[],None,{**GENSHIN_CONTRACT_SOURCE,'article_format':['synthetic']},{**GENSHIN_CONTRACT_SOURCE,'article_format':{**GENSHIN_CONTRACT_SOURCE['article_format'],'version':True}}]:
+   with self.subTest(source=source),self.assertRaises(ValidationError):genshin_cms_request(source)
+
+ def test_thumbnail_crop_does_not_replace_original_body_art(self):
+  d=self.parse();self.assertNotIn(GENSHIN_CONTRACT_CROP,d['official_article_image_urls']);self.assertEqual(d['source_image_urls'],[GENSHIN_CONTRACT_ART])
+
+ def test_external_or_cross_article_art_is_rejected(self):
+  body=genshin_contract_article_data()['sContent']+'<img src="https://example.invalid/x.jpg"><img src="https://fastcdn.hoyoverse.com/content-v2/hk4e/1/other.jpg">'
+  self.assertEqual(self.parse(genshin_contract_response(genshin_contract_article_data(sContent=body)))['official_article_image_urls'],[GENSHIN_CONTRACT_ART])
+
+ def test_script_text_and_embedded_image_do_not_enter_article(self):
+  body=genshin_contract_article_data()['sContent']+'<script>unsafe synthetic instructions<img src="https://fastcdn.hoyoverse.com/content-v2/hk4e/123456/script.jpg"></script>'
+  d=self.parse(genshin_contract_response(genshin_contract_article_data(sContent=body)));self.assertNotIn('unsafe synthetic',d['original_description']);self.assertEqual(d['official_article_image_urls'],[GENSHIN_CONTRACT_ART])
+
+ def test_two_bounded_synthetic_pages_preserve_index_identity(self):
+  for page in [1,2]:
+   rows=[genshin_contract_article_data(iInfoId=123456+(page-1)*50+i)for i in range(50)]
+   result=parse_genshin_cms_index(genshin_contract_response({'iTotal':100,'list':rows}),GENSHIN_CONTRACT_SOURCE,page)
+   self.assertEqual(len(result),50);self.assertEqual(result[0]['id'],max(row['iInfoId']for row in rows));self.assertEqual(result[0]['publishedDate'],'2026.10.08')
+
+ def test_index_duplicate_id_is_rejected(self):
+  row=genshin_contract_article_data()
+  with self.assertRaises(ValidationError):parse_genshin_cms_index(genshin_contract_response({'iTotal':2,'list':[row,row]}),GENSHIN_CONTRACT_SOURCE)
+
+ def test_non_news_channel_is_rejected(self):
+  with self.assertRaises(ValidationError):self.parse(genshin_contract_response(genshin_contract_article_data(sChanId=['403'])))
+
+ def test_changed_source_body_revokes_normalized_hash(self):
+  d=self.parse();raw=genshin_contract_response(genshin_contract_article_data(sContent='<p>Changed synthetic source</p>'));self.assertNotEqual(d['raw_sha256'],self.parse(raw)['raw_sha256'])
+
+ def test_normalized_snapshot_hash_matches_collector_hash(self):
+  from collector import digest
+  d=self.parse();self.assertEqual(d['raw_sha256'],digest(d['raw_json']))
+
+ def test_reviewed_source_integrates_without_fabricated_schedule(self):
+  self.assertTrue(reviewed(GENSHIN_CONTRACT_SOURCE))
+  store=MemoryStore();d=self.parse();upsert_notice(store,GENSHIN_CONTRACT_SOURCE,d,NOW)
+  row=store.get('gameEvents/'+event_identity(d,GENSHIN_CONTRACT_SOURCE));self.assertEqual(row['sourceProvider'],'official-site');self.assertEqual(row['publicationPrecision'],'day');self.assertEqual(row['publicationLocalDate'],'2026-10-08');self.assertIsNone(row['startsAt']);self.assertEqual(row['verificationStatus'],'pending')
+
+ def test_korean_event_open_remains_exact_event_preview(self):
+  classified=classify_notice_content({'rawSha256':'a'*64,'originalTitle':'합성 이벤트 오픈!'})
+  self.assertEqual(classified['kind'],'event-preview');self.assertEqual(classified['sourceTitle'],'합성 이벤트 오픈!');self.assertEqual(classified['status'],'verified')
+
+ def test_korean_event_wish_notice_is_pickup_preview(self):
+  classified=classify_notice_content({'rawSha256':'a'*64,'originalTitle':'합성 이벤트 기원 알림 제2회'})
+  self.assertEqual(classified['kind'],'pickup-preview');self.assertEqual(classified['status'],'verified')
+
+
 if __name__=='__main__':unittest.main()
+"""Mock-only source-proof/cutoff regressions; never accesses Firestore."""
+from copy import deepcopy
+from datetime import datetime, timezone
+import unittest
+from collector import verified_calendar_day_period, apply_notice_content_policy, content_cleanup_reason
+
+class CalendarPeriodTests(unittest.TestCase):
+    now=datetime(2026,10,15,tzinfo=timezone.utc)
+    def row(self):
+        url='https://official.example/notice/1';sha='a'*64;title='캐릭터 이벤트 튜닝 안내';checked='2026-10-14T00:00:00Z'
+        return {'id':'event1','officialUrl':url,'rawSha256':sha,'originalTitle':title,'calendarRole':'main-character',
+            'announcementKind':'new','characterNames':['공식 캐릭터'],'rarityLabel':'5성','publishedAt':'2026-09-29T00:00:00Z',
+            'calendarRoleEvidence':{'status':'verified','sourceSha256':sha,'sourceTitle':title,'evidenceUrl':url,'checkedAt':checked},
+            'calendarPeriod':{'version':1,'mode':'official_day_range_v1','status':'verified','precision':'day','startsOn':'2026-09-30','endsOn':'2026-10-22',
+                'sourceUrl':url,'sourceSha256':sha,'sourceTitle':title,'evidenceText':'공식 날짜 기간','checkedAt':checked},
+            'image':{'url':'https://cdn.official.example/banner.jpg','sourceUrl':url,'kind':'PICKUP_ART','rightsStatus':'UNCONFIRMED',
+                'sourceReference':{'mode':'OFFICIAL_NOTICE_IMAGE','allowedImageUrl':'https://cdn.official.example/banner.jpg','sourceUrl':url,'checkedAt':checked},
+                'subjectEvidence':{'status':'MATCHED','eventId':'event1','officialUrl':url,'kind':'pickup','method':'reviewed_image',
+                    'sourceSha256':sha,'sourceTitle':title,'characterNames':['공식 캐릭터'],'evidenceText':'정확한 공식 배너','announcementKind':'new'}}}
+    def test_older_period_is_calendar_only_and_survives_news_cleanup(self):
+        row=self.row();result=apply_notice_content_policy(row,self.now)
+        self.assertTrue(verified_calendar_day_period(row,self.now));self.assertFalse(result['newsEligible']);self.assertTrue(result['calendarEligible'])
+        self.assertIsNone(content_cleanup_reason(result,self.now));self.assertNotIn('startsAt',result)
+    def test_before_october_period_is_still_removed(self):
+        row=self.row();row['calendarPeriod']['endsOn']='2026-09-30'
+        self.assertFalse(verified_calendar_day_period(row,self.now));self.assertEqual(content_cleanup_reason(row,self.now),'PUBLISHED_BEFORE_CONTENT_CUTOFF')
+    def test_source_change_or_wrong_image_never_retains_period(self):
+        for target,key,value in [('calendarPeriod','sourceSha256','b'*64),('calendarPeriod','sourceTitle','다른 공지'),('image','sourceUrl','https://other.example/notice')]:
+            row=self.row();row[target][key]=value;self.assertFalse(verified_calendar_day_period(row,self.now))
+    def test_rerun_weapon_cancelled_missing_image_are_not_exceptions(self):
+        for key,value in [('announcementKind','rerun'),('characterNames',[]),('status','cancelled'),('image',None)]:
+            row=self.row();row[key]=value;self.assertFalse(verified_calendar_day_period(row,self.now))
+    def test_update_day_needs_complete_auxiliary_proof(self):
+        row=self.row();row['calendarPeriod']['startsOnBasis']='version-update-day'
+        self.assertFalse(verified_calendar_day_period(row,self.now))
+        row['calendarPeriod'].update(auxiliarySourceUrl='https://official.example/update',auxiliarySourceSha256='c'*64,auxiliaryEvidenceText='공식 업데이트 날짜')
+        self.assertTrue(verified_calendar_day_period(row,self.now))
+    def test_invalid_reversed_and_future_review_are_rejected(self):
+        for key,value in [('startsOn','2026-09-31'),('startsOn','2026-10-23'),('checkedAt','2026-10-16T00:00:00Z')]:
+            row=self.row();row['calendarPeriod'][key]=value;self.assertFalse(verified_calendar_day_period(row,self.now))
+
+
