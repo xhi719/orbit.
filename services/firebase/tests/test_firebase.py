@@ -1,14 +1,19 @@
 from __future__ import annotations
 from datetime import datetime,timedelta,timezone
 import json
+import os
+import hashlib
+from urllib.parse import parse_qs,urlsplit
 from pathlib import Path
 import sys
 import unittest
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from store import MemoryStore,FirestoreStore,SafetyError,timestamp
-from collector import reviewed,seed_catalogue,event_identity,upsert_notice,claim_source,collect_one,run,enrich_document,extract_schedule,highest_rarity_targets,source_row,operating_source,section_documents,confirmed_window_overlap,youtube_request,parse_youtube_documents,YOUTUBE_FEED_DOCUMENTATION,source_policy,EXTRACTION_VERSION,parse_official_roster,refresh_localization_roster,GF2_ROSTER_URLS,new_doll_block_targets,plain_notice
-from engine import ValidationError
+from collector import reviewed,seed_catalogue,event_identity,upsert_notice,claim_source,collect_one,run,enrich_document,extract_schedule,highest_rarity_targets,source_row,operating_source,section_documents,confirmed_window_overlap,youtube_request,parse_youtube_documents,YOUTUBE_FEED_DOCUMENTATION,source_policy,EXTRACTION_VERSION,parse_official_roster,refresh_localization_roster,GF2_ROSTER_URLS,new_doll_block_targets,plain_notice,CONTENT_CUTOFF,CONTENT_PUBLISHED_NOT_BEFORE,content_publication_status,content_cleanup_plan,apply_content_cleanup,automatic_youtube_notice_image,youtube_metadata_expired,expire_youtube_metadata
+from store import document_fingerprint
+from official_adapter import youtube_api_request,parse_youtube_api_documents
+from engine import ValidationError,fetch_source
 from notifications import quiet,eligible,plan_user,dispatch,fixed_payload,fcm_message,run as notification_run,reset_cycle,completed_cycle,attendance_context,plan_attendance_user,plan_announcement_user,announcement_identity,ANNOUNCEMENT_KIND
 from admin import validate_change,apply_requests,cleanup_accounts,cleanup_execution_retention
 from import_pending_pickups import validate_bundle,apply_bundle
@@ -145,8 +150,8 @@ class FirebaseOfficialSocialFeedTests(unittest.TestCase):
   def fetch(source):requests.append(source['url']);return 200,self.feed(),{}
   result=collect_one(store,self.source(),NOW-timedelta(hours=72),NOW,fetch=fetch,sleep=lambda _:None,now=NOW);self.assertEqual(result['status'],'success');self.assertEqual(result['metrics']['pagesFetched'],1);self.assertFalse(result['metrics']['windowCoverageVerified']);self.assertEqual(len(store.list('gameEvents')),1);self.assertEqual(len(requests),1)
   writes=store.writes;doc,_=parse_youtube_documents(self.feed(),self.source(),NOW.isoformat());self.assertEqual(upsert_notice(store,self.source(),doc[0],NOW),'unchanged');self.assertEqual(store.writes,writes)
- def test_recent_update_of_older_video_is_included_as_source_update(self):
-  raw=self.feed(published=NOW-timedelta(days=30),updated=NOW-timedelta(minutes=30));store=MemoryStore();result=collect_one(store,self.source(),NOW-timedelta(hours=72),NOW,fetch=lambda _:(200,raw,{}),sleep=lambda _:None,now=NOW);self.assertEqual(result['metrics']['created'],1);self.assertEqual(timestamp(store.list('gameEvents')[0][1]['publishedAt']),NOW-timedelta(days=30))
+ def test_recent_update_does_not_reintroduce_pre_cutoff_video(self):
+  raw=self.feed(published=NOW-timedelta(days=30),updated=NOW-timedelta(minutes=30));store=MemoryStore();result=collect_one(store,self.source(),NOW-timedelta(hours=72),NOW,fetch=lambda _:(200,raw,{}),sleep=lambda _:None,now=NOW);self.assertEqual(result['metrics']['created'],0);self.assertEqual(result['metrics']['beforeContentCutoffSkipped'],1);self.assertEqual(store.list('gameEvents'),[]);self.assertEqual(store.list('collectionDocuments'),[])
  def test_unchanged_old_video_outside_window_is_not_inserted(self):
   raw=self.feed(published=NOW-timedelta(days=30),updated=NOW-timedelta(days=29));store=MemoryStore();result=collect_one(store,self.source(),NOW-timedelta(hours=72),NOW,fetch=lambda _:(200,raw,{}),sleep=lambda _:None,now=NOW);self.assertEqual(result['metrics']['created'],0)
  def test_steam_policy_hash_does_not_change_for_empty_youtube_fields(self):
@@ -1303,5 +1308,375 @@ class OfficialAnnouncementNotificationTests(unittest.TestCase):
  def test_new_doll_cancellation_is_preserved_when_story_period_is_removed(self):
   s,source=self.new_block_fixture();rows=self.publish(s,source,text=self.new_block_text()+'[p]Event has been cancelled[/p]');self.assertEqual(rows[0]['status'],'cancelled')
   pickup=next(row for _,row in s.list('pickupSchedules') if row['eventId']==rows[0]['id']);self.assertEqual(pickup['status'],'cancelled');self.assertFalse(eligible(s,'alice',rows[0],ANNOUNCEMENT_KIND,NOW+timedelta(minutes=2)))
+
+class OctoberContentRetentionTests(unittest.TestCase):
+ def fixtures(self):
+  old=CONTENT_CUTOFF-timedelta(seconds=1);recent=CONTENT_CUTOFF
+  parent={'id':'old','sourceId':'source','externalKey':'old-key','rawSha256':'old-sha','publishedAt':old,'officialUrl':'https://official.example/old','gameIds':['blue-archive']}
+  pickup={'id':'pickup','eventId':'old','gameId':'blue-archive','officialUrl':parent['officialUrl']}
+  raw={'sourceId':'source','externalKey':'old-key','rawSha256':'old-sha','publishedAt':old}
+  return {'gameEvents/old':parent,'pickupSchedules/pickup':pickup,'collectionDocuments/raw':raw,
+   'gameEvents/new':{**parent,'id':'new','publishedAt':recent,'externalKey':'new'},'gameEvents/unknown':{'title':'Unknown date'},
+   'games/blue-archive':{'title':'Shared game'},'gameSources/source':{'enabled':True},'collectorLocks/source':{'token':'preserve'},
+   'users/mock-owner/executionRecords/mock-row':{'startedAt':old},'users/mock-owner/attendanceDaily/day':{'lastExecutionAt':old},
+   'users/mock-owner/notificationJobs/job':{'status':'requested','eventId':'old'},'users/mock-owner':{'timezone':'UTC'}}
+ def test_korean_october_boundary_is_exact_and_aware(self):
+  self.assertEqual(CONTENT_CUTOFF,datetime(2026,9,30,15,tzinfo=UTC));self.assertEqual(content_publication_status(CONTENT_CUTOFF),'INCLUDED');self.assertEqual(content_publication_status(CONTENT_CUTOFF-timedelta(microseconds=1)),'PUBLISHED_BEFORE_CONTENT_CUTOFF')
+ def test_unknown_naive_and_malformed_dates_are_never_included(self):
+  for value in [None,'yesterday','2026-10-01T00:00:00',datetime(2026,10,1),123,False]:self.assertEqual(content_publication_status(value),'PUBLICATION_DATE_UNCONFIRMED')
+ def test_future_publication_is_quarantined_without_date_guess(self):
+  self.assertEqual(content_publication_status(NOW+timedelta(seconds=1),NOW),'PUBLICATION_DATE_IN_FUTURE')
+ def test_upsert_old_and_unknown_never_stores_raw_event_or_pickup(self):
+  for value in [None,CONTENT_CUTOFF-timedelta(seconds=1),'not-a-date']:
+   store=MemoryStore();notice={**document(),'published_at':value,'source_updated_at':NOW.isoformat()};result=upsert_notice(store,SOURCE,notice,NOW)
+   self.assertIn(result,['beforeContentCutoffSkipped','publicationUnconfirmedSkipped']);self.assertEqual(store.records,{});self.assertEqual(store.writes,0)
+ def test_october_boundary_notice_is_ingested_without_invented_schedule(self):
+  store=MemoryStore();notice={**document(),'published_at':CONTENT_CUTOFF.isoformat()};upsert_notice(store,SOURCE,notice,NOW)
+  row=store.list('gameEvents')[0][1];self.assertEqual(row['publishedAt'],CONTENT_CUTOFF);self.assertIsNone(row['startsAt'])
+ def test_recent_change_cannot_override_old_steam_publication(self):
+  old=CONTENT_CUTOFF-timedelta(seconds=1);store=MemoryStore();payload=json.loads(response(date=old));payload['appnews']['newsitems'][0]['contents']='Event Duration: 2026-10-11 00:00 - 2026-10-20 00:00 (UTC+0)'
+  result=collect_one(store,SOURCE,NOW-timedelta(hours=72),NOW,fetch=lambda _:(200,json.dumps(payload).encode(),{}),sleep=lambda _:None,now=NOW)
+  self.assertEqual(result['metrics']['beforeContentCutoffSkipped'],1);self.assertEqual(store.list('gameEvents'),[]);self.assertEqual(store.list('collectionDocuments'),[])
+ def test_october_old_video_recent_update_remains_eligible(self):
+  fixture=FirebaseOfficialSocialFeedTests();raw=fixture.feed(published=NOW-timedelta(days=7),updated=NOW-timedelta(minutes=30));store=MemoryStore()
+  result=collect_one(store,fixture.source(),NOW-timedelta(hours=72),NOW,fetch=lambda _:(200,raw,{}),sleep=lambda _:None,now=NOW)
+  self.assertEqual(result['metrics']['created'],1);self.assertEqual(store.list('gameEvents')[0][1]['publishedAt'],NOW-timedelta(days=7))
+ def test_explicit_october_backfill_accepts_only_fixed_bounded_window(self):
+  store=MemoryStore();result=collect_one(store,SOURCE,CONTENT_CUTOFF,NOW,mode='content-backfill',fetch=lambda _:(200,response(date=CONTENT_CUTOFF+timedelta(days=1)),{}),sleep=lambda _:None,now=NOW)
+  self.assertEqual(result['metrics']['created'],1);self.assertEqual(result['mode'],'content-backfill');self.assertEqual(result['contentPublishedNotBefore'],CONTENT_PUBLISHED_NOT_BEFORE)
+  for start,mode in [(CONTENT_CUTOFF-timedelta(seconds=1),'content-backfill'),(CONTENT_CUTOFF,'backfill')]:
+   with self.assertRaisesRegex(SafetyError,'72_hours'):collect_one(MemoryStore(),SOURCE,start,NOW,mode=mode,sleep=lambda _:None,now=NOW)
+ def test_cutoff_cleanup_dry_run_has_zero_writes_and_exact_old_candidates(self):
+  store=MemoryStore(self.fixtures());before=dict(store.records);review=content_cleanup_plan(store,now=NOW)
+  self.assertEqual(store.writes,0);self.assertEqual(store.records,before);self.assertEqual({(row['collection'],row['id'])for row in review['candidates']},{('gameEvents','old'),('pickupSchedules','pickup'),('collectionDocuments','raw')});self.assertTrue(review['scanComplete'])
+ def test_cleanup_deletes_old_public_content_and_preserves_all_private_shared_data(self):
+  store=MemoryStore(self.fixtures());review=content_cleanup_plan(store,now=NOW);result=apply_content_cleanup(store,review,now=NOW)
+  self.assertEqual(result['documentsDeleted'],3);self.assertEqual(result['fcmSends'],0)
+  for path in ['gameEvents/new','gameEvents/unknown','games/blue-archive','gameSources/source','collectorLocks/source','users/mock-owner/executionRecords/mock-row','users/mock-owner/attendanceDaily/day','users/mock-owner/notificationJobs/job','users/mock-owner']:self.assertIn(path,store.records)
+ def test_cleanup_does_not_use_schedule_or_modification_as_publication(self):
+  records=self.fixtures();records['gameEvents/unknown'].update(startsAt=CONTENT_CUTOFF-timedelta(days=3),sourceUpdatedAt=NOW,lastCheckedAt=NOW)
+  store=MemoryStore(records);apply_content_cleanup(store,content_cleanup_plan(store,now=NOW),now=NOW);self.assertIn('gameEvents/unknown',store.records)
+ def test_unknown_or_conflicting_pickup_parent_is_preserved(self):
+  records=self.fixtures();records['pickupSchedules/orphan']={'eventId':'absent','gameId':'blue-archive','officialUrl':'https://official.example/none'}
+  records['pickupSchedules/conflicting']={**records['pickupSchedules/pickup'],'publishedAt':NOW}
+  store=MemoryStore(records);result=apply_content_cleanup(store,content_cleanup_plan(store,now=NOW),now=NOW)
+  self.assertIn('pickupSchedules/orphan',store.records);self.assertIn('pickupSchedules/conflicting',store.records);self.assertIn('gameEvents/old',store.records);self.assertEqual(result['documentsDeleted'],1)
+ def test_linked_parent_change_after_review_preserves_pickup(self):
+  store=MemoryStore(self.fixtures());review=content_cleanup_plan(store,now=NOW);store.records['gameEvents/old']['publishedAt']=NOW
+  result=apply_content_cleanup(store,review,now=NOW);self.assertIn('pickupSchedules/pickup',store.records);self.assertIn('gameEvents/old',store.records);self.assertIn('collectionDocuments/raw',store.records);self.assertEqual(result['changedSinceReview'],3)
+ def test_row_change_after_review_is_never_overwritten_or_deleted(self):
+  store=MemoryStore({'gameEvents/old':self.fixtures()['gameEvents/old']});review=content_cleanup_plan(store,now=NOW);store.records['gameEvents/old']['title']='Changed after review'
+  result=apply_content_cleanup(store,review,now=NOW);self.assertEqual(result['documentsDeleted'],0);self.assertEqual(result['changedSinceReview'],1)
+ def test_changed_pickup_blocks_deletion_of_its_parent_and_raw_proof(self):
+  store=MemoryStore(self.fixtures());review=content_cleanup_plan(store,now=NOW);store.records['pickupSchedules/pickup']['title']='Changed after review'
+  result=apply_content_cleanup(store,review,now=NOW);self.assertEqual(result['documentsDeleted'],0);self.assertEqual(result['changedSinceReview'],3)
+  for path in ['pickupSchedules/pickup','gameEvents/old','collectionDocuments/raw']:self.assertIn(path,store.records)
+ def test_plan_tampering_or_private_path_is_rejected(self):
+  store=MemoryStore(self.fixtures());review=content_cleanup_plan(store,now=NOW);review['candidateCount']=99
+  with self.assertRaisesRegex(SafetyError,'reviewed_content_cleanup_plan'):apply_content_cleanup(store,review,now=NOW)
+  with self.assertRaisesRegex(SafetyError,'public_content_cleanup_path'):store.delete_content_if_unchanged('users/mock-owner',document_fingerprint(store.records['users/mock-owner']))
+  with self.assertRaisesRegex(SafetyError,'public_content_cleanup_path'):content_cleanup_plan(store,cursors={'users':'mock-owner'})
+ def test_forged_old_review_date_cannot_delete_a_current_actual_document(self):
+  store=MemoryStore({'gameEvents/new':{'publishedAt':NOW}});review=content_cleanup_plan(store,now=NOW)
+  review['candidates']=[{'collection':'gameEvents','id':'new','publishedAt':CONTENT_CUTOFF-timedelta(days=1),'reasonCode':'PUBLISHED_BEFORE_CONTENT_CUTOFF','basis':'publishedAt','fingerprint':document_fingerprint(store.records['gameEvents/new']),'guards':{}}]
+  review['planSha256']=document_fingerprint({key:value for key,value in review.items()if key!='planSha256'})
+  self.assertEqual(apply_content_cleanup(store,review,now=NOW)['documentsDeleted'],0);self.assertIn('gameEvents/new',store.records)
+ def test_bounded_delete_cap_preserves_parent_until_its_pickup_is_deleted(self):
+  store=MemoryStore(self.fixtures());review=content_cleanup_plan(store,max_delete=1,now=NOW);self.assertEqual(review['candidateCount'],1);self.assertTrue(review['deleteLimitReached'])
+  self.assertEqual(review['candidates'][0]['collection'],'pickupSchedules');apply_content_cleanup(store,review,now=NOW);self.assertIn('gameEvents/old',store.records)
+  result=apply_content_cleanup(store,content_cleanup_plan(store,now=NOW),now=NOW);self.assertNotIn('gameEvents/old',store.records);self.assertEqual(result['documentsDeleted'],2)
+ def test_partial_scan_does_not_delete_parent_or_linked_raw(self):
+  store=MemoryStore(self.fixtures());review=content_cleanup_plan(store,max_scan=1,now=NOW);self.assertFalse(review['fullCleanupVerified']);self.assertFalse(any(row['collection']in['gameEvents','collectionDocuments']for row in review['candidates']))
+ def test_json_review_roundtrip_preserves_guard_hash(self):
+  store=MemoryStore(self.fixtures());review=json.loads(json.dumps(content_cleanup_plan(store,now=NOW),default=lambda value:value.isoformat()))
+  self.assertEqual(apply_content_cleanup(store,review,now=NOW)['documentsDeleted'],3)
+ def test_cleanup_limits_are_enforced_before_reads(self):
+  for kwargs in [{'max_scan':501},{'max_scan':0},{'max_delete':401},{'max_delete':0}]:
+   store=MemoryStore()
+   with self.assertRaisesRegex(SafetyError,'bounded_content_cleanup'):content_cleanup_plan(store,**kwargs)
+   self.assertEqual(store.reads,0)
+ def test_remote_conditional_cleanup_keeps_soft_budget_guard(self):
+  store=FirestoreStore.__new__(FirestoreStore);store.reads=2500;store.max_reads=2500;store.writes=0;store.max_writes=500
+  with self.assertRaisesRegex(SafetyError,'soft_budget'):store.delete_content_if_unchanged('gameEvents/old','a'*64)
+
+class ExactOfficialYoutubeThumbnailTests(unittest.TestCase):
+ def notice(self,title='Official livestream'):
+  fixture=FirebaseOfficialSocialFeedTests();source=fixture.source();docs,_=parse_youtube_documents(fixture.feed(title=title),source,NOW.isoformat());return source,docs[0]
+ def test_exact_feed_thumbnail_is_notice_reference_with_independent_root_ids(self):
+  source,notice=self.notice();store=MemoryStore();upsert_notice(store,source,notice,NOW);row=store.list('gameEvents')[0][1];image=row['noticeImage'];proof=image['subjectEvidence']
+  self.assertEqual(row['image'],image);self.assertEqual(image['kind'],'NOTICE_ART');self.assertEqual(image['rightsStatus'],'UNCONFIRMED');self.assertEqual(proof['kind'],'notice');self.assertEqual(proof['method'],'source_post')
+  self.assertEqual(proof['eventId'],row['id']);self.assertEqual(proof['channelId'],row['sourceChannelId']);self.assertEqual(proof['videoId'],row['sourceVideoId']);self.assertEqual(proof['rawSha256'],row['rawSha256']);self.assertEqual(proof['sourceTitle'],row['originalTitle']);self.assertEqual(row['metadataExpiresAt'],NOW+timedelta(days=30))
+ def test_wrong_video_thumbnail_never_becomes_renderable_image(self):
+  source,notice=self.notice();notice['raw_json']['thumbnailUrls']=['https://i.ytimg.com/vi/wrongvideo1/hqdefault.jpg'];notice['source_image_urls']=notice['raw_json']['thumbnailUrls']
+  from collector import digest
+  notice['raw_sha256']=digest(notice['raw_json']);self.assertIsNone(automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW))
+ def test_non_youtube_private_host_query_and_generic_art_are_rejected(self):
+  from collector import digest
+  for url in ['https://evil.example/vi/aBcD123_-xy/hqdefault.jpg','https://localhost/vi/aBcD123_-xy/hqdefault.jpg','https://i.ytimg.com/logo.jpg','https://i.ytimg.com/vi/aBcD123_-xy/hqdefault.jpg?unverified=1']:
+   source,notice=self.notice();notice['raw_json']['thumbnailUrls']=[url];notice['source_image_urls']=[url];notice['raw_sha256']=digest(notice['raw_json']);self.assertIsNone(automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW))
+ def test_external_key_channel_title_or_raw_hash_mismatch_invalidates_reference(self):
+  for field,value in [('external_key','wrongvideo1'),('original_title','Another title'),('raw_sha256','a'*64)]:
+   source,notice=self.notice();notice[field]=value;self.assertIsNone(automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW))
+  source,notice=self.notice();source['youtube_channel_id']='UC'+'b'*22;source['url']='https://www.youtube.com/feeds/videos.xml?channel_id='+source['youtube_channel_id'];self.assertIsNone(automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW))
+ def test_unreviewed_channel_never_has_automatic_image(self):
+  source,notice=self.notice();source['publisher_identity_checked_at']=None;self.assertIsNone(automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW))
+ def test_youtube_thumbnail_is_not_promoted_to_pickup_banner(self):
+  source,notice=self.notice('Official character pickup');store=MemoryStore();upsert_notice(store,source,notice,NOW);row=store.list('gameEvents')[0][1]
+  self.assertEqual(row['categoryCandidate'],'recruitment');self.assertIsNotNone(row['noticeImage']);self.assertIsNone(row['image']);self.assertEqual(row['noticeImage']['subjectEvidence']['kind'],'notice')
+ def test_section_cannot_inherit_article_thumbnail(self):
+  source,notice=self.notice();notice['_section_key']='independent';notice['_parent_event_id']='other'
+  self.assertIsNone(automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW))
+ def test_numbered_cdn_hosts_require_the_exact_video_path(self):
+  fixture=FirebaseOfficialSocialFeedTests();source=fixture.source();docs,_=parse_youtube_documents(fixture.feed().replace(b'i.ytimg.com',b'i3.ytimg.com'),source,NOW.isoformat());image=automatic_youtube_notice_image(docs[0],source,event_identity(docs[0],source),NOW)
+  self.assertTrue(image['url'].startswith('https://i3.ytimg.com/vi/'+fixture.VIDEO+'/'))
+ def test_refetch_refreshes_only_after_24h_and_preserves_content_revision(self):
+  source,notice=self.notice();store=MemoryStore();upsert_notice(store,source,notice,NOW);event=store.list('gameEvents')[0][1];writes=store.writes
+  self.assertEqual(upsert_notice(store,source,notice,NOW+timedelta(hours=23)),'unchanged');self.assertEqual(store.writes,writes)
+  self.assertEqual(upsert_notice(store,source,notice,NOW+timedelta(hours=24)),'updated');updated=store.get('gameEvents/'+event['id']);self.assertEqual(updated['revision'],event['revision']);self.assertEqual(updated['metadataExpiresAt'],NOW+timedelta(days=31))
+  raw=store.list('collectionDocuments')[0][1];self.assertEqual(raw['metadataExpiresAt'],updated['metadataExpiresAt'])
+ def test_image_update_replaces_old_exact_thumbnail_without_other_post_fallback(self):
+  from collector import digest
+  source,notice=self.notice();store=MemoryStore();upsert_notice(store,source,notice,NOW);url=notice['source_image_urls'][0].replace('hqdefault.jpg','maxresdefault.jpg');notice['raw_json']['thumbnailUrls']=[url];notice['source_image_urls']=[url];notice['raw_sha256']=digest(notice['raw_json'])
+  upsert_notice(store,source,notice,NOW+timedelta(minutes=1));row=store.list('gameEvents')[0][1];self.assertEqual(row['noticeImage']['url'],url);self.assertEqual(row['noticeImage']['subjectEvidence']['rawSha256'],notice['raw_sha256'])
+ def test_expired_exact_youtube_event_and_raw_are_bounded_cleanup_candidates(self):
+  source,notice=self.notice();store=MemoryStore();upsert_notice(store,source,notice,NOW);late=NOW+timedelta(days=30)
+  review=content_cleanup_plan(store,now=late);self.assertEqual({row['reasonCode']for row in review['candidates']},{'YOUTUBE_METADATA_EXPIRED'});self.assertEqual(len(review['candidates']),2)
+  self.assertEqual(apply_content_cleanup(store,review,now=late)['documentsDeleted'],2);self.assertEqual(store.list('gameEvents'),[]);self.assertEqual(store.list('collectionDocuments'),[])
+ def test_expiry_requires_positive_exact_provider_ids_and_30day_clocks(self):
+  source,notice=self.notice();store=MemoryStore();upsert_notice(store,source,notice,NOW);row=store.list('gameEvents')[0][1];late=NOW+timedelta(days=31)
+  self.assertTrue(youtube_metadata_expired(row,late))
+  for field,value in [('sourceProvider','other'),('sourceChannelId','invalid'),('sourceVideoId','invalid'),('officialUrl','https://www.youtube.com/watch?v=wrongvideo1'),('metadataExpiresAt',NOW+timedelta(days=29)),('metadataCheckedAt',None)]:self.assertFalse(youtube_metadata_expired({**row,field:value},late))
+
+class FirebaseSourceFairnessTests(unittest.TestCase):
+ def registry(self):return {'games':[{'gameId':'blue-archive','sources':[{**SOURCE,'id':str(index)}for index in range(3)]}]}
+ def test_oldest_checked_and_never_attempted_sources_run_before_recent_sources(self):
+  registry=self.registry();sources=registry['games'][0]['sources'];sources[0]['last_checked_at']=NOW;sources[1]['last_checked_at']=NOW-timedelta(days=1);calls=[]
+  with patch('collector.collect_one',side_effect=lambda _,source,*args,**kwargs:(calls.append(source['id'])or{'sourceId':source['id'],'status':'success'})):
+   result=run(registry,MemoryStore(),NOW-timedelta(hours=72),NOW,max_sources=2,sleep=lambda _:None)
+  self.assertEqual(calls,['2','1']);self.assertEqual(result['sourceAttempts'],2)
+ def test_known_backoff_source_does_not_consume_attempt_budget(self):
+  registry=self.registry();registry['games'][0]['sources'][0]['next_run_at']=datetime.now(UTC)+timedelta(days=1);calls=[]
+  with patch('collector.collect_one',side_effect=lambda _,source,*args,**kwargs:(calls.append(source['id'])or{'sourceId':source['id'],'status':'success'})):
+   result=run(registry,MemoryStore(),NOW-timedelta(hours=72),NOW,max_sources=1,sleep=lambda _:None)
+  self.assertEqual(calls,['1']);self.assertEqual(result['sourceAttempts'],1);self.assertEqual(result['results'][0]['reasonCode'],'SOURCE_NOT_DUE')
+ def test_atomic_lease_deferred_source_does_not_starve_next_source(self):
+  calls=[]
+  def collected(_,source,*args,**kwargs):calls.append(source['id']);return {'sourceId':source['id'],'status':'DEFERRED'if source['id']=='0'else'success'}
+  with patch('collector.collect_one',side_effect=collected):result=run(self.registry(),MemoryStore(),NOW-timedelta(hours=72),NOW,max_sources=1,sleep=lambda _:None)
+  self.assertEqual(calls,['0','1']);self.assertEqual(result['sourceAttempts'],1)
+ def test_success_publishes_next_due_clock_without_extra_fetch(self):
+  store=MemoryStore({'gameSources/source':{'enabled':True}});result=collect_one(store,SOURCE,NOW-timedelta(hours=72),NOW,fetch=lambda _:(200,response(),{}),sleep=lambda _:None,now=NOW)
+  self.assertEqual(result['status'],'success');self.assertEqual(store.get('gameSources/source')['nextRunAt'],store.get('collectorLocks/source')['nextRunAt'])
+
+YOUTUBE_API_FIXTURE_CHANNEL="UC"+"a"*22;YOUTUBE_API_FIXTURE_PLAYLIST="UU"+"b"*22;YOUTUBE_API_FIXTURE_VIDEO="AbcDef_1234"
+YOUTUBE_API_FIXTURE_SOURCE={"parser":"youtube_data_api","youtube_channel_id":YOUTUBE_API_FIXTURE_CHANNEL,"youtube_uploads_playlist_id":YOUTUBE_API_FIXTURE_PLAYLIST,
+    "url":"https://www.googleapis.com/youtube/v3/playlistItems","content_language":"ko","server_region":"UNSPECIFIED"}
+def youtube_api_response():
+    return {"kind":"youtube#playlistItemListResponse","nextPageToken":"next_2==","items":[{"kind":"youtube#playlistItem","id":"opaque_playlist_item_1",
+        "snippet":{"channelId":YOUTUBE_API_FIXTURE_CHANNEL,"videoOwnerChannelId":YOUTUBE_API_FIXTURE_CHANNEL,"playlistId":YOUTUBE_API_FIXTURE_PLAYLIST,"title":"공식 신규 픽업 소식","description":"이 영상의 공식 안내입니다.",
+            "publishedAt":"2026-09-25T10:00:00Z","resourceId":{"kind":"youtube#video","videoId":YOUTUBE_API_FIXTURE_VIDEO},
+            "thumbnails":{"high":{"url":f"https://i.ytimg.com/vi/{YOUTUBE_API_FIXTURE_VIDEO}/hqdefault.jpg"}}},
+        "contentDetails":{"videoId":YOUTUBE_API_FIXTURE_VIDEO,"videoPublishedAt":"2026-10-10T09:00:00Z"}}]}
+def parse_youtube_api_fixture(payload):return parse_youtube_api_documents(json.dumps(payload).encode(),YOUTUBE_API_FIXTURE_SOURCE,"2026-10-14T03:00:00Z")
+class YouTubeApiAdapterTests(unittest.TestCase):
+    def test_exact_public_endpoint_and_opaque_cursor_without_credentials(self):
+        request=youtube_api_request(YOUTUBE_API_FIXTURE_SOURCE,"next_2==")
+        self.assertEqual(urlsplit(request["url"]).netloc,"www.googleapis.com")
+        self.assertEqual(parse_qs(urlsplit(request["url"]).query),{"part":["snippet,contentDetails"],"playlistId":[YOUTUBE_API_FIXTURE_PLAYLIST],"maxResults":["50"],"pageToken":["next_2=="]})
+        self.assertNotIn("headers",request);self.assertNotIn("key",request)
+    def test_publication_is_video_release_not_playlist_addition(self):
+        docs,metadata=parse_youtube_api_fixture(youtube_api_response());doc=docs[0]
+        self.assertEqual(doc["published_at"],"2026-10-10T09:00:00+00:00")
+        self.assertEqual(doc["raw_json"]["addedToPlaylistAt"],"2026-09-25T10:00:00Z")
+        self.assertEqual(doc["external_key"],YOUTUBE_API_FIXTURE_VIDEO);self.assertEqual(doc["raw_json"]["playlistItemId"],"opaque_playlist_item_1")
+        self.assertEqual(doc["raw_sha256"],hashlib.sha256(json.dumps(doc["raw_json"],sort_keys=True,ensure_ascii=False).encode()).hexdigest())
+        self.assertEqual(metadata["next_page_token"],"next_2==");self.assertIsNone(doc["source_updated_at"])
+    def test_rejects_keys_wrong_paths_and_identity_query_overrides(self):
+        for change in [{"url":"https://www.googleapis.com/youtube/v3/playlistItems?key=SECRET"},{"headers":{"Authorization":"SECRET"}},
+            {"apiKey":"SECRET"},{"url":"https://evil.invalid/youtube/v3/playlistItems"},{"url":"https://www.googleapis.com/youtube/v3/videos"},
+            {"url":YOUTUBE_API_FIXTURE_SOURCE["url"]+"?playlistId="+"UU"+"c"*22},{"url":YOUTUBE_API_FIXTURE_SOURCE["url"]+"?part=snippet&part=snippet"}]:
+            with self.subTest(change=list(change)),self.assertRaises(ValidationError):youtube_api_request({**YOUTUBE_API_FIXTURE_SOURCE,**change})
+    def test_rejects_foreign_owner_playlist_and_video(self):
+        for field,value in [("channelId","UC"+"c"*22),("videoOwnerChannelId","UC"+"c"*22),("playlistId","UU"+"c"*22)]:
+            payload=youtube_api_response();payload["items"][0]["snippet"][field]=value
+            with self.subTest(field=field),self.assertRaises(ValidationError):parse_youtube_api_fixture(payload)
+        payload=youtube_api_response();payload["items"][0]["snippet"]["resourceId"]["videoId"]="AbcDef_4321"
+        with self.assertRaises(ValidationError):parse_youtube_api_fixture(payload)
+    def test_missing_actual_public_release_never_uses_playlist_addition(self):
+        payload=youtube_api_response();del payload["items"][0]["contentDetails"]["videoPublishedAt"]
+        docs,metadata=parse_youtube_api_fixture(payload);self.assertEqual(docs,[]);self.assertEqual(metadata["skip_reasons"],["video_publication_unconfirmed"])
+    def test_thumbnail_must_belong_to_this_exact_video(self):
+        payload=youtube_api_response();thumbs=payload["items"][0]["snippet"]["thumbnails"]
+        thumbs["maxres"]={"url":"https://i.ytimg.com/vi/AbcDef_4321/maxresdefault.jpg"}
+        thumbs["medium"]={"url":f"https://evil.invalid/vi/{YOUTUBE_API_FIXTURE_VIDEO}/mqdefault.jpg"}
+        docs,_=parse_youtube_api_fixture(payload);self.assertEqual(docs[0]["source_image_urls"],[f"https://i.ytimg.com/vi/{YOUTUBE_API_FIXTURE_VIDEO}/hqdefault.jpg"])
+        self.assertEqual(docs[0]["pickups"],[])
+    def test_provider_error_does_not_echo_sensitive_message(self):
+        with self.assertRaisesRegex(ValidationError,"^youtube_api_error_response$"):parse_youtube_api_fixture({"error":{"message":"secret API key"}})
+    def test_actual_release_requires_an_explicit_timezone(self):
+        payload=youtube_api_response();payload["items"][0]["contentDetails"]["videoPublishedAt"]="2026-10-10T09:00:00"
+        with self.assertRaises(ValidationError):parse_youtube_api_fixture(payload)
+    def test_rejects_oversized_pages_duplicate_videos_and_unsafe_continuation(self):
+        for change in [{"items":youtube_api_response()["items"]*51},{"items":youtube_api_response()["items"]*2},{"nextPageToken":"bad\nheader"}]:
+            with self.subTest(change=list(change)),self.assertRaises(ValidationError):parse_youtube_api_fixture({**youtube_api_response(),**change})
+        for count in [0,51,True]:
+            with self.subTest(count=count),self.assertRaises(ValidationError):youtube_api_request(YOUTUBE_API_FIXTURE_SOURCE,count=count)
+    def test_empty_valid_response_is_not_an_error_or_invented_notice(self):
+        docs,metadata=parse_youtube_api_fixture({"kind":"youtube#playlistItemListResponse","items":[]})
+        self.assertEqual(docs,[]);self.assertEqual(metadata["items_seen"],0);self.assertIsNone(metadata["next_page_token"])
+
+class FirebaseYouTubeDataApiCollectionTests(unittest.TestCase):
+ def source(self,**changes):
+  return {**SOURCE,**YOUTUBE_API_FIXTURE_SOURCE,'id':'api-source','steam_appid':None,'game_id':'blue-archive','approved_for_staging':True,
+   'feed_allowlist':['youtube_uploads_playlist'],'allowed_notice_hosts':['www.youtube.com'],
+   'terms_url':'https://developers.google.com/youtube/terms/api-services-terms-of-service','publisher_identity_evidence_url':'https://official.example/social',
+   'publisher_identity_checked_at':NOW.isoformat(),'youtube_uploads_playlist_verified_at':NOW.isoformat(),**changes}
+ def payload(self,**changes):return {**youtube_api_response(),'nextPageToken':None,**changes}
+ def collect(self,store=None,source=None,fetch=None,max_pages=10,mode='content-backfill'):
+  with patch.dict('os.environ',{'YOUTUBE_API_KEY':'mock-only-nonproduction-key'}):
+   return collect_one(store or MemoryStore(),source or self.source(),CONTENT_CUTOFF,NOW,mode=mode,fetch=fetch or(lambda _:(200,json.dumps(self.payload()).encode(),{})),sleep=lambda _:None,now=NOW,max_pages=max_pages)
+ def test_api_review_requires_separate_playlist_permission_and_identity_clock(self):
+  self.assertTrue(reviewed(self.source()))
+  for changes in [{'youtube_uploads_playlist_verified_at':None},{'youtube_uploads_playlist_id':None},{'publisher_identity_checked_at':None},
+   {'terms_url':YOUTUBE_FEED_DOCUMENTATION},{'feed_allowlist':['youtube_channel_videos']},{'allowed_notice_hosts':['evil.example']}]:self.assertFalse(reviewed(self.source(**changes)))
+ def test_sdk_timestamp_review_fields_remain_valid_after_admin_normalization(self):
+  source=self.source(publisher_identity_checked_at=NOW,youtube_uploads_playlist_verified_at=NOW);self.assertTrue(reviewed(source))
+  row=source_row(source,'blue-archive');row['enabled']=True;approved=validate_change('gameSources','api-source',row)
+  self.assertTrue(reviewed(operating_source(approved)));self.assertEqual(approved['youtubeUploadsPlaylistVerifiedAt'],NOW)
+ def test_seed_preserves_existing_verified_uploads_playlist_but_never_autoenables(self):
+  store=MemoryStore();source=self.source();registry={'games':[{'gameId':'blue-archive','sources':[source]}]};seed_catalogue(store,[],registry)
+  row=store.get('gameSources/api-source');self.assertFalse(row['enabled']);self.assertEqual(row['youtubeUploadsPlaylistId'],YOUTUBE_API_FIXTURE_PLAYLIST);self.assertTrue(reviewed(operating_source(row)))
+ def test_missing_api_key_defers_only_that_source_without_http_or_writes(self):
+  store=MemoryStore()
+  with patch.dict('os.environ',{},clear=True):result=collect_one(store,self.source(),CONTENT_CUTOFF,NOW,mode='content-backfill',fetch=lambda _:self.fail('missing-key HTTP'),sleep=lambda _:None,now=NOW)
+  self.assertEqual(result['status'],'DEFERRED');self.assertEqual(result['reasonCode'],'YOUTUBE_API_KEY_NOT_CONFIGURED');self.assertEqual(store.writes,0);self.assertEqual(result['httpRequests'],0)
+ def test_missing_api_key_does_not_block_an_independent_steam_source(self):
+  registry={'games':[{'gameId':'blue-archive','sources':[self.source(),SOURCE]}]}
+  with patch.dict('os.environ',{},clear=True):result=run(registry,MemoryStore(),NOW-timedelta(hours=72),NOW,max_sources=1,fetch=lambda _:(200,response(),{}),sleep=lambda _:None)
+  self.assertEqual(result['sourceAttempts'],1);self.assertEqual({row['sourceId']for row in result['results']},{'api-source','source'})
+ def test_api_collect_stores_exact_notice_image_metadata_and_no_confirmed_schedule(self):
+  store=MemoryStore();result=self.collect(store);self.assertEqual(result['status'],'success');self.assertEqual(result['metrics']['apiUnitsEstimated'],1);self.assertFalse(result['metrics']['windowCoverageVerified'])
+  event=store.list('gameEvents')[0][1];self.assertEqual(event['sourceVideoId'],YOUTUBE_API_FIXTURE_VIDEO);self.assertEqual(event['noticeImage']['subjectEvidence']['rawSha256'],event['rawSha256']);self.assertIsNone(event['startsAt']);self.assertIsNone(event['image']);self.assertEqual(store.list('pickupSchedules'),[])
+ def test_publication_before_cutoff_is_skipped_even_if_added_in_october(self):
+  payload=self.payload();item=payload['items'][0];item['contentDetails']['videoPublishedAt']=(CONTENT_CUTOFF-timedelta(seconds=1)).isoformat();item['snippet']['publishedAt']=NOW.isoformat();store=MemoryStore()
+  result=self.collect(store,fetch=lambda _:(200,json.dumps(payload).encode(),{}));self.assertEqual(result['metrics']['beforeContentCutoffSkipped'],1);self.assertEqual(store.list('gameEvents'),[]);self.assertEqual(store.list('collectionDocuments'),[])
+ def test_missing_release_is_reported_but_never_inferred_from_playlist_date(self):
+  payload=self.payload();del payload['items'][0]['contentDetails']['videoPublishedAt'];store=MemoryStore();result=self.collect(store,fetch=lambda _:(200,json.dumps(payload).encode(),{}))
+  self.assertEqual(result['status'],'success');self.assertEqual(result['metrics']['providerSkipped'],1);self.assertIn('video_publication_unconfirmed',result['metrics']['providerSkipReasons']);self.assertEqual(store.list('gameEvents'),[])
+ def test_older_first_page_does_not_hide_october_video_on_later_page(self):
+  first=self.payload(nextPageToken='next_2==');first['items'][0]['contentDetails']['videoPublishedAt']=(CONTENT_CUTOFF-timedelta(seconds=1)).isoformat();calls=[]
+  def fetch(source):calls.append(source['url']);return 200,json.dumps(self.payload()if'pageToken='in source['url']else first).encode(),{}
+  store=MemoryStore();result=self.collect(store,fetch=fetch);self.assertEqual(result['status'],'success');self.assertEqual(len(calls),2);self.assertEqual(result['metrics']['created'],1);self.assertTrue(result['metrics']['providerPaginationComplete']);self.assertNotIn('key=', ''.join(calls));self.assertNotIn('mock-only', ''.join(calls))
+ def test_repeated_page_token_stops_with_concrete_partial_failure(self):
+  payload=self.payload(nextPageToken='same==');store=MemoryStore();result=self.collect(store,fetch=lambda _:(200,json.dumps(payload).encode(),{}))
+  self.assertEqual(result['status'],'FETCH_FAILED');self.assertEqual(result['reasonCode'],'youtube_pagination_token_not_advancing');self.assertEqual(result['metrics']['pagesFetched'],2);self.assertEqual(len(store.list('gameEvents')),1)
+ def test_bounded_page_cap_keeps_saved_partial_data_without_failure_backoff(self):
+  payload=self.payload(nextPageToken='continue_2==');store=MemoryStore();result=self.collect(store,fetch=lambda _:(200,json.dumps(payload).encode(),{}),max_pages=1)
+  self.assertEqual(result['status'],'SUCCESS_BOUNDED');self.assertIsNone(result['reasonCode']);self.assertEqual(result['metrics']['coverageReason'],'PAGE_LIMIT_REACHED_WITH_MORE_UPLOADS');self.assertFalse(result['metrics']['windowCoverageVerified']);self.assertEqual(len(store.list('gameEvents')),1);self.assertEqual(store.get('collectorLocks/api-source')['consecutiveFailures'],0)
+ def test_quota_or_source_failure_isolated_and_backed_off(self):
+  store=MemoryStore({'gameEvents/kept':{'title':'Existing'}});result=self.collect(store,fetch=lambda _:(403,b'',{}))
+  self.assertEqual(result['status'],'FETCH_FAILED');self.assertEqual(result['reasonCode'],'source_http_403');self.assertEqual(store.get('gameEvents/kept')['title'],'Existing');self.assertGreater(timestamp(store.get('collectorLocks/api-source')['nextRunAt']),NOW)
+ def test_unsafe_api_headers_or_keys_never_pass_admin_public_source_schema(self):
+  row=source_row(self.source(),'blue-archive')
+  for key in ['headers','apiKey','accessToken']:
+   with self.assertRaises(SafetyError):validate_change('gameSources','api-source',{**row,key:'mock-secret'})
+ def test_api_policy_hash_tracks_playlist_review_independently_from_atom(self):
+  from collector import digest
+  source=self.source();changed={**source,'youtube_uploads_playlist_verified_at':(NOW+timedelta(seconds=1)).isoformat()}
+  self.assertNotEqual(digest(source_policy(source)),digest(source_policy(changed)));self.assertNotIn('youtube_uploads_playlist_id',source_policy(SOURCE))
+
+class YouTubeTransportTests(unittest.TestCase):
+    def source(self,**fields):
+        return {'url':'https://www.googleapis.com/youtube/v3/playlistItems?part=snippet%2CcontentDetails&playlistId=UU'+'a'*22,'parser':'youtube_data_api','official_host':'www.googleapis.com','enabled':True,'access_status':'approved','terms_checked_at':'2026-10-14T00:00:00Z','terms_url':'https://developers.google.com/youtube/terms/api-services-terms-of-service',**fields}
+    def test_missing_key_fails_before_network(self):
+        with patch.dict(os.environ,{},clear=True),patch('engine._safe_address') as dns:
+            with self.assertRaisesRegex(ValidationError,'key_not_configured'):fetch_source(self.source())
+            dns.assert_not_called()
+    def test_key_never_reaches_wrong_host_path_or_query(self):
+        for values in ({'url':'https://attacker.example/youtube/v3/playlistItems','official_host':'attacker.example'}, {'url':'https://www.googleapis.com/other'},{'url':'https://www.googleapis.com/youtube/v3/playlistItems?key=forbidden'}):
+            with self.subTest(values=values),patch.dict(os.environ,{'YOUTUBE_API_KEY':'AIza'+'x'*35}),patch('engine._safe_address') as dns:
+                with self.assertRaisesRegex(ValidationError,'endpoint_not_approved'):fetch_source(self.source(**values))
+                dns.assert_not_called()
+    def test_key_is_header_only(self):
+        with patch.dict(os.environ,{'YOUTUBE_API_KEY':'AIza'+'x'*35}),patch('engine._safe_address',return_value='8.8.8.8'),patch('engine._PinnedHTTPSConnection') as connection:
+            response=connection.return_value.getresponse.return_value
+            response.status=200;response.getheaders.return_value=[];response.read.return_value=b'{}'
+            self.assertEqual(fetch_source(self.source()),(200,b'{}',{}))
+            args,kwargs=connection.return_value.request.call_args
+            self.assertNotIn('AIza',args[1]);self.assertEqual(kwargs['headers']['X-Goog-Api-Key'],'AIza'+'x'*35)
+            connection.return_value.close.assert_called_once()
+    def test_redirect_never_forwards_key(self):
+        with patch.dict(os.environ,{'YOUTUBE_API_KEY':'AIza'+'x'*35}),patch('engine._safe_address',return_value='8.8.8.8'),patch('engine._PinnedHTTPSConnection') as connection:
+            response=connection.return_value.getresponse.return_value
+            response.status=302;response.getheaders.return_value=[('Location','https://www.googleapis.com/other')]
+            with self.assertRaisesRegex(ValidationError,'authenticated_source_redirect_blocked'):fetch_source(self.source())
+            connection.return_value.request.assert_called_once();connection.return_value.close.assert_called_once()
+    def test_regular_source_does_not_get_key(self):
+        with patch.dict(os.environ,{'YOUTUBE_API_KEY':'AIza'+'x'*35}),patch('engine._safe_address',return_value='8.8.8.8'),patch('engine._PinnedHTTPSConnection') as connection:
+            response=connection.return_value.getresponse.return_value
+            response.status=200;response.getheaders.return_value=[];response.read.return_value=b'{}'
+            fetch_source(self.source(parser='structured_json'))
+            self.assertNotIn('X-Goog-Api-Key',connection.return_value.request.call_args.kwargs['headers'])
+
+
+class DailyYoutubeMetadataRetentionTests(unittest.TestCase):
+ def store(self):
+  source,notice=ExactOfficialYoutubeThumbnailTests().notice();store=MemoryStore();upsert_notice(store,source,notice,NOW);return store
+ def test_daily_expiry_deletes_only_positive_provider_metadata_without_private_reads(self):
+  store=self.store();store.records['users/mock-owner/executionRecords/mock-row']={'startedAt':NOW};store.records['gameSources/shared']={'enabled':True}
+  result=expire_youtube_metadata(store,NOW+timedelta(days=30));self.assertEqual(result['status'],'COMPLETED');self.assertEqual(result['deleted'],{'gameEvents':1,'collectionDocuments':1});self.assertEqual(result['privateRecordsRead'],0);self.assertEqual(result['fcmSends'],0)
+  self.assertIn('users/mock-owner/executionRecords/mock-row',store.records);self.assertIn('gameSources/shared',store.records)
+ def test_daily_expiry_keeps_pre_october_cleanup_separate(self):
+  store=self.store();store.records['gameEvents/pre-october']={'publishedAt':CONTENT_CUTOFF-timedelta(days=1)};expire_youtube_metadata(store,NOW+timedelta(days=30));self.assertIn('gameEvents/pre-october',store.records)
+ def test_next_24h_tick_is_read_only_deferred_without_a_lock_write(self):
+  store=self.store();late=NOW+timedelta(days=30);expire_youtube_metadata(store,late);writes=store.writes;result=expire_youtube_metadata(store,late+timedelta(hours=23))
+  self.assertEqual(result['status'],'DEFERRED');self.assertEqual(store.writes,writes)
+ def test_revalidated_metadata_survives_original_expiry_date(self):
+  source,notice=ExactOfficialYoutubeThumbnailTests().notice();store=MemoryStore();upsert_notice(store,source,notice,NOW);upsert_notice(store,source,notice,NOW+timedelta(days=20));result=expire_youtube_metadata(store,NOW+timedelta(days=30))
+  self.assertEqual(result['deleted'],{});self.assertEqual(len(store.list('gameEvents')),1)
+ def test_changed_during_deletion_is_retained_and_reported_partial(self):
+  source,notice=ExactOfficialYoutubeThumbnailTests().notice()
+  class RacingStore(MemoryStore):
+   def delete_content_if_unchanged(self,path,proof,guards=None,predicate=None):
+    if path.startswith('gameEvents/'):
+     self.records[path]['metadataCheckedAt']=NOW+timedelta(days=30);self.records[path]['metadataExpiresAt']=NOW+timedelta(days=60)
+    return super().delete_content_if_unchanged(path,proof,guards,predicate)
+  store=RacingStore();upsert_notice(store,source,notice,NOW);result=expire_youtube_metadata(store,NOW+timedelta(days=30))
+  self.assertEqual(result['status'],'PARTIAL');self.assertEqual(result['changedSinceRead'],1);self.assertEqual(result['dependenciesRetained'],1);self.assertEqual(len(store.list('gameEvents')),1);self.assertEqual(len(store.list('collectionDocuments')),1)
+ def test_invalid_proof_or_naive_metadata_clock_is_not_deleted(self):
+  store=self.store();path=next(path for path in store.records if path.startswith('gameEvents/'));store.records[path]['sourceVideoId']='invalid'
+  result=expire_youtube_metadata(store,NOW+timedelta(days=30));self.assertEqual(result['status'],'PARTIAL');self.assertEqual(result['ignoredWithoutProof'],1);self.assertIn(path,store.records)
+  row={**store.records[path],'sourceVideoId':FirebaseOfficialSocialFeedTests.VIDEO,'metadataCheckedAt':datetime(2026,10,11,10)};self.assertFalse(youtube_metadata_expired(row,NOW+timedelta(days=40)))
+ def test_query_cap_preserves_remaining_metadata_for_the_next_daily_run(self):
+  store=self.store();event=store.list('gameEvents')[0][1];store.records={path:row for path,row in store.records.items()if not path.startswith('gameEvents/')}
+  for index in range(51):store.records['gameEvents/expired-'+str(index)]={**event,'id':'expired-'+str(index)}
+  result=expire_youtube_metadata(store,NOW+timedelta(days=30));self.assertEqual(result['status'],'PARTIAL');self.assertTrue(result['queryLimitReached']);self.assertEqual(result['deleted']['gameEvents'],50);self.assertEqual(len(store.list('gameEvents')),1)
+  final=expire_youtube_metadata(store,NOW+timedelta(days=31));self.assertEqual(final['status'],'COMPLETED');self.assertEqual(len(store.list('gameEvents')),0);self.assertEqual(len(store.list('collectionDocuments')),0)
+ def test_public_expiry_query_whitelist_and_soft_budget_remain_strict(self):
+  for collection,limit in [('users',50),('gameEvents',51),('gameEvents',0)]:
+   with self.assertRaisesRegex(SafetyError,'bounded_public_youtube_expiry'):MemoryStore().list_expired_youtube(collection,NOW,limit)
+  store=FirestoreStore.__new__(FirestoreStore);store.reads=2500;store.max_reads=2500;store.writes=0;store.max_writes=500
+  with self.assertRaisesRegex(SafetyError,'soft_budget'):store.list_expired_youtube('gameEvents',NOW)
+ def test_deleted_old_event_cancels_queued_job_without_a_provider_request(self):
+  store,event=owner_store();store.records['gameEvents/event']['publishedAt']=CONTENT_CUTOFF-timedelta(seconds=1);store.records['users/alice/notificationJobs/job']={'kind':'event:start','eventId':'event','eventRevision':1,'status':'requested','dueAt':NOW}
+  apply_content_cleanup(store,content_cleanup_plan(store,now=NOW),now=NOW)
+  self.assertEqual(dispatch(store,'alice','job',lambda _:self.fail('deleted-event FCM request'),NOW),'cancelled');self.assertEqual(store.get('users/alice/notificationJobs/job')['reasonCode'],'INELIGIBLE_AT_SEND')
+ def test_real_api_high_definition_thumbnail_names_are_not_invented_or_discarded(self):
+  source,notice=ExactOfficialYoutubeThumbnailTests().notice();url=notice['source_image_urls'][0].replace('hqdefault.jpg','fhddefault.jpg');notice['raw_json']['thumbnailUrls']=[url];notice['source_image_urls']=[url]
+  from collector import digest
+  notice['raw_sha256']=digest(notice['raw_json']);image=automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW);self.assertEqual(image['url'],url);self.assertEqual(image['kind'],'NOTICE_ART')
+
+class AnnouncementPublicationCutoffTests(unittest.TestCase):
+ def test_pre_october_article_recently_updated_cannot_dispatch_or_create_a_new_job(self):
+  fixture=OfficialAnnouncementNotificationTests();store,source=fixture.fixture();rows=fixture.publish(store,source);job_id=fixture.job(store,rows)
+  event=store.records['gameEvents/'+rows[0]['id']];event['publishedAt']=CONTENT_CUTOFF-timedelta(seconds=1);event['sourceUpdatedAt']=NOW+timedelta(minutes=1)
+  from collector import digest
+  raw=store.records['collectionDocuments/'+digest([event['sourceId'],event['externalKey'],event['rawSha256']])];raw['publishedAt']=event['publishedAt'];raw['sourceUpdatedAt']=event['sourceUpdatedAt']
+  self.assertIsNone(announcement_identity(store,event,NOW+timedelta(minutes=2)));self.assertEqual(plan_announcement_user(store,'alice',[event],NOW+timedelta(minutes=2)),0)
+  self.assertEqual(dispatch(store,'alice',job_id,lambda _:self.fail('pre-cutoff announcement provider call'),NOW+timedelta(minutes=2)),'cancelled')
+ def test_unknown_or_naive_original_publication_cannot_become_a_recent_announcement(self):
+  for published in [None,'2026-10-11T10:01:00',datetime(2026,10,11,10,1)]:
+   fixture=OfficialAnnouncementNotificationTests();store,source=fixture.fixture();rows=fixture.publish(store,source);event={**rows[0],'publishedAt':published,'sourceUpdatedAt':NOW+timedelta(minutes=1)}
+   self.assertIsNone(announcement_identity(store,event,NOW+timedelta(minutes=2)));self.assertEqual(plan_announcement_user(store,'alice',[event],NOW+timedelta(minutes=2)),0);self.assertEqual(store.list('users/alice/notificationJobs'),[])
 
 if __name__=='__main__':unittest.main()
