@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "recordedAt": "2026-10-14T12:41:17.968913+00:00",
+  "recordedAt": "2026-10-14T22:44:54.038243+00:00",
   "scope": "APPROVED_PUBLIC_WORKER_EXPECTED_BYTES",
-  "sourceBaseCommit": "23badb6efda351077efca16770407bacaa9dea56",
+  "sourceBaseCommit": "5381cd73e186af1d0ac327f4e84ea9c276772fa6",
   "files": [
     {
       "path": ".github/workflows/firebase-free-collector.yml",
@@ -21,13 +21,13 @@
     },
     {
       "path": "data/official-sources.json",
-      "bytes": 618990,
-      "sha256": "b1552a5c86b14f27d72c39f3e1c37e80c0045c3033d043cf0d36916f5a393c55"
+      "bytes": 622226,
+      "sha256": "cf6c6d0f80e0873fdf914685041c6440bab6c79dce06807589d0501a714612e3"
     },
     {
       "path": "docs/github-free-runner-plan.md",
-      "bytes": 45934,
-      "sha256": "7f9f5ed2c6856cd8c8797f07606c8d235bdd7322640412620a6bd2c73da2e60e"
+      "bytes": 47491,
+      "sha256": "7aecc35402309e1a31ab85ca19549061906784994c16fb32fca3b87861591fe9"
     },
     {
       "path": "README.md",
@@ -46,8 +46,8 @@
     },
     {
       "path": "services/collector/official_adapter.py",
-      "bytes": 45709,
-      "sha256": "3781fae79322000124fd84014d54ccf4441330293bbdccf57657861ab2de58e9"
+      "bytes": 64621,
+      "sha256": "b68dea5b254206246d2c6a595c1622182c164712544c141c360ab35716c44bb8"
     },
     {
       "path": "services/collector/staging_store.py",
@@ -56,13 +56,13 @@
     },
     {
       "path": "services/firebase/admin.py",
-      "bytes": 26998,
-      "sha256": "0233d7568808b9905964e8dc1816128f81c35fc2d8b47d8278ea0455cfad5217"
+      "bytes": 27504,
+      "sha256": "fdf3deeb626797039c143e93c095604905b04a49b90cdb399aebdfeffa3f2cf7"
     },
     {
       "path": "services/firebase/collector.py",
-      "bytes": 197870,
-      "sha256": "16eaf47380e9f01d34d428b4018ed588f459d212ae286b417f9df125b67eb9fe"
+      "bytes": 204099,
+      "sha256": "3fda11a1cb36fc82b3e9eefe89d7cdd5698c8d11569f1b938e409114456b0bb9"
     },
     {
       "path": "services/firebase/iam/orbit-free-fcm-sender-role.json",
@@ -96,11 +96,11 @@
     },
     {
       "path": "services/firebase/tests/test_firebase.py",
-      "bytes": 296978,
-      "sha256": "7f23ef19a48062d0f2020ec66cee2b4e472c0620571daca887f2f447f6cc6a4e"
+      "bytes": 310137,
+      "sha256": "cf332ca237ea641e3cc83fb7fc09895c228b4a0c1fe10e215cceae9c60d4db89"
     }
   ],
-  "payloadBytes": 1752055,
+  "payloadBytes": 1795654,
   "excluded": [
     "images",
     "native apps",
