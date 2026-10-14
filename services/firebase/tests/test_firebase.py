@@ -2327,4 +2327,130 @@ class AdaptiveFreeWorkerBudgetTests(unittest.TestCase):
   from collector import adaptive_source_budget
   policy=adaptive_source_budget(MemoryStore(),50,116);self.assertFalse(policy['enabled']);self.assertEqual(policy['effectiveSourceAttempts'],50)
 
+
+# Public RSS archive boundary regressions: synthetic input only; no HTTP, private data or media.
+from official_adapter import parse_official_rss_documents
+
+RSS_WINDOW_OBSERVED = "2026-10-14T13:00:00Z"
+RSS_WINDOW_START = "2026-09-30T15:00:00Z"
+RSS_WINDOW_END = "2026-10-31T15:00:00Z"
+RSS_WINDOW_SOURCE = {
+    "parser": "official_rss", "url": "https://official.example/feed/",
+    "allowed_notice_hosts": ["official.example"], "content_language": "ja",
+    "article_format": {"mode": "official_rss_v1", "version": 1,
+        "reviewedAt": RSS_WINDOW_OBSERVED, "evidenceUrl": "https://official.example/",
+        "allowedImageHosts": ["official.example"]},
+}
+
+
+def rss_window_item(url="https://official.example/news/1", date="Thu, 01 Oct 2026 00:00:00 +0900"):
+    return ("<item><title>Fixture official event preview</title><link>" + url +
+            "</link><pubDate>" + date + "</pubDate><description>Fixture body</description></item>")
+
+
+def rss_window_feed(*items):
+    return ("<rss><channel>" + "".join(items) + "</channel></rss>").encode()
+
+
+def rss_window_rdf_item(url="https://official.example/news/1", date="2026-10-01T00:00:00+09:00", about=None):
+    return ('<item rdf:about="' + (about or url) + '"><title>Fixture</title><link>' + url +
+            "</link><dc:date>" + date + "</dc:date><description>Fixture body</description></item>")
+
+
+def rss_window_rdf_feed(*items):
+    return ('<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" '
+            'xmlns="http://purl.org/rss/1.0/" xmlns:dc="http://purl.org/dc/elements/1.1/">' +
+            "".join(items) + "</rdf:RDF>").encode()
+
+
+class OfficialRSSPublicationWindowTests(unittest.TestCase):
+    def parse(self, raw, source=RSS_WINDOW_SOURCE, **bounds):
+        return parse_official_rss_documents(raw, source, RSS_WINDOW_OBSERVED,
+            published_start=bounds.get("published_start", RSS_WINDOW_START), published_end=bounds.get("published_end", RSS_WINDOW_END))
+
+    def test_old_http_article_omitted_before_url_normalization_without_upgrading(self):
+        raw = rss_window_feed(rss_window_item("http://official.example/old", "Thu, 31 Mar 2017 00:00:00 +0000"), rss_window_item())
+        docs, metrics = self.parse(raw)
+        self.assertEqual([d["official_url"] for d in docs], ["https://official.example/news/1"])
+        self.assertEqual((metrics["items_seen"], metrics["items_accepted"], metrics["items_skipped"]), (2, 1, 1))
+        self.assertEqual(metrics["before_window_skipped"], 1)
+        self.assertEqual(metrics["after_window_skipped"], 0)
+        self.assertIn(b"http://official.example/old", raw)
+        self.assertFalse(metrics["window_coverage_verified"])
+
+    def test_no_window_preserves_strict_http_failure(self):
+        with self.assertRaisesRegex(ValidationError, "https_url_required"):
+            parse_official_rss_documents(rss_window_feed(rss_window_item("http://official.example/old", "Thu, 31 Mar 2017 00:00:00 +0000")), RSS_WINDOW_SOURCE, RSS_WINDOW_OBSERVED)
+
+    def test_in_window_http_still_fails_closed(self):
+        with self.assertRaisesRegex(ValidationError, "https_url_required"):
+            self.parse(rss_window_feed(rss_window_item("http://official.example/news/1")))
+
+    def test_in_window_unreviewed_origin_still_fails_closed(self):
+        with self.assertRaisesRegex(ValidationError, "article_identity"):
+            self.parse(rss_window_feed(rss_window_item("https://unreviewed.example/news/1")))
+
+    def test_aware_lower_boundary_inclusive_and_upper_boundary_exclusive(self):
+        docs, meta = self.parse(rss_window_feed(rss_window_item(), rss_window_item("https://official.example/end", "Sun, 01 Nov 2026 00:00:00 +0900")))
+        self.assertEqual(len(docs), 1)
+        self.assertEqual(docs[0]["published_at"], "2026-09-30T15:00:00+00:00")
+        self.assertEqual((meta["before_window_skipped"], meta["after_window_skipped"], meta["publication_window_skipped"]), (0, 1, 1))
+
+    def test_aware_datetime_bounds_supported(self):
+        docs, _ = self.parse(rss_window_feed(rss_window_item()), published_start=datetime(2026, 9, 30, 15, tzinfo=timezone.utc),
+            published_end=datetime(2026, 10, 31, 15, tzinfo=timezone.utc))
+        self.assertEqual(len(docs), 1)
+
+    def test_future_http_article_omitted_only_after_valid_publication_check(self):
+        docs, meta = self.parse(rss_window_feed(rss_window_item("http://official.example/future", "Sun, 01 Nov 2026 00:00:00 +0900")))
+        self.assertEqual(docs, [])
+        self.assertEqual(meta["after_window_skipped"], 1)
+
+    def test_invalid_publication_cannot_hide_behind_old_http_or_date(self):
+        for raw in (rss_window_feed(rss_window_item("http://official.example/old", "not a timestamp")),
+                    rss_window_rdf_feed(rss_window_rdf_item("http://official.example/old", "2017-02-30")),
+                    rss_window_rdf_feed(rss_window_rdf_item("http://official.example/old", "2017-03-31T12:00:00"))):
+            with self.subTest(raw=raw[:80]), self.assertRaises(ValidationError):
+                self.parse(raw)
+
+    def test_proven_outside_rdf_date_only_can_be_omitted_without_posting_clock(self):
+        docs, meta = self.parse(rss_window_rdf_feed(rss_window_rdf_item("http://official.example/old", "2017-03-31"),
+            rss_window_rdf_item("http://official.example/future", "2026-11-05"), rss_window_rdf_item()))
+        self.assertEqual(len(docs), 1)
+        self.assertEqual((meta["before_window_skipped"], meta["after_window_skipped"]), (1, 1))
+        self.assertEqual(docs[0]["raw_publication_timestamp"], "2026-10-01T00:00:00+09:00")
+
+    def test_overlapping_or_boundary_rdf_date_only_still_has_no_verified_timezone(self):
+        for date in ("2026-09-30", "2026-10-01", "2026-10-31", "2026-11-01"):
+            with self.subTest(date=date), self.assertRaisesRegex(ValidationError, "publication_timezone"):
+                self.parse(rss_window_rdf_feed(rss_window_rdf_item(date=date)))
+
+    def test_no_window_keeps_date_only_rdf_failure(self):
+        with self.assertRaises(ValidationError):
+            parse_official_rss_documents(rss_window_rdf_feed(rss_window_rdf_item(date="2017-03-31")), RSS_WINDOW_SOURCE, RSS_WINDOW_OBSERVED)
+
+    def test_in_window_rdf_original_identity_still_required(self):
+        with self.assertRaisesRegex(ValidationError, "rdf_article_identity"):
+            self.parse(rss_window_rdf_feed(rss_window_rdf_item(about="https://official.example/other")))
+
+    def test_invalid_naive_or_unordered_window_rejected_before_empty_feed(self):
+        for bounds in ({"published_start": "2026-10-01T00:00:00"},
+                       {"published_start": datetime(2026, 10, 1)},
+                       {"published_start": RSS_WINDOW_END, "published_end": RSS_WINDOW_START},
+                       {"published_start": RSS_WINDOW_START, "published_end": RSS_WINDOW_START}):
+            with self.subTest(bounds=bounds), self.assertRaises(ValidationError):
+                self.parse(rss_window_feed(), **bounds)
+
+    def test_unsafe_or_invalid_xml_never_bypassed_by_window(self):
+        for raw in (b'<!DOCTYPE rss [<!ENTITY x "unsafe">]><rss><channel/></rss>', b"<rss><channel>"):
+            with self.subTest(raw=raw), self.assertRaises(ValidationError):
+                self.parse(raw)
+
+    def test_unwindowed_valid_document_provenance_is_unchanged(self):
+        raw = rss_window_rdf_feed(rss_window_rdf_item())
+        original, _ = parse_official_rss_documents(raw, RSS_WINDOW_SOURCE, RSS_WINDOW_OBSERVED)
+        filtered, _ = self.parse(raw)
+        self.assertEqual(original, filtered)
+
+
 if __name__=='__main__':unittest.main()
