@@ -170,9 +170,9 @@ python services/firebase/collector.py --mode content-backfill --live --apply --r
 
 공식 YouTube 채널의 공개 ID·publisher 관계와 실제 `channels.list`의 `relatedPlaylists.uploads`를 별도로 확인한 뒤 `youtube_data_api` 출처를 등록합니다. 채널 ID의 UC를 UU로 문자열 치환해 uploads ID를 만들어 쓰지 않습니다. `youtubeUploadsPlaylistVerifiedAt`과 별도 API 이용 조건 검토가 있어야 합니다. 출처 신규 등록은 계속 disabled이며 승인된 공식 출처만 활성화합니다. Atom `/feeds/videos.xml` 404나 `/xml/feeds/videos.xml`의 채널 정보 없는 정적 템플릿을 빈 정상 피드로 보고하지 않습니다.
 
-무료 YouTube Data API의 `playlistItems.list`만 조회합니다. `YOUTUBE_API_KEY`는 서버 환경/GitHub Secret에만 보관하고 승인된 `www.googleapis.com/youtube/v3/playlistItems` 요청 헤더로 전달합니다. 키·인증 헤더는 공개 source URL, 원문 데이터, 저장소, 결과 로그에 넣지 않습니다. 인증 요청 redirect는 차단합니다. 키가 없으면 해당 출처만 보류하며 다른 게임의 수집을 계속합니다. 게시일은 `contentDetails.videoPublishedAt`을 쓰고 재생목록에 넣은 시각 `snippet.publishedAt`은 별도 증거로 저장합니다. 다른 채널·영상·재생목록 응답은 차단합니다.
+무료 YouTube Data API의 `playlistItems.list`로 업로드를 조회하고, 분류된 공식 방송 예고에 한해 `videos.list`의 `snippet,liveStreamingDetails`를 추가 조회합니다. 영상 ID는 최대 50개의 고유한 확인된 ID이며 검색·소유자 전용 필드·개인 계정 API는 호출하지 않습니다. `YOUTUBE_API_KEY`는 서버 환경/GitHub Secret에만 보관하고 승인된 `www.googleapis.com/youtube/v3/playlistItems` 또는 `/youtube/v3/videos` 요청 헤더로 전달합니다. 키·인증 헤더는 공개 source URL, 원문 데이터, 저장소, 결과 로그에 넣지 않습니다. 인증 요청 redirect와 중복 query는 차단합니다. 키가 없으면 해당 출처만 보류하며 다른 게임의 수집을 계속합니다. 게시일은 `contentDetails.videoPublishedAt`을 쓰고 재생목록에 넣은 시각 `snippet.publishedAt`은 별도 증거로 저장합니다. 다른 채널·영상·재생목록 응답은 차단합니다.
 
-영상 썸네일은 그 영상 ID의 공식 응답 URL만 저장하며 이미지 바이트를 파일이나 Firestore에 넣지 않습니다. `noticeImage`는 `NOTICE_ART`/`source_post`와 독립 루트 채널·영상 ID, 원문 SHA·제목·정식 영상 URL을 연결한 **공식 영상 소식 이미지**입니다. 저작권 사용 허가를 추정하지 않고 `UNCONFIRMED` 원본 참조로 표시합니다. 일반 소식에는 공식 YouTube 캡션·영상 링크와 함께 표시할 수 있지만 픽업 배너·별도 캐릭터 게시글·캘린더 사진으로 승격하거나 다른 게시물에 복제하지 않습니다. 원문 썸네일 변경 시 실제 응답에 맞춰 갱신합니다.
+영상 썸네일은 그 영상 ID의 공식 응답 URL만 저장하며 이미지 바이트를 파일이나 Firestore에 넣지 않습니다. `noticeImage`는 `NOTICE_ART`/`source_post`와 독립 루트 채널·영상 ID, 원문 SHA·제목·정식 영상 URL을 연결한 **공식 영상 소식 이미지**입니다. 저작권 사용 허가를 추정하지 않고 `UNCONFIRMED` 원본 참조로 표시합니다. 요청한 유형의 소식과, 같은 게시물의 일정이 공식적으로 확인된 달력 상세에는 공식 YouTube 캡션·영상 링크와 함께 표시할 수 있습니다. 픽업 배너·별도 캐릭터 게시글의 증거로 승격하거나 다른 게시물에 복제하지 않습니다. 원문 썸네일 변경 시 실제 응답에 맞춰 갱신합니다.
 
 실제 검사에서 일부 `fhddefault.jpg` URL은 HTTP 200이지만 API의 1920×1080 설명과 다른 120×90 회색 대체 이미지를 반환했습니다. `youtubeNoticeImagePolicyVersion=2`는 API가 이미 제공한 `maxres`, `standard`, `high`, `medium`, `default`를 우선하며 FHD/QHD/UHD는 뒤에 검토합니다. 제목이 같은 기존 원문도 이 출처 정책 지문 변경으로 다시 검사하므로 잘못 저장한 FHD 링크가 unchanged로 남지 않습니다. Steam 등 다른 출처의 추출 버전은 이 영상 이미지 선택 변경만으로 바꾸지 않습니다. 현재 정책 버전은 3이며, 공식 API가 실제 제공한 같은 영상의 `maxresdefault_live.jpg` 등 `_live` 변형도 허용합니다. URL을 생성하지 않고 원 응답 목록·실제 이미지 크기 검증을 똑같이 적용하며, 버전 2에서 미지원이던 방송용 링크도 같은 원문 SHA에서 다시 검사합니다.
 
@@ -188,3 +188,13 @@ X 게시물 수집은 이번 worker에 구현·활성화하지 않았습니다. 
 
 최신 로컬 검증은 Firebase worker **447/447**, collector **107/107**입니다. 기존 348개 중 이전 게시물의 최근 수정으로 범위에 포함하던 YouTube 시험 1개는 사용자 요청한 10월 게시일 기준에 맞게 제외 검증으로 변경했고, 99개 검증을 추가했습니다. 여기에는 API adapter/키 전송 차단, 날짜·이미지·원본 증거, 정리 지문/연결 관계, 만료·재검증, 공정 순서, 삭제 공지 발송 중지, 실제 크기 불일치 대체 이미지 차단 및 이미지 요청 한도 등이 포함됩니다. 이미지 시험은 합성 JPEG/PNG/WebP 헤더와 모의 응답만 쓰며 실제 이미지 파일을 테스트에 복사하지 않습니다. 이 결과는 모의 API/MemoryStore이며 실제 API 연결·운영 DB 적재·정리·GitHub 예약 실행·기기 수신은 각 운영 보고서에서 별도로 확인합니다.
 
+
+## 2026-10-14 PV·예고 분류와 달력 연결
+
+모든 영상을 가져와 표시하지 않습니다. `contentClassificationVersion=1`은 제목과 원문 SHA에 연결된 `contentKind`를 기록합니다. 캐릭터 PV·이벤트 PV는 소식 전용입니다. 특별 방송·오프라인 행사·픽업·이벤트 예고는 소식과 일정 확인 후 달력 대상으로 분리합니다. OST·일반 쇼츠·생일·컷신·공략·지난 방송은 표시 대상에서 제외하고, 제외된 신규 영상은 공개 공지·원문 저장과 이미지 요청을 실행하지 않습니다. 명시적 OST 콘서트/음악회 개최 예고는 오프라인 유형으로 처리합니다.
+
+모든 표시 대상은 같은 게시물의 검증된 대표 사진이 필요합니다. `newsEligible`와 `calendarEligible`는 단순 관리자 플래그가 아니라 원문 분류·기간·이미지 증거를 다시 검사한 결과입니다. PV에 기간이나 잘못된 calendarEligible 값이 있어도 달력에 넣지 않습니다. 기존 공지는 개인 기록을 건드리지 않고 같은 함수로 다시 분류합니다. 새 출처가 등록되면 동일 규칙을 사용하며, 게임 등록 여부와 감지 연결은 별개입니다. 출처가 없는 게임의 소식을 만들어 내거나 전체 게임 자동 수집 성공으로 표시하지 않습니다.
+
+공식 YouTube 방송의 `liveStreamingDetails.scheduledStartTime` 또는 `actualStartTime`은 동일 채널·영상·제목과 대조한 RFC3339 값만 사용합니다. 방송 기간을 추측하지 않으며 저장된 동일 시작/종료 값은 `scheduleKind=point`인 한 시점입니다. 원본 게임 서버 지역은 계속 미확인으로 두고 `calendarAudience=GLOBAL_ANNOUNCEMENT`인 방송만 허용합니다. API 한 번의 추가 quota 1단위를 실행 지표에 포함합니다. 영상 게시일을 행사 시작일로 쓰지 않습니다.
+
+공식 원문에 확인된 메인 픽업·메인 이벤트 기간이 있고 서버만 미확인인 이전 검토 자료는 정확한 원문 역할·시간대·기간 증거가 일치할 때만 `sourceClockOnly`인 참고 막대로 표시합니다. 검증된 서버 일정 알림으로 승격하지 않습니다. 복각·무기와 중복 부모 공지는 달력에서 제외합니다. 달력에는 실제 시작일에서만 이름을 한 번 표시하고 다음 주·다음 달로 이어지는 막대에는 반복하지 않습니다. 통합 이벤트 캘린더는 등록 게임 중 선택된 게임들의 같은 달력 자료를 사용합니다.
