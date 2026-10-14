@@ -149,3 +149,42 @@ python services/firebase/notifications.py --apply
 
 로컬 검증: `python -m unittest discover -s services/firebase/tests -p test_firebase.py -q` **348/348 통과**(기존 283 + 신규 공식 공지 65). 별도 검토 콘텐츠 시험 4개·표시 시험 11개도 통과했습니다. 모든 신규 발송 검증은 MemoryStore와 모의 제공자이며 실제 FCM·운영 사용자 데이터 접근 0입니다. 인자 없이 `notifications.py`는 계속 `DISABLED`, 발송 0, 원격 쓰기 0입니다. 배포·정책 반영·실제 예약 실행·실기기 수신은 운영 실행 자료로 별도 확인해야 합니다.
 
+## 2026-10-14 이후 게시물 보존·공식 영상 이미지 정책
+
+현재 수집·표시 기준은 `contentPublishedNotBefore=2026-10-01T00:00:00+09:00`(UTC 2026-09-30 15:00)입니다. **원 게시일**이 기준이며, 9월 자료가 10월에 수정되거나 10월 행사 기간을 포함해도 다시 저장하지 않습니다. 게시일·시간대가 확인되지 않거나 미래인 원문은 신규 공개 저장 대상에서 제외하고 수집 지표/검증 대기에 남깁니다. 기존 날짜 불명 자료는 임의로 9월로 판단해서 삭제하지 않습니다. 날짜 기반 알림과 신규 공식 공지 알림도 이전 게시일·날짜 미확인 자료를 새 소식으로 발송하지 않습니다.
+
+초기 정리 범위는 공개 `gameEvents`, 연결된 `pickupSchedules`, 원문 증거 `collectionDocuments`입니다. 실제 스키마에 없는 컬렉션을 추정해 삭제하지 않습니다. `games`, `gameSources`, 인증 계정, 등록 게임, 실행·출석 기록, 사용자 설정·알림함·발송 이력은 보존합니다. 삭제된 이벤트의 발송 대기 작업은 기존 발송 직전 자격 검사에서 취소하며 이 정리 작업 자체는 FCM을 호출하지 않습니다.
+
+정리 dry run은 컬렉션별 최대 500문서를 읽고 삭제 후보 최대 400개를 문서 지문과 함께 제시합니다. 실제 적용에는 그 JSON의 정확한 검토 지문이 필요합니다. 픽업은 연결 공지의 날짜와 관계를 확인하며, 픽업 삭제가 성공하기 전에는 부모 공지를 삭제하지 않습니다. 부모가 남아 있으면 연결 원문 증거도 남깁니다. 적용 순간 transaction에서 문서·관계가 바뀌었으면 삭제를 건너뜁니다. 한도·날짜 불명·충돌·미처리 연결 자료를 기록하고 적용 후 재조회 없이 전체 삭제 완료라고 표시하지 않습니다.
+
+```sh
+# 승인된 Spark 연결 환경에서 실제 공개 데이터만 읽는 검토 목록. 쓰기/발송 0.
+python services/firebase/collector.py --content-cleanup --live --report reports/content-cutoff-cleanup-dryrun.json
+# 검토한 정확한 목록을 별도로 적용. 기존 무료/Billing guard를 계속 검사.
+python services/firebase/collector.py --content-cleanup --live --apply --cleanup-review reports/content-cutoff-cleanup-dryrun.json --report reports/content-cutoff-cleanup-applied.json
+# 10월 1일부터의 최초 보완 적재. seed/출처 활성화/알림 발송을 포함하지 않음.
+python services/firebase/collector.py --mode content-backfill --live --apply --report reports/youtube-october-backfill.json
+```
+
+`content-backfill`은 고정 10월 기준부터 실행 시각까지(최대 31일)의 별도 모드이며 정기 daily reverify로 바꾸지 않습니다. 일반 모드의 72시간 제한은 유지합니다. 운영 `run`은 관리자 승인·활성화된 DB 출처를 사용하므로 registry 파일을 지정했다고 운영 수집 범위가 그 파일로 제한되는 것은 아닙니다. 게임별 한정 수동 적재는 동일 승인·lease·quota를 검사하는 `collect_one`을 정확한 출처 ID에 대해 호출해야 합니다. 출처 한 번 실행은 10페이지·최대 480초, worker 최대 50개 실수집·200개 출처 조회, 기존 읽기 2,500/쓰기 500 및 일별 soft cap을 유지합니다.
+
+공식 YouTube 채널의 공개 ID·publisher 관계와 실제 `channels.list`의 `relatedPlaylists.uploads`를 별도로 확인한 뒤 `youtube_data_api` 출처를 등록합니다. 채널 ID의 UC를 UU로 문자열 치환해 uploads ID를 만들어 쓰지 않습니다. `youtubeUploadsPlaylistVerifiedAt`과 별도 API 이용 조건 검토가 있어야 합니다. 출처 신규 등록은 계속 disabled이며 승인된 공식 출처만 활성화합니다. Atom `/feeds/videos.xml` 404나 `/xml/feeds/videos.xml`의 채널 정보 없는 정적 템플릿을 빈 정상 피드로 보고하지 않습니다.
+
+무료 YouTube Data API의 `playlistItems.list`만 조회합니다. `YOUTUBE_API_KEY`는 서버 환경/GitHub Secret에만 보관하고 승인된 `www.googleapis.com/youtube/v3/playlistItems` 요청 헤더로 전달합니다. 키·인증 헤더는 공개 source URL, 원문 데이터, 저장소, 결과 로그에 넣지 않습니다. 인증 요청 redirect는 차단합니다. 키가 없으면 해당 출처만 보류하며 다른 게임의 수집을 계속합니다. 게시일은 `contentDetails.videoPublishedAt`을 쓰고 재생목록에 넣은 시각 `snippet.publishedAt`은 별도 증거로 저장합니다. 다른 채널·영상·재생목록 응답은 차단합니다.
+
+영상 썸네일은 그 영상 ID의 공식 응답 URL만 저장하며 이미지 바이트를 파일이나 Firestore에 넣지 않습니다. `noticeImage`는 `NOTICE_ART`/`source_post`와 독립 루트 채널·영상 ID, 원문 SHA·제목·정식 영상 URL을 연결한 **공식 영상 소식 이미지**입니다. 저작권 사용 허가를 추정하지 않고 `UNCONFIRMED` 원본 참조로 표시합니다. 일반 소식에는 공식 YouTube 캡션·영상 링크와 함께 표시할 수 있지만 픽업 배너·별도 캐릭터 게시글·캘린더 사진으로 승격하거나 다른 게시물에 복제하지 않습니다. 원문 썸네일 변경 시 실제 응답에 맞춰 갱신합니다.
+
+실제 검사에서 일부 `fhddefault.jpg` URL은 HTTP 200이지만 API의 1920×1080 설명과 다른 120×90 회색 대체 이미지를 반환했습니다. `youtubeNoticeImagePolicyVersion=2`는 API가 이미 제공한 `maxres`, `standard`, `high`, `medium`, `default`를 우선하며 FHD/QHD/UHD는 뒤에 검토합니다. 제목이 같은 기존 원문도 이 출처 정책 지문 변경으로 다시 검사하므로 잘못 저장한 FHD 링크가 unchanged로 남지 않습니다. Steam 등 다른 출처의 추출 버전은 이 영상 이미지 선택 변경만으로 바꾸지 않습니다. 현재 정책 버전은 3이며, 공식 API가 실제 제공한 같은 영상의 `maxresdefault_live.jpg` 등 `_live` 변형도 허용합니다. URL을 생성하지 않고 원 응답 목록·실제 이미지 크기 검증을 똑같이 적용하며, 버전 2에서 미지원이던 방송용 링크도 같은 원문 SHA에서 다시 검사합니다.
+
+신규·변경 원문 및 실제 재조회 24시간 경과 때만 공식 응답의 이미지 후보 최대 3개를 메모리에서 확인합니다. 후보당 최대 2MiB, HTTPS의 해당 영상 CDN URL, HTTP 200 JPEG/PNG, 실제 헤더 크기가 API 제공 width/height와 일치하고 최소 320×180이어야 합니다. 공지 전체 480초 deadline 안에서 검사하며 인증 키를 이미지 CDN에 보내지 않습니다. bytes를 보관하지 않고 SHA256·실제/예상 크기·확인 시각의 `imageVerification` 증거만 저장합니다. Firestore transaction 밖에서 한 번 검사해 transaction 재시도로 HTTP가 반복되지 않게 합니다. 모든 후보가 실패·미확인·시간 초과면 이전 `noticeImage`/공지 사진을 지우고 오류·보류 사유를 기록합니다. 게임 로고·다른 게시물 사진으로 대신하지 않습니다. 동일 검증 원문을 24시간 안에 반복 조회할 때는 추가 이미지 요청을 하지 않습니다.
+
+YouTube의 비인증 메타데이터는 실제 재조회 시각 `metadataCheckedAt`과 30일 후 `metadataExpiresAt`을 저장합니다. 같은 원문을 재조회하더라도 24시간이 지난 경우에만 보존 기한 갱신 쓰기를 실행하며 수집하지 않은 영상의 기한은 늘리지 않습니다. worker `run`은 하루 한 번 공개 영상 소식 50건·원문 증거 50건의 만료 자료만 정리합니다. 정확한 공식 영상 ID/URL·30일 시각·현재 지문을 재검사하고, 미검증 관계가 있으면 보류합니다. 이 자동 만료 정리는 최초 10월 이전 자료 삭제와 별개이며 개인 데이터 읽기/발송 0입니다. UI는 만료된 영상 소식을 제외합니다. [YouTube API 정책](https://developers.google.com/youtube/terms/developer-policies).
+
+`playlistItems.list`는 페이지당 1 quota unit입니다. 정상 응답 10페이지 한도 도달은 `SUCCESS_BOUNDED`/`PAGE_LIMIT_REACHED_WITH_MORE_UPLOADS`로 저장한 범위를 보고하며 실패 백오프를 만들지 않습니다. 전체 월 수집 완료로 간주하지 않고 `windowCoverageVerified=false`를 유지합니다. 반복 token·identity 오류·HTTP/할당량 오류는 실패와 백오프로 기록합니다. 재생목록 순서가 실제 게시 순서와 같다고 가정해서 오래된 영상 한 건만으로 페이지 조회를 조기 종료하지 않습니다. 최대 6개 채널×10페이지×96회면 5,760 quota unit/day이며 다른 API 요청 사용량은 별도입니다. 기본 무료 quota 소진 시 제한하고 결제 연결·quota 증액·유료 전환을 실행하지 않습니다. [공식 quota 비용](https://developers.google.com/youtube/v3/determine_quota_cost).
+
+출처가 50개보다 많아도 최근 실행한 출처가 계속 앞을 점유하지 않도록 미실행·오래된 `lastCheckedAt` 출처를 먼저 검토합니다. backoff/미도래 출처는 조회된 `nextRunAt`으로 보류하고 50개 실수집 슬롯을 소모하지 않습니다. 기존 atomic lease가 최종 실행 가능 여부를 결정합니다.
+
+X 게시물 수집은 이번 worker에 구현·활성화하지 않았습니다. 공식 API 접근·비용·publisher/media 증거가 연결되지 않은 상태에서 임의 scraper나 다른 이미지로 대신하지 않습니다. YouTube 역시 검증한 출처와 반환한 범위만 수집하며 모든 게임·모든 공식 SNS의 완전한 자동 수집을 주장하지 않습니다.
+
+최신 로컬 검증은 Firebase worker **447/447**, collector **107/107**입니다. 기존 348개 중 이전 게시물의 최근 수정으로 범위에 포함하던 YouTube 시험 1개는 사용자 요청한 10월 게시일 기준에 맞게 제외 검증으로 변경했고, 99개 검증을 추가했습니다. 여기에는 API adapter/키 전송 차단, 날짜·이미지·원본 증거, 정리 지문/연결 관계, 만료·재검증, 공정 순서, 삭제 공지 발송 중지, 실제 크기 불일치 대체 이미지 차단 및 이미지 요청 한도 등이 포함됩니다. 이미지 시험은 합성 JPEG/PNG/WebP 헤더와 모의 응답만 쓰며 실제 이미지 파일을 테스트에 복사하지 않습니다. 이 결과는 모의 API/MemoryStore이며 실제 API 연결·운영 DB 적재·정리·GitHub 예약 실행·기기 수신은 각 운영 보고서에서 별도로 확인합니다.
+
