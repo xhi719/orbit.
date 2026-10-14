@@ -19,6 +19,7 @@ FIELDS={
  "pickupSchedules":{"id","eventId","gameId","serverRegion","serverLabel","officialUrl","verificationStatus","lastCheckedAt","firstCheckedAt","firstConfirmedAt","lastChangedAt","pickupKind","characters","weapons","outfits","startsAt","endsAt","lastVerifiedAt"},
 }
 FIELDS["gameSources"].add("pairedTicketNotice")
+FIELDS["games"].add("highestCharacterRarity")
 TIME_FIELDS={"termsCheckedAt","noticeHostsVerifiedAt","publisherIdentityCheckedAt","youtubeUploadsPlaylistVerifiedAt","lastCheckedAt","lastSuccessAt","lastErrorAt","lastReverifiedAt","nextRunAt","publishedAt","sourceUpdatedAt","firstCheckedAt","lastChangedAt","lastVerifiedAt","startsAt","endsAt","reservationStartsAt","reservationEndsAt","ticketSalesAt","firstConfirmedAt","createdAt","updatedAt"}
 
 
@@ -100,6 +101,7 @@ def validate_change(collection,document_id,data,old=None):
  for field in TIME_FIELDS:
   if row.get(field) is not None:row[field]=timestamp(row[field])
  if collection=='games':
+  if row.get('highestCharacterRarity') is not None and (not isinstance(row['highestCharacterRarity'],str) or not 1<=len(row['highestCharacterRarity'].strip())<=40):raise SafetyError('valid_highest_character_rarity_required')
   if not https(row.get('officialWebsite')):raise SafetyError('official_website_https_required')
   names=row.get('names',{})
   if not isinstance(names,dict) or set(names)-{'ko','en','ja'} or not any(isinstance(v,str) and v for v in names.values()):raise SafetyError('official_game_name_required')
@@ -130,13 +132,15 @@ def validate_change(collection,document_id,data,old=None):
    from official_adapter import youtube_api_request
    try:youtube_api_request(operating_source({**row,'gameId':row.get('gameId','pending')}))
    except Exception as error:raise SafetyError('reviewed_youtube_uploads_playlist_required') from error
-  elif row.get('parser')in ['official_html','official_rss']:
+  elif row.get('parser')=='manual_review':
+   if row.get('enabled') is not False or row.get('accessStatus')!='manual_only':raise SafetyError('manual_source_must_remain_disabled')
+  elif row.get('parser')in ['official_html','official_rss','kuro_cms','genshin_cms']:
    from collector import operating_source,reviewed
    if not reviewed(operating_source({**row,'gameId':row.get('gameId','pending')})):raise SafetyError('reviewed_publisher_article_source_required')
   elif row.get('parser')!='steam_news' or not isinstance(row.get('steamAppid'),int):raise SafetyError('reviewed_source_adapter_required')
   if row.get('intervalMinutes',0)<15:raise SafetyError('minimum_source_interval_15_minutes')
   if row.get('enabled') is True:
-   if row.get('parser')in ['youtube_atom','youtube_data_api','official_html','official_rss']:
+   if row.get('parser')in ['youtube_atom','youtube_data_api','official_html','official_rss','kuro_cms','genshin_cms']:
     from collector import reviewed,operating_source
     if not reviewed(operating_source({**row,'gameId':row.get('gameId','pending')})):raise SafetyError('source_permission_evidence_required')
    elif row.get('accessStatus')!='approved' or not row.get('termsCheckedAt') or not row.get('noticeHostsVerifiedAt') or not https(row.get('termsUrl')) or row.get('feedAllowlist')!=['steam_community_announcements'] or not row.get('allowedNoticeHosts'):raise SafetyError('source_permission_evidence_required')
@@ -312,3 +316,4 @@ if __name__=='__main__':
  except SafetyError as error:
   if str(error)not in('collector_daily_soft_budget_exhausted','worker_run_soft_budget_exhausted'):raise
   print(json.dumps({'status':'DEFERRED_QUOTA_BUDGET','reasonCode':str(error)}))
+

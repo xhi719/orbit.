@@ -42,7 +42,8 @@ YOUTUBE_FEED_PATHS = ("/feeds/videos.xml", "/xml/feeds/videos.xml")
 YOUTUBE_FEED_DOCUMENTATION = "https://developers.google.com/youtube/v3/guides/push_notifications"
 YOUTUBE_API_TERMS = "https://developers.google.com/youtube/terms/api-services-terms-of-service"
 YOUTUBE_PARSERS = frozenset({"youtube_atom","youtube_data_api"})
-OFFICIAL_SITE_PARSERS = frozenset({"official_html","official_rss"})
+OFFICIAL_CMS_PARSERS = frozenset({"kuro_cms", "genshin_cms"})
+OFFICIAL_SITE_PARSERS = frozenset({"official_html","official_rss", *OFFICIAL_CMS_PARSERS})
 YOUTUBE_NOTICE_IMAGE_POLICY_VERSION = 3
 CONTENT_CLASSIFICATION_VERSION = 1
 NEWS_ONLY_KINDS = frozenset({"character-pv", "event-pv"})
@@ -54,10 +55,10 @@ YOUTUBE_ADMITTED_NEWS_KINDS = NEWS_ONLY_KINDS | CALENDAR_PREVIEW_KINDS | frozens
 CONTENT_EXCLUDED_TITLE = re.compile(r"\b(?:OST|soundtrack|music\s*video|song|cover|shorts|guide|tutorial|how\s*to|recap|highlights?)\b|#shorts|다시\s*보기|하이라이트|공략|가이드|쇼츠|음악(?!회)|커버|歌ってみた|攻略|解説|切り抜き", re.I)
 CONTENT_CHARACTER_PV = re.compile(r"(?:캐릭터|인형|에이전트|ニケ|キャラクター|人形|エージェント|character|doll|agent)\s*(?:[^\n|｜:：]{0,60}?\s*)?(?:(?<![A-Za-z])PV(?![A-Za-z])|프로모션\s*비디오|promotion\s*video|demo|trailer|teaser)|\b(?:PV|trailer|teaser)\b\s*(?:[-|:：]\s*)?(?:캐릭터|인형|キャラクター|character|doll)", re.I)
 CONTENT_EVENT_PV = re.compile(r"(?:이벤트|イベント|event)\s*(?:[^\n|｜:：]{0,60}?\s*)?(?:(?<![A-Za-z])PV(?![A-Za-z])|프로모션\s*비디오|promotion\s*video|trailer|teaser)|\b(?:PV|trailer|teaser)\b\s*(?:[-|:：]\s*)?(?:이벤트|イベント|event)", re.I)
-CONTENT_PREVIEW = re.compile(r"예고|안내|공지|사전\s*안내|소식|공개|시작|개최|실시|신규|판매|예약|예매|\b(?:new|preview|announcement|notice|coming|announced|starting|available|opens?|begins?|launch|sale|release)\b|告知|予告|開催|開催決定|新規|新登場|販売|予約", re.I)
+CONTENT_PREVIEW = re.compile(r"예고|안내|공지|사전\s*안내|소식|공개|시작|개최|실시|신규|판매|예약|예매|오픈|\b(?:new|preview|announcement|notice|coming|announced|starting|available|opens?|begins?|launch|sale|release)\b|告知|予告|開催|開催決定|新規|新登場|販売|予約", re.I)
 CONTENT_BROADCAST = re.compile(r"특별\s*방송|공식\s*(?:생)?방송|개발자\s*방송|생방송|\b(?:special\s*(?:program|broadcast)|live\s*stream|livestream|developer\s*(?:stream|broadcast))\b|公式\s*生放送|特別番組|生放送", re.I)
 CONTENT_OFFLINE = re.compile(r"오프라인|콜라보\s*카페|팝업\s*스토어|전시회|콘서트|음악회|오케스트라|페스티벌|팬미팅|\b(?:offline|collab(?:oration)?\s*caf[eé]|pop[- ]?up|exhibition|concert|orchestra|festival|fan\s*meeting)\b|コラボカフェ|ポップアップ|展覧会|コンサート|オフライン|フェスティバル", re.I)
-CONTENT_PICKUP = re.compile(r"픽업|모집|한정\s*뽑기|\b(?:pick[- ]?up|banner|event\s*wishes|recruitment|targeted\s*procurement|military\s*upgrade)\b|ピックアップ|募集|召集|おいのり", re.I)
+CONTENT_PICKUP = re.compile(r"픽업|모집|한정\s*뽑기|이벤트\s*기원|」\s*기원|캐릭터\s*이벤트\s*튜닝|\b(?:pick[- ]?up|banner|event\s*wishes|recruitment|targeted\s*procurement|military\s*upgrade)\b|ピックアップ|募集|召集|おいのり", re.I)
 CONTENT_EVENT = re.compile(r"이벤트|\b(?:limited[- ]time\s*event|time[- ]limited\s*event|event)\b|イベント", re.I)
 CONTENT_GOODS = re.compile(r"굿즈|상품\s*예약|예약\s*판매|재입고|\b(?:merchandise|merch|goods|pre[- ]?orders?|restock)\b|グッズ|予約販売|再入荷", re.I)
 CONTENT_COLLABORATION = re.compile(r"콜라보|컬래버레이션|협업|\b(?:collab(?:oration)?|crossover)\b|コラボ", re.I)
@@ -165,6 +166,42 @@ def notice_has_representative_image(row, observed=None):
     return False
 
 
+def verified_calendar_day_period(row, observed=None):
+    """An older publisher notice may establish an October calendar period.
+
+    This does not admit the older article into news or invent game timestamps.
+    Only a separately reviewed main role, exact source-bound period and image
+    can survive the public-news cutoff. These rows are never clock-based push
+    schedules merely because their calendar dates have been reviewed.
+    """
+    proof=row.get("calendarPeriod") or {}
+    role=row.get("calendarRoleEvidence") or {}
+    selected=row.get("displayTitle") or row.get("sourceSectionTitle") or row.get("originalTitle")
+    if (not isinstance(proof,dict)or proof.get("version")!=1 or proof.get("mode")!="official_day_range_v1"
+        or proof.get("status")!="verified" or proof.get("precision")!="day"
+        or proof.get("sourceUrl")!=row.get("officialUrl") or not safe_public_url(proof.get("sourceUrl"))
+        or not re.fullmatch(r"[a-f0-9]{64}",str(row.get("rawSha256","")))
+        or proof.get("sourceSha256")!=row["rawSha256"] or proof.get("sourceTitle")!=selected
+        or not isinstance(proof.get("evidenceText"),str)or not proof["evidenceText"].strip()
+        or row.get("calendarRole")not in("main-character","main-event")or not isinstance(role,dict)
+        or role.get("status")!="verified"or role.get("sourceSha256")!=row["rawSha256"]
+        or role.get("sourceTitle")!=selected or role.get("evidenceUrl")!=row.get("officialUrl")
+        or row.get("status")in("cancelled","postponed","rejected")):
+        return False
+    try:
+        start,end=(datetime.strptime(proof[key],"%Y-%m-%d").date().isoformat()for key in("startsOn","endsOn"))
+        if start!=proof["startsOn"]or end!=proof["endsOn"]or start>end or end<"2026-10-01"or start>="2026-11-01":return False
+        clock=timestamp(observed or datetime.now(UTC))
+        if timestamp(proof.get("checkedAt"))>clock or timestamp(role.get("checkedAt"))>clock:return False
+    except(ValueError,TypeError,KeyError):return False
+    auxiliary=[proof.get("auxiliarySourceUrl"),proof.get("auxiliarySourceSha256"),proof.get("auxiliaryEvidenceText")]
+    if proof.get("startsOnBasis")not in(None,"version-update-day"):return False
+    if proof.get("startsOnBasis")=="version-update-day"or any(value is not None for value in auxiliary):
+        if not safe_public_url(auxiliary[0])or not re.fullmatch(r"[a-f0-9]{64}",str(auxiliary[1]))or not isinstance(auxiliary[2],str)or not auxiliary[2].strip():return False
+    if row["calendarRole"]=="main-character" and (row.get("announcementKind")!="new"or not row.get("characterNames")or not row.get("rarityLabel")):return False
+    return notice_has_representative_image(row,observed)
+
+
 def apply_notice_content_policy(row, observed=None, *, source=None):
     """Idempotent public-only migration/ingestion policy; never changes dates."""
     if source is not None and reviewed(source):
@@ -190,7 +227,7 @@ def apply_notice_content_policy(row, observed=None, *, source=None):
         or row.get("derivedCharacterAnnouncements",0)>0 or row.get("derivedSectionCount",0)>0):
         calendar=False
     source_clock = news and verified_pending_main_role_clock(row, classification)
-    return {**row, "contentKind": classification["kind"], "contentClassification": classification, "newsEligible": news, "calendarEligible": bool(calendar or source_clock), "sourceClockOnly": bool(source_clock)}
+    return {**row, "contentKind": classification["kind"], "contentClassification": classification, "newsEligible": news, "calendarEligible": bool(calendar or source_clock or verified_calendar_day_period(row,observed)), "sourceClockOnly": bool(source_clock)}
 
 
 def verified_pending_main_role_clock(row, classification=None):
@@ -1300,7 +1337,7 @@ def youtube_metadata_expired(row, now):
 
 def content_cleanup_reason(row, now):
     gate=content_publication_status(row.get("publishedAt"))
-    if gate=="PUBLISHED_BEFORE_CONTENT_CUTOFF":return gate
+    if gate=="PUBLISHED_BEFORE_CONTENT_CUTOFF" and not verified_calendar_day_period(row,now):return gate
     if youtube_metadata_expired(row,now):return "YOUTUBE_METADATA_EXPIRED"
     return None
 
@@ -1560,7 +1597,14 @@ def reviewed(source):
     if source.get("parser")in OFFICIAL_SITE_PARSERS:
         try:
             from official_adapter import official_html_request,official_rss_request
-            (official_html_request if source["parser"]=="official_html"else official_rss_request)(source)
+            if source["parser"] == "kuro_cms":
+                from official_adapter import kuro_cms_request
+                kuro_cms_request(source)
+            elif source["parser"] == "genshin_cms":
+                from official_adapter import genshin_cms_request
+                genshin_cms_request(source)
+            else:
+                (official_html_request if source["parser"]=="official_html"else official_rss_request)(source)
             policy_timestamp(source.get("publisher_identity_checked_at"))
         except (ImportError,ValidationError,ValueError,TypeError):return False
         return bool(safe_public_url(source.get("publisher_identity_evidence_url"))and source.get("feed_allowlist")==["official_publisher_articles"]
@@ -2142,7 +2186,7 @@ def collect_one(store, source, start, end, mode="backfill", fetch=fetch_source, 
     metrics.update(candidateSchedules=0,candidateSectionSchedules=0,beforeContentCutoffSkipped=0,publicationUnconfirmedSkipped=0,contentExcluded=0,contentSuppressedUpdated=0,videoDetailsRequests=0,videoDetailsFailures=0)
     metrics.update(afterContentMonthSkipped=0,backfillResumeUsed=bool(matching),backfillCursorCommitted=False,sharedChannelOtherGameSkipped=0)
     success,error,http_status,retry_after=False,None,None,0
-    cursor=1 if source["parser"]=="official_html" else int(end.timestamp())+1;page_token=None;seen_page_tokens=set()
+    cursor=1 if source["parser"]=="official_html" or source["parser"]in OFFICIAL_CMS_PARSERS else int(end.timestamp())+1;page_token=None;seen_page_tokens=set()
     if matching:
         if source["parser"]=="youtube_data_api" and previous.get("pageToken"):
             page_token=previous["pageToken"]
@@ -2174,12 +2218,34 @@ def collect_one(store, source, start, end, mode="backfill", fetch=fetch_source, 
             elif source["parser"]=="official_rss":
                 from official_adapter import official_rss_request,parse_official_rss_documents
                 request=official_rss_request(source)
+            elif source["parser"]in OFFICIAL_CMS_PARSERS:
+                from official_adapter import kuro_cms_request,parse_kuro_cms_index,parse_kuro_cms_article,genshin_cms_request,parse_genshin_cms_index,parse_genshin_cms_article
+                cms_request,cms_index,cms_article=(kuro_cms_request,parse_kuro_cms_index,parse_kuro_cms_article)if source["parser"]=="kuro_cms"else(genshin_cms_request,parse_genshin_cms_index,parse_genshin_cms_article)
+                request=cms_request(source,**({"page":cursor}if source["parser"]=="genshin_cms"else{}))
             else:request=youtube_request(source) if source["parser"]=="youtube_atom" else steam_request({**source,"enabled":True},cursor,50)
             http_status,raw,headers=fetch(request);metrics["pagesFetched"]+=1
             if http_status!=200:
                 retry_after=retry_after_seconds(headers.get("retry-after"))
                 raise SafetyError("source_http_"+str(http_status))
-            if source["parser"]=="official_html":
+            if source["parser"]in OFFICIAL_CMS_PARSERS:
+                entries=cms_index(raw,source);documents=[]
+                dates_for_index=[entry["publishedDate"]for entry in entries]
+                for entry in entries:
+                    date=datetime.strptime(entry["publishedDate"],"%Y.%m.%d").replace(tzinfo=UTC)
+                    if date.date()<CONTENT_CUTOFF.astimezone(timezone(timedelta(hours=9))).date()or date.date()>=CONTENT_MONTH_END.astimezone(timezone(timedelta(hours=9))).date()or date.date()>observed.date():continue
+                    if not source_document_allowed(source,entry["title"]):metrics["sharedChannelOtherGameSkipped"]+=1;continue
+                    if source.get("news_scope")=="relevant_game_news_v1" and classify_notice_content({"originalTitle":entry["title"],"rawSha256":"a"*64})["kind"]=="other":metrics["contentExcluded"]+=1;continue
+                    if metrics.get("publisherArticleRequests",0)>=40:raise SafetyError("publisher_article_request_limit")
+                    if deadline is not None and time.monotonic()>=deadline:raise SafetyError("run_time_limit")
+                    sleep(1);article_status,article_raw,_=fetch(cms_request(source,article_id=entry["id"]))
+                    metrics["publisherArticleRequests"]=metrics.get("publisherArticleRequests",0)+1
+                    if article_status!=200:raise SafetyError("publisher_article_http_"+str(article_status))
+                    article=cms_article(article_raw,source,entry["url"],observed.isoformat())
+                    if article.get("publication_local_date")!=entry["publishedDate"].replace(".","-")or plain_notice(article["original_title"])!=plain_notice(entry["title"]):raise SafetyError("publisher_list_article_identity_changed")
+                    documents.append(article)
+                parsed={"items_seen":len(entries),"items_accepted":len(documents),"items_skipped":len(entries)-len(documents),"skip_reasons":[],
+                    "publication_cutoff_reached":bool(dates_for_index and min(dates_for_index)<"2026.10.01"),"coverage_reason":"PUBLIC_PUBLISHER_CMS_INDEX"}
+            elif source["parser"]=="official_html":
                 entries=parse_official_html_index(raw,source,cursor);documents=[];dates_for_index=[entry["publishedDate"]for entry in entries]
                 if dates_for_index!=sorted(dates_for_index,reverse=True):raise SafetyError("publisher_board_publication_order_unconfirmed")
                 for entry in entries:
@@ -2283,8 +2349,8 @@ def collect_one(store, source, start, end, mode="backfill", fetch=fetch_source, 
                     metrics["olderUnseenSkipped"]+=1
             oldest=min(dates) if dates else None
             if source["parser"]in OFFICIAL_SITE_PARSERS:
-                if source["parser"]=="official_rss" or mode=="reverify" or not parsed["items_seen"] or parsed.get("publication_cutoff_reached"):
-                    complete=source["parser"]=="official_html" and (not parsed["items_seen"]or parsed.get("publication_cutoff_reached"))
+                if source["parser"]in("official_rss","kuro_cms") or mode=="reverify" or not parsed["items_seen"] or parsed.get("publication_cutoff_reached"):
+                    complete=source["parser"]in("official_html","genshin_cms","kuro_cms") and (source["parser"]=="kuro_cms"or not parsed["items_seen"]or parsed.get("publication_cutoff_reached"))
                     metrics.update(providerPaginationComplete=bool(complete),publicationCutoffReached=bool(parsed.get("publication_cutoff_reached")),windowCoverageVerified=bool(complete),
                         coverageReason="PUBLISHER_BOARD_DATE_BOUNDARY_REACHED" if complete else parsed.get("coverage_reason","PUBLIC_ARTICLES_BOUNDED_REVERIFY"))
                     if mode=="content-backfill":checkpoint_month_backfill(store,source,token,start,end,cursor=cursor,complete=True,pages=1);metrics["backfillCursorCommitted"]=True
@@ -2487,3 +2553,4 @@ if __name__=="__main__":
         if str(error)in("collector_daily_soft_budget_exhausted","worker_run_soft_budget_exhausted","collector_free_quota_headroom"):
             print(json.dumps({"status":"DEFERRED_QUOTA_BUDGET","reasonCode":str(error),"fullSourceCoverageVerified":False}));sys.exit(0)
         print(json.dumps({"status":"BLOCKED","reasonCode":str(error),"firebaseConnectionVerified":False}));sys.exit(1)
+
