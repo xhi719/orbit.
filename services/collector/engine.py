@@ -6,6 +6,8 @@ from html.parser import HTMLParser
 import http.client
 import ipaddress
 import json
+import os
+import re
 import socket
 import ssl
 from datetime import datetime
@@ -255,6 +257,17 @@ def fetch_source(source: dict) -> tuple[int, bytes, dict]:
         raise ValidationError("source_access_not_approved")
     url = source["url"]
     headers = {"User-Agent": "SubcultureHubCollector/1.0 (official-source; terms-reviewed)", "Accept": "application/json,application/rss+xml,application/atom+xml,text/html"}
+    youtube_api = source.get("parser") == "youtube_data_api"
+    if youtube_api:
+        endpoint = urlsplit(normalize_url(url))
+        parameters = dict(parse_qsl(endpoint.query, keep_blank_values=True))
+        if endpoint.hostname != "www.googleapis.com" or source.get("official_host") != "www.googleapis.com" or endpoint.path != "/youtube/v3/playlistItems" \
+            or set(parameters) - {"part", "playlistId", "maxResults", "pageToken"}:
+            raise ValidationError("youtube_api_endpoint_not_approved")
+        key = os.environ.get("YOUTUBE_API_KEY", "")
+        if not re.fullmatch(r"AIza[A-Za-z0-9_-]{35}", key):
+            raise ValidationError("youtube_api_key_not_configured")
+        headers["X-Goog-Api-Key"] = key
     if source.get("etag"):
         headers["If-None-Match"] = source["etag"]
     if source.get("last_modified"):
@@ -270,6 +283,8 @@ def fetch_source(source: dict) -> tuple[int, bytes, dict]:
             response = connection.getresponse()
             response_headers = {key.lower(): value for key, value in response.getheaders()}
             if response.status in (301, 302, 303, 307, 308):
+                if youtube_api:
+                    raise ValidationError("authenticated_source_redirect_blocked")
                 url = urljoin(url, response_headers.get("location", ""))
                 continue
             if response.status == 304:

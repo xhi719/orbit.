@@ -45,6 +45,131 @@ def steam_request(source, enddate, count=50):
     return {**source, "url": endpoint + "?" + query}
 
 
+YOUTUBE_API_ENDPOINT = "https://www.googleapis.com/youtube/v3/playlistItems"
+YOUTUBE_API_DOCUMENTATION = "https://developers.google.com/youtube/v3/docs/playlistItems/list"
+_YOUTUBE_CHANNEL_ID = re.compile(r"UC[A-Za-z0-9_-]{22}")
+_YOUTUBE_UPLOADS_ID = re.compile(r"UU[A-Za-z0-9_-]{22}")
+_YOUTUBE_VIDEO_ID = re.compile(r"[A-Za-z0-9_-]{11}")
+_YOUTUBE_PAGE_TOKEN = re.compile(r"[A-Za-z0-9_+=./:-]{1,512}")
+
+
+def youtube_api_request(source, page_token=None, count=50):
+    """Public uploads metadata only. A separate transport supplies a restricted
+    API key in its header; source URLs, dictionaries and reports contain no key.
+    The uploads playlist must have been observed from the official channel API,
+    rather than manufactured by replacing a channel-ID prefix.
+    """
+    channel, playlist = source.get("youtube_channel_id"), source.get("youtube_uploads_playlist_id")
+    if (source.get("parser") != "youtube_data_api" or not isinstance(channel, str) or not _YOUTUBE_CHANNEL_ID.fullmatch(channel)
+        or not isinstance(playlist, str) or not _YOUTUBE_UPLOADS_ID.fullmatch(playlist)):
+        raise ValidationError("youtube_api_source_identity_required")
+    if any(str(key).lower() in {"key", "api_key", "apikey", "headers", "authorization", "access_token", "accesstoken"} for key in source):
+        raise ValidationError("youtube_api_credentials_forbidden")
+    try:
+        parsed = urlsplit(source.get("url", ""))
+        query = parse_qsl(parsed.query, keep_blank_values=True)
+        if (parsed.scheme != "https" or parsed.hostname != "www.googleapis.com" or parsed.port not in (None,443)
+            or parsed.username or parsed.password or parsed.path != "/youtube/v3/playlistItems" or parsed.fragment):
+            raise ValidationError("youtube_api_public_endpoint_required")
+    except (ValueError, TypeError) as error:
+        raise ValidationError("youtube_api_public_endpoint_required") from error
+    if len({key for key, _ in query}) != len(query) or any(key not in {"part", "playlistId", "maxResults", "pageToken"} for key, _ in query):
+        raise ValidationError("youtube_api_query_invalid")
+    for key, value in query:
+        if (key == "part" and value != "snippet,contentDetails" or key == "playlistId" and value != playlist
+            or key == "maxResults" and not re.fullmatch(r"(?:[1-9]|[1-4][0-9]|50)", value)
+            or key == "pageToken" and not _YOUTUBE_PAGE_TOKEN.fullmatch(value)):
+            raise ValidationError("youtube_api_query_invalid")
+    if not isinstance(count,int) or isinstance(count,bool) or not 1 <= count <= 50:
+        raise ValidationError("youtube_api_count_invalid")
+    if page_token is not None and (not isinstance(page_token,str) or not _YOUTUBE_PAGE_TOKEN.fullmatch(page_token)):
+        raise ValidationError("youtube_api_page_token_invalid")
+    parameters = {"part":"snippet,contentDetails", "playlistId":playlist, "maxResults":count}
+    if page_token is not None: parameters["pageToken"] = page_token
+    return {**source, "url":YOUTUBE_API_ENDPOINT+"?"+urlencode(parameters), "method":"official_api", "official_host":"www.googleapis.com", "enabled":True}
+
+
+def parse_youtube_api_documents(raw, source, observed_at):
+    """Normalize the official uploads playlist without treating its add date as
+    the video's public release, or its thumbnail as a character pickup banner.
+    Private/deleted placeholders without a public release date are skipped.
+    Cross-channel, cross-playlist and cross-video identities fail closed.
+    """
+    youtube_api_request(source)
+    if not isinstance(raw,(bytes,str)) or len(raw) > 2097152:
+        raise ValidationError("youtube_api_response_too_large")
+    try:
+        payload = json.loads(raw)
+    except (ValueError,UnicodeError) as error:
+        raise ValidationError("youtube_api_json_invalid") from error
+    if not isinstance(payload,dict) or "error" in payload:
+        raise ValidationError("youtube_api_error_response")
+    if payload.get("kind") != "youtube#playlistItemListResponse":
+        raise ValidationError("youtube_api_response_kind_invalid")
+    items, continuation = payload.get("items"), payload.get("nextPageToken")
+    if not isinstance(items,list) or len(items) > 50:
+        raise ValidationError("youtube_api_items_invalid")
+    if continuation is not None and (not isinstance(continuation,str) or not _YOUTUBE_PAGE_TOKEN.fullmatch(continuation)):
+        raise ValidationError("youtube_api_page_token_invalid")
+    channel, playlist = source["youtube_channel_id"], source["youtube_uploads_playlist_id"]
+    documents, seen, skipped = [], set(), []
+    for item in items:
+        if not isinstance(item,dict) or item.get("kind") != "youtube#playlistItem":
+            raise ValidationError("youtube_api_item_invalid")
+        snippet, details = item.get("snippet"), item.get("contentDetails")
+        if not isinstance(snippet,dict) or not isinstance(details,dict):
+            raise ValidationError("youtube_api_item_invalid")
+        if snippet.get("playlistId") != playlist or snippet.get("channelId") != channel:
+            raise ValidationError("youtube_api_response_channel_mismatch")
+        published = details.get("videoPublishedAt")
+        if published is None:
+            skipped.append("video_publication_unconfirmed")
+            continue
+        if snippet.get("videoOwnerChannelId") != channel:
+            raise ValidationError("youtube_api_video_owner_mismatch")
+        identity = snippet.get("resourceId")
+        video = details.get("videoId")
+        if (not isinstance(identity,dict) or identity.get("kind") != "youtube#video" or not isinstance(video,str)
+            or not _YOUTUBE_VIDEO_ID.fullmatch(video) or identity.get("videoId") != video or video in seen):
+            raise ValidationError("youtube_api_video_identity_mismatch")
+        seen.add(video)
+        title, content, playlist_item = snippet.get("title"), snippet.get("description", ""), item.get("id")
+        if (not isinstance(title,str) or not 1 <= len(title.strip()) <= 500 or not isinstance(content,str) or len(content)>200000
+            or not isinstance(playlist_item,str) or not 1 <= len(playlist_item) <= 256 or any(ord(char)<32 for char in playlist_item)):
+            raise ValidationError("youtube_api_document_fields_invalid")
+        published_time = aware_timestamp(published)
+        added = snippet.get("publishedAt")
+        if added is not None: aware_timestamp(added)
+        thumbnails = []
+        image_map = snippet.get("thumbnails", {})
+        if not isinstance(image_map,dict): raise ValidationError("youtube_api_thumbnails_invalid")
+        for quality in ("uhd","qhd","fhd","maxres","standard","high","medium","default"):
+            image = image_map.get(quality)
+            if not isinstance(image,dict): continue
+            try:
+                url = normalize_url(image.get("url"))
+                parsed = urlsplit(url)
+                if (parsed.hostname not in ("i.ytimg.com","i1.ytimg.com","i2.ytimg.com","i3.ytimg.com","i4.ytimg.com")
+                    or not re.fullmatch(r"/(?:vi|vi_webp)/"+re.escape(video)+r"/[A-Za-z0-9_.-]+",parsed.path)):
+                    continue
+            except (ValidationError,ValueError,TypeError): continue
+            if url not in thumbnails: thumbnails.append(url)
+        url = "https://www.youtube.com/watch?"+urlencode({"v":video})
+        raw_item = {"channelId":channel,"videoId":video,"title":title,"description":content,"published":published,"updated":None,
+            "officialUrl":url,"originalVideoUrl":url,"thumbnailUrls":thumbnails,"playlistItemId":playlist_item,
+            "uploadsPlaylistId":playlist,"addedToPlaylistAt":added}
+        original_json = json.dumps(raw_item,ensure_ascii=False,sort_keys=True)
+        hints = [kind for kind,patterns in TYPES.items() if any(re.search(pattern,title+"\n"+content,re.I) for pattern in patterns)]
+        documents.append({"external_key":video,"raw_sha256":hashlib.sha256(original_json.encode()).hexdigest(),"raw_json":raw_item,
+            "raw_publication_timestamp":published,"published_at":published_time.isoformat(),"source_updated_at":None,
+            "observed_at":observed_at,"official_url":url,"original_title":title,"original_description":content,
+            "original_language":source.get("content_language") or "unknown","server_region":source.get("server_region") or "UNSPECIFIED",
+            "server_label":source.get("server_label"),"event_type_candidates":hints,"pickups":[],"source_image_urls":thumbnails,
+            "source_provider":"youtube","source_channel_id":channel,"source_video_id":video})
+    return documents, {"items_seen":len(items),"items_accepted":len(documents),"items_skipped":len(skipped),"skip_reasons":skipped,
+        "next_page_token":continuation,"window_coverage_verified":False,"coverage_reason":"PAGINATED_UPLOADS_BOUNDARY_NOT_YET_VERIFIED"}
+
+
 def parse_steam_documents(raw, source, observed_at):
     try:
         payload = json.loads(raw)
