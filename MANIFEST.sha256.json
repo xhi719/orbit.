@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "recordedAt": "2026-10-13T22:04:23.647262+00:00",
+  "recordedAt": "2026-10-14T00:43:22.437Z",
   "scope": "APPROVED_PUBLIC_WORKER_EXPECTED_BYTES",
-  "sourceBaseCommit": "955d36bc0faa507850264ac71ba6602c6c4235d8",
+  "sourceBaseCommit": "0bde754fffc7dfdd37cb82ecfebf799f5f92f175",
   "files": [
     {
       "path": ".github/workflows/firebase-free-collector.yml",
@@ -26,8 +26,8 @@
     },
     {
       "path": "docs/github-free-runner-plan.md",
-      "bytes": 18569,
-      "sha256": "5845636f413c2ff393de9b34419276cc583582f86c0a141d83efa16a4c291807"
+      "bytes": 23933,
+      "sha256": "07dfce87aa5dcf642c4ec9fd14ca64e28167906e83dba76cd2c9a6af0abdac57"
     },
     {
       "path": "README.md",
@@ -56,13 +56,13 @@
     },
     {
       "path": "services/firebase/admin.py",
-      "bytes": 24750,
-      "sha256": "75543ea5afcc7ec9111dc652434b106052f1d0f0c06f823abbb0fa450a96c1ab"
+      "bytes": 25037,
+      "sha256": "b6982ea9d62978be509e46fdf356c90323fc61d7bf12f402d592c9567739907d"
     },
     {
       "path": "services/firebase/collector.py",
-      "bytes": 92590,
-      "sha256": "bf9b059f9520646572240a734225af2513fd733a3b20bbdc7d1a757a90dd6413"
+      "bytes": 102268,
+      "sha256": "7d3ced2058dcf9079d0682a1f450d4c8935425bdbd7f286bd5ccf38ed69dfa9d"
     },
     {
       "path": "services/firebase/iam/orbit-free-fcm-sender-role.json",
@@ -81,8 +81,8 @@
     },
     {
       "path": "services/firebase/notifications.py",
-      "bytes": 28354,
-      "sha256": "4ee7faa6a1c3bd252a23e02a28a7d214df2f83ab49c6c80b54e6f0a353e7891c"
+      "bytes": 41179,
+      "sha256": "ccb66407397575d52105d1aa26a67632a9beecf0a3c6b846f99505693eff8435"
     },
     {
       "path": "services/firebase/requirements.txt",
@@ -91,24 +91,22 @@
     },
     {
       "path": "services/firebase/store.py",
-      "bytes": 10433,
-      "sha256": "e09b206b7789063ff1b25f2b3fd31dae3a65a26c45cf0cd0c8e74bc0da4d4376"
+      "bytes": 11831,
+      "sha256": "75c79ed8ec1dbb0bdc08b233b799da873a7bed90ff2c7faf592c31c3a02510e8"
     },
     {
       "path": "services/firebase/tests/test_firebase.py",
-      "bytes": 128976,
-      "sha256": "2222fc8ed2aa154a8c98c712e800281953adfb039dbdd3e2e60ebd5f84c6fa55"
+      "bytes": 162704,
+      "sha256": "586fc4ff1c0b5014552f4a43216dce05db688750a80488924636f3d6bcb9037f"
     }
   ],
-  "payloadBytes": 888839,
+  "payloadBytes": 1017460,
   "excluded": [
     "images",
-    "work",
-    "ADC",
+    "native apps",
+    "frontend",
     "credentials",
-    "private user/device data",
-    "raw collection evidence",
-    "UI",
-    "native binaries"
+    "private user data",
+    "raw source evidence"
   ]
 }
