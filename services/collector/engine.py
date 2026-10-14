@@ -27,6 +27,48 @@ class ValidationError(ValueError):
     pass
 
 
+def image_dimensions(raw: bytes) -> tuple[int, int] | None:
+    """Read bounded raster headers only; no decoder, generated URL or pixel storage.
+
+    A successful image HTTP response may still be YouTube's tiny placeholder.
+    The caller also compares these dimensions with that exact API image entry.
+    """
+    if not isinstance(raw, bytes) or len(raw) > 2097152:
+        return None
+    width = height = 0
+    if raw.startswith(b'\x89PNG\r\n\x1a\n') and len(raw) >= 24 and raw[12:16] == b'IHDR':
+        width, height = int.from_bytes(raw[16:20], 'big'), int.from_bytes(raw[20:24], 'big')
+    elif raw.startswith(b'\xff\xd8'):
+        cursor = 2
+        for _ in range(4096):
+            if cursor + 2 > len(raw) or raw[cursor] != 255:
+                return None
+            while cursor < len(raw) and raw[cursor] == 255:
+                cursor += 1
+            if cursor >= len(raw): return None
+            marker = raw[cursor]; cursor += 1
+            if marker in (0xD9, 0xDA): return None
+            if marker in (0x01, *range(0xD0, 0xD9)): continue
+            if cursor + 2 > len(raw): return None
+            length = int.from_bytes(raw[cursor:cursor+2], 'big')
+            if length < 2 or cursor + length > len(raw): return None
+            if marker in (0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF):
+                if length < 8: return None
+                height, width = int.from_bytes(raw[cursor+3:cursor+5], 'big'), int.from_bytes(raw[cursor+5:cursor+7], 'big')
+                break
+            cursor += length
+    elif raw.startswith(b'RIFF') and len(raw) >= 30 and raw[8:12] == b'WEBP':
+        tag = raw[12:16]
+        if tag == b'VP8X':
+            width, height = 1 + int.from_bytes(raw[24:27], 'little'), 1 + int.from_bytes(raw[27:30], 'little')
+        elif tag == b'VP8 ' and raw[23:26] == b'\x9d\x01\x2a':
+            width, height = int.from_bytes(raw[26:28], 'little') & 16383, int.from_bytes(raw[28:30], 'little') & 16383
+        elif tag == b'VP8L' and raw[20] == 0x2F:
+            bits = int.from_bytes(raw[21:25], 'little')
+            width, height = 1 + (bits & 16383), 1 + ((bits >> 14) & 16383)
+    return (width, height) if 0 < width <= 16384 and 0 < height <= 16384 else None
+
+
 def normalize_url(value: str) -> str:
     if not isinstance(value, str) or len(value) > 4096:
         raise ValidationError("invalid_url")

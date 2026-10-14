@@ -141,9 +141,10 @@ def parse_youtube_api_documents(raw, source, observed_at):
         added = snippet.get("publishedAt")
         if added is not None: aware_timestamp(added)
         thumbnails = []
+        thumbnail_metadata = {}
         image_map = snippet.get("thumbnails", {})
         if not isinstance(image_map,dict): raise ValidationError("youtube_api_thumbnails_invalid")
-        for quality in ("uhd","qhd","fhd","maxres","standard","high","medium","default"):
+        for quality in ("maxres","standard","high","medium","default","fhd","qhd","uhd"):
             image = image_map.get(quality)
             if not isinstance(image,dict): continue
             try:
@@ -154,15 +155,19 @@ def parse_youtube_api_documents(raw, source, observed_at):
                     continue
             except (ValidationError,ValueError,TypeError): continue
             if url not in thumbnails: thumbnails.append(url)
+            width,height=image.get("width"),image.get("height")
+            if isinstance(width,int) and not isinstance(width,bool) and isinstance(height,int) and not isinstance(height,bool) and 0<width<=16384 and 0<height<=16384:
+                thumbnail_metadata[url]={"width":width,"height":height,"quality":quality}
         url = "https://www.youtube.com/watch?"+urlencode({"v":video})
         raw_item = {"channelId":channel,"videoId":video,"title":title,"description":content,"published":published,"updated":None,
-            "officialUrl":url,"originalVideoUrl":url,"thumbnailUrls":thumbnails,"playlistItemId":playlist_item,
+            "officialUrl":url,"originalVideoUrl":url,"thumbnailUrls":thumbnails,"thumbnailMetadata":thumbnail_metadata,"playlistItemId":playlist_item,
             "uploadsPlaylistId":playlist,"addedToPlaylistAt":added}
         original_json = json.dumps(raw_item,ensure_ascii=False,sort_keys=True)
         hints = [kind for kind,patterns in TYPES.items() if any(re.search(pattern,title+"\n"+content,re.I) for pattern in patterns)]
         documents.append({"external_key":video,"raw_sha256":hashlib.sha256(original_json.encode()).hexdigest(),"raw_json":raw_item,
             "raw_publication_timestamp":published,"published_at":published_time.isoformat(),"source_updated_at":None,
             "observed_at":observed_at,"official_url":url,"original_title":title,"original_description":content,
+            "source_image_metadata":thumbnail_metadata,
             "original_language":source.get("content_language") or "unknown","server_region":source.get("server_region") or "UNSPECIFIED",
             "server_label":source.get("server_label"),"event_type_candidates":hints,"pickups":[],"source_image_urls":thumbnails,
             "source_provider":"youtube","source_channel_id":channel,"source_video_id":video})
