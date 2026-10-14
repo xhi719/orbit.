@@ -1059,7 +1059,22 @@ class OfficialAnnouncementNotificationTests(unittest.TestCase):
   notice={**document(region=source['server_region'],sha=digest(raw)),'external_key':key,'original_title':raw['title'],'original_description':body,
    'raw_json':raw,'published_at':clock.isoformat(),'source_updated_at':updated.isoformat() if updated else None,'pickups':[]}
   upsert_notice(store,source,notice,updated or clock)
+  self.fixture_posters(store,updated or clock)
   return [row for _,row in store.list('gameEvents') if row.get('calendarRole') in ['main-character','main-event']]
+ def fixture_posters(self,store,clock):
+  # These notification-only fixtures now include a synthetic exact publisher
+  # poster, matching the production requirement that visible news has artwork.
+  # No real image, source or provider is contacted by this mock test helper.
+  from collector import apply_notice_content_policy
+  for event_id,row in store.list('gameEvents'):
+   if row.get('calendarRole') not in ['main-character','main-event']:continue
+   selected=row.get('displayTitle')or row.get('sourceSectionTitle')or row['originalTitle']
+   kind='pickup'if row['calendarRole']=='main-character'else'event'
+   row['image']={'url':'https://cdn.example/promotional/'+event_id+'.jpg','sourceUrl':row['officialUrl'],'kind':'PICKUP_ART'if kind=='pickup'else'EVENT_ART',
+    'rightsStatus':'APPROVED','rightsEvidenceUrl':'https://steamcommunity.com/announcement/synthetic-art-permission','subjectStatus':'MATCHED',
+    'subjectEvidence':{'status':'MATCHED','eventId':event_id,'officialUrl':row['officialUrl'],'kind':kind,'method':'source_alt',
+     'sourceSha256':row['rawSha256'],'sourceTitle':selected,'evidenceText':selected,'characterNames':row.get('characterNames',[])}}
+   store.records['gameEvents/'+event_id]=apply_notice_content_policy(row,clock)
  def job(self,store,rows,now=None):
   now=now or NOW+timedelta(minutes=2);self.assertEqual(plan_announcement_user(store,'alice',rows,now),1)
   jobs=store.list('users/alice/notificationJobs');self.assertEqual(len(jobs),1);return jobs[0][0]
@@ -1291,7 +1306,7 @@ class OfficialAnnouncementNotificationTests(unittest.TestCase):
  def test_new_doll_pickup_role_does_not_depend_on_generic_pickup_keyword_guess(self):
   s,source=self.new_block_fixture();body=self.new_block_text();clock=NOW+timedelta(minutes=1)
   notice={**document(region='KR',sha='d'*64),'original_description':body,'event_type_candidates':['update'],'published_at':clock.isoformat(),'pickups':[]}
-  upsert_notice(s,source,notice,clock);rows=[row for _,row in s.list('gameEvents') if row.get('calendarRole')=='main-character']
+  upsert_notice(s,source,notice,clock);self.fixture_posters(s,clock);rows=[row for _,row in s.list('gameEvents') if row.get('calendarRole')=='main-character']
   self.assertEqual(len(rows),1);self.assertEqual(rows[0]['categoryCandidate'],'recruitment');self.assertTrue(eligible(s,'alice',rows[0],ANNOUNCEMENT_KIND,NOW+timedelta(minutes=2)))
  def test_verified_story_period_never_becomes_new_doll_pickup_schedule(self):
   s,source=self.new_block_fixture();source.update(schedule_extraction_approved=True,schedule_extraction_reviewed_at=NOW.isoformat(),schedule_extraction_evidence_url='https://steamcommunity.com/announcement/format')
@@ -1796,5 +1811,142 @@ class SchedulePublicationCutoffTests(unittest.TestCase):
   self.assertTrue(eligible(store,'alice',video,'event:start',NOW))
   for patch_value in [{'metadataExpiresAt':NOW},{'metadataExpiresAt':None},{'metadataCheckedAt':None},{'metadataCheckedAt':NOW+timedelta(seconds=1)}, {'metadataExpiresAt':checked+timedelta(days=31)}]:
    current={**video,**patch_value};self.assertFalse(eligible(store,'alice',current,'event:start',NOW));self.assertFalse(eligible(store,'alice',current,'reservation:1d',NOW));self.assertEqual(plan_user(store,'alice',[current],NOW),0)
+
+class SelectiveOfficialSocialContentTests(unittest.TestCase):
+ """Mocked source classification, photos and schedule facts; no live requests."""
+ def classify(self,title,**extra):
+  from collector import classify_notice_content
+  return classify_notice_content({'originalTitle':title,'rawSha256':'a'*64,**extra})
+ def video(self,title='4주년 특별 방송 | 공식 게임',details=None):
+  from collector import digest
+  fixture=FirebaseYouTubeDataApiCollectionTests();source=fixture.source();payload=youtube_api_response();payload['nextPageToken']=None;payload['items'][0]['snippet']['title']=title
+  doc=parse_youtube_api_documents(json.dumps(payload).encode(),source,NOW.isoformat())[0][0]
+  if details is not None:
+   doc['source_live_details']=details;doc['raw_json']['liveStreamingDetails']=details;doc['raw_sha256']=digest(doc['raw_json'])
+  return source,doc,payload
+ def details(self,title='4주년 특별 방송 | 공식 게임',**values):
+  return {'kind':'youtube#videoListResponse','items':[{'kind':'youtube#video','id':YOUTUBE_API_FIXTURE_VIDEO,'snippet':{'channelId':YOUTUBE_API_FIXTURE_CHANNEL,'title':title},'liveStreamingDetails':values}]}
+ def test_explicit_pvs_in_three_languages_are_only_the_two_pv_kinds(self):
+  for title,kind in [('전술인형 PV 「미틸」 | 소녀전선2: 망명','character-pv'),('[게임] 람과천청 이벤트 PV','event-pv'),('Character Trailer: Alice','character-pv'),('Summer Event PV','event-pv'),('キャラクターPV「アリス」','character-pv'),('イベントPV「月光」','event-pv')]:
+   with self.subTest(title=title):self.assertEqual(self.classify(title)['kind'],kind)
+ def test_previews_in_three_languages_have_only_the_requested_four_kinds(self):
+  for title,kind in [('4주년 특별 방송 | 니케','broadcast-preview'),('콜라보 카페 개최 안내','offline-preview'),('OST 콘서트 예고','offline-preview'),('게임 음악회 개최 안내','offline-preview'),('신규 캐릭터 픽업 예고','pickup-preview'),('신규 스토리 이벤트 : LITTLE WITCH TRICK','event-preview'),('Special Program Announcement','broadcast-preview'),('Offline Concert Preview','offline-preview'),('New Character Banner Announcement','pickup-preview'),('Time-Limited Event Announcement','event-preview'),('公式生放送予告','broadcast-preview'),('コラボカフェ開催決定','offline-preview'),('ピックアップ予告','pickup-preview'),('イベント告知','event-preview')]:
+   with self.subTest(title=title):self.assertEqual(self.classify(title)['kind'],kind)
+ def test_music_guides_shorts_cutscenes_replays_and_unknown_uploads_are_excluded(self):
+  for title in ['Character Theme Song','이벤트 OST','Character PV #shorts','캐릭터 공략 PV','Special Program Highlights','공식 방송 다시보기','캐릭터 테마곡','Story Animation Cutscene','스토리 PV 「과거」','ニケ 攻略ガイド','歌ってみた','Funny game moment']:
+   with self.subTest(title=title):self.assertEqual(self.classify(title)['kind'],'other')
+ def test_description_boilerplate_does_not_classify_an_unrelated_video(self):
+  self.assertEqual(self.classify('Funny game moment',originalDescription='특별 방송 예고\n이벤트 PV\n신규 픽업 안내')['kind'],'other')
+ def test_ambiguous_pv_and_missing_raw_hash_do_not_qualify(self):
+  self.assertEqual(self.classify('캐릭터 PV / 이벤트 PV')['kind'],'other');self.assertEqual(self.classify('이벤트 PV',rawSha256=None)['kind'],'other')
+ def test_named_reviewed_main_role_is_bound_to_hash_and_exact_title(self):
+  proof={'status':'verified','sourceSha256':'a'*64,'sourceTitle':'Actual Story','role':'main-event','evidenceUrl':'https://official.example/story'}
+  self.assertEqual(self.classify('Actual Story',calendarRole='main-event',calendarRoleEvidence=proof)['kind'],'event-preview')
+  for change in [{'sourceTitle':'Other'},{'sourceSha256':'b'*64},{'role':'other'},{'status':'pending'}]:
+   self.assertEqual(self.classify('Actual Story',calendarRole='main-event',calendarRoleEvidence={**proof,**change})['kind'],'other')
+ def test_pv_with_explicit_game_dates_is_never_verified_as_a_calendar_schedule(self):
+  source,doc,_=self.video('Character PV: Alice');source.update(schedule_extraction_approved=True,schedule_extraction_reviewed_at=NOW.isoformat(),schedule_extraction_evidence_url='https://official.example/format',server_region='KR');doc['server_region']='KR';doc['original_description']='Event Period: 2026-10-15 10:00 - 2026-10-20 18:00 (UTC)'
+  row=enrich_document(doc,source);self.assertIsNotNone(row['schedule']['startsAt']);self.assertFalse(row['schedule_verified'])
+ def test_news_requires_exact_representative_image_and_never_game_cover_fallback(self):
+  from collector import apply_notice_content_policy
+  source,doc,_=self.video('Character PV: Alice');store=MemoryStore();upsert_notice(store,source,doc,NOW,image_fetch=synthetic_thumbnail_fetch);row=store.list('gameEvents')[0][1]
+  self.assertTrue(row['newsEligible']);self.assertFalse(row['calendarEligible'])
+  for change in [{'noticeImage':None,'image':None},{'noticeImage':None,'image':{'url':'https://cdn.example/game-cover.jpg'}},{'rawSha256':'b'*64}]:
+   self.assertFalse(apply_notice_content_policy({**row,**change},NOW)['newsEligible'])
+ def test_image_proof_changed_dimensions_or_expired_source_cannot_publish_news(self):
+  from copy import deepcopy
+  from collector import apply_notice_content_policy
+  source,doc,_=self.video('Event PV: Moonlight');store=MemoryStore();upsert_notice(store,source,doc,NOW,image_fetch=synthetic_thumbnail_fetch);row=store.list('gameEvents')[0][1]
+  changed=deepcopy(row);changed['noticeImage']['imageVerification']['width']=120;changed['image']=changed['noticeImage'];self.assertFalse(apply_notice_content_policy(changed,NOW)['newsEligible'])
+  self.assertFalse(apply_notice_content_policy(row,NOW+timedelta(days=30))['newsEligible'])
+ def test_official_broadcast_point_has_no_inferred_game_server_or_duration(self):
+  from collector import verified_youtube_broadcast_point
+  source,doc,_=self.video(details={'scheduledStartTime':'2026-10-24T09:30:00Z'});store=MemoryStore();upsert_notice(store,source,doc,NOW,image_fetch=synthetic_thumbnail_fetch);row=store.list('gameEvents')[0][1]
+  self.assertEqual(row['serverRegion'],'UNSPECIFIED');self.assertEqual(row['startsAt'],datetime(2026,10,24,9,30,tzinfo=timezone.utc));self.assertEqual(row['endsAt'],row['startsAt']);self.assertEqual(row['scheduleKind'],'point');self.assertEqual(row['calendarAudience'],'GLOBAL_ANNOUNCEMENT');self.assertTrue(row['calendarEligible']);self.assertTrue(verified_youtube_broadcast_point(row))
+  self.assertEqual(row['scheduleEvidence']['providerField'],'liveStreamingDetails.scheduledStartTime');self.assertNotEqual(row['startsAt'],row['publishedAt'])
+ def test_broadcast_point_hash_title_id_and_provider_value_must_match(self):
+  from collector import verified_youtube_broadcast_point
+  source,doc,_=self.video(details={'scheduledStartTime':'2026-10-24T09:30:00Z'});store=MemoryStore();upsert_notice(store,source,doc,NOW,image_fetch=synthetic_thumbnail_fetch);row=store.list('gameEvents')[0][1]
+  for change in [{'sourceSha256':'b'*64},{'sourceTitle':'Other'},{'videoId':'WrongVid123'},{'providerValue':'2026-10-24T10:00:00Z'},{'providerField':'publishedAt'}]:
+   self.assertFalse(verified_youtube_broadcast_point({**row,'scheduleEvidence':{**row['scheduleEvidence'],**change}}))
+ def test_pv_cannot_use_broadcast_api_clock_even_when_details_exist(self):
+  source,doc,_=self.video('Event PV: Moonlight',{'scheduledStartTime':'2026-10-24T09:30:00Z'});self.assertIsNone(enrich_document(doc,source)['source_live_point'])
+ def test_missing_or_incomplete_dates_and_undated_preview_never_get_calendar_periods(self):
+  source,doc,_=self.video('신규 이벤트 예고');doc['original_description']='종료: 2026-10-28 23:59';store=MemoryStore();upsert_notice(store,source,doc,NOW,image_fetch=synthetic_thumbnail_fetch);row=store.list('gameEvents')[0][1]
+  self.assertTrue(row['newsEligible']);self.assertFalse(row['calendarEligible']);self.assertIsNone(row['startsAt']);self.assertIsNone(row['endsAt'])
+ def test_video_details_endpoint_and_ids_are_exact_and_bounded(self):
+  from official_adapter import youtube_video_details_request
+  source,_,_=self.video();request=youtube_video_details_request(source,[YOUTUBE_API_FIXTURE_VIDEO]);self.assertEqual(urlsplit(request['url']).path,'/youtube/v3/videos');self.assertEqual(parse_qs(urlsplit(request['url']).query),{'part':['snippet,liveStreamingDetails'],'id':[YOUTUBE_API_FIXTURE_VIDEO]})
+  for ids in [[],['bad'],[YOUTUBE_API_FIXTURE_VIDEO]*2,[str(index).zfill(11)for index in range(51)]]:
+   with self.assertRaises(ValidationError):youtube_video_details_request(source,ids)
+ def test_exact_video_details_refresh_keeps_thumbnail_identity_and_updates_hash(self):
+  from official_adapter import attach_youtube_video_details
+  from collector import digest
+  source,doc,_=self.video();result=attach_youtube_video_details(json.dumps(self.details(scheduledStartTime='2026-10-24T09:30:00Z')).encode(),source,[doc])[0]
+  self.assertEqual(result['raw_sha256'],digest(result['raw_json']));self.assertNotEqual(result['raw_sha256'],doc['raw_sha256']);self.assertEqual(result['source_image_urls'],doc['source_image_urls']);self.assertEqual(result['source_live_details']['scheduledStartTime'],'2026-10-24T09:30:00Z')
+ def test_cross_channel_cross_video_changed_title_and_bad_timestamps_fail_closed(self):
+  from official_adapter import attach_youtube_video_details
+  from copy import deepcopy
+  source,doc,_=self.video();base=self.details(scheduledStartTime='2026-10-24T09:30:00Z')
+  for field,value in [('id','WrongVid123'),('channelId','UC'+'z'*22),('title','New changed title'),('scheduledStartTime','2026-10-24T09:30:00')]:
+   payload=deepcopy(base);item=payload['items'][0]
+   if field=='id':item['id']=value
+   elif field=='scheduledStartTime':item['liveStreamingDetails'][field]=value
+   else:item['snippet'][field]=value
+   with self.assertRaises(ValidationError):attach_youtube_video_details(json.dumps(payload).encode(),source,[doc])
+ def test_non_live_and_disappeared_videos_do_not_invent_broadcast_points(self):
+  from official_adapter import attach_youtube_video_details
+  source,doc,_=self.video()
+  for payload in [self.details(),{'kind':'youtube#videoListResponse','items':[]}]:
+   item=attach_youtube_video_details(json.dumps(payload).encode(),source,[doc])[0];self.assertIsNone(enrich_document(item,source)['source_live_point'])
+ def test_actual_broadcast_start_takes_precedence_over_scheduled_countdown(self):
+  source,doc,_=self.video(details={'scheduledStartTime':'2026-10-24T09:30:00Z','actualStartTime':'2026-10-24T10:00:00Z'});self.assertEqual(enrich_document(doc,source)['source_live_point']['providerField'],'liveStreamingDetails.actualStartTime')
+ def test_unknown_video_collection_skips_public_and_raw_writes_and_thumbnail_fetch(self):
+  source,_,payload=self.video('캐릭터 OST #shorts');store=MemoryStore({'gameSources/'+source['id']:{**source_row(source,source['game_id']),'enabled':True}});calls=[]
+  def fetch(request):calls.append(request['url']);return 200,json.dumps(payload).encode(),{}
+  with patch.dict(os.environ,{'YOUTUBE_API_KEY':'synthetic-local-key'}):result=collect_one(store,source,NOW-timedelta(hours=72),NOW,fetch=fetch,sleep=lambda _:None,now=NOW)
+  self.assertEqual(result['metrics']['contentExcluded'],1);self.assertEqual(store.list('gameEvents'),[]);self.assertEqual(store.list('collectionDocuments'),[]);self.assertEqual(len(calls),1)
+ def test_broadcast_collection_fetches_exact_details_once_before_source_image(self):
+  source,_,payload=self.video();store=MemoryStore({'gameSources/'+source['id']:{**source_row(source,source['game_id']),'enabled':True}});calls=[]
+  def fetch(request):
+   calls.append(request['url'])
+   if request.get('parser')=='official_image_probe':return synthetic_thumbnail_fetch(request)
+   return 200,json.dumps(self.details(scheduledStartTime='2026-10-24T09:30:00Z')if urlsplit(request['url']).path.endswith('/videos')else payload).encode(),{}
+  with patch.dict(os.environ,{'YOUTUBE_API_KEY':'synthetic-local-key'}):result=collect_one(store,source,NOW-timedelta(hours=72),NOW,fetch=fetch,sleep=lambda _:None,now=NOW)
+  self.assertEqual(result['status'],'success');self.assertEqual(result['metrics']['videoDetailsRequests'],1);self.assertEqual(result['metrics']['apiUnitsEstimated'],2);self.assertTrue(store.list('gameEvents')[0][1]['calendarEligible']);self.assertEqual(len(calls),3)
+ def test_details_provider_failure_preserves_news_but_leaves_calendar_unconfirmed(self):
+  source,_,payload=self.video();store=MemoryStore({'gameSources/'+source['id']:{**source_row(source,source['game_id']),'enabled':True}})
+  def fetch(request):
+   if request.get('parser')=='official_image_probe':return synthetic_thumbnail_fetch(request)
+   return (503,b'',{})if urlsplit(request['url']).path.endswith('/videos')else(200,json.dumps(payload).encode(),{})
+  with patch.dict(os.environ,{'YOUTUBE_API_KEY':'synthetic-local-key'}):result=collect_one(store,source,NOW-timedelta(hours=72),NOW,fetch=fetch,sleep=lambda _:None,now=NOW)
+  self.assertEqual(result['status'],'success');row=store.list('gameEvents')[0][1];self.assertTrue(row['newsEligible']);self.assertFalse(row['calendarEligible']);self.assertEqual(result['metrics']['videoDetailsFailures'],1)
+ def test_existing_public_migration_is_idempotent_and_does_not_mutate_private_records(self):
+  from collector import apply_notice_content_policy
+  source,doc,_=self.video('Event PV: Moonlight');store=MemoryStore({'users/alice/attendanceDaily/day':{'gameId':'private-game','status':'completed'}});upsert_notice(store,source,doc,NOW,image_fetch=synthetic_thumbnail_fetch);row=store.list('gameEvents')[0][1]
+  changed=apply_notice_content_policy(row,NOW);self.assertEqual(apply_notice_content_policy(changed,NOW),changed);self.assertEqual(store.get('users/alice/attendanceDaily/day'),{'gameId':'private-game','status':'completed'})
+ def test_missing_image_blocks_new_main_announcement_even_when_role_is_confirmed(self):
+  from collector import apply_notice_content_policy
+  fixture=OfficialAnnouncementNotificationTests();store,source=fixture.fixture();rows=fixture.publish(store,source);row=rows[0];row=apply_notice_content_policy({**row,'image':None,'noticeImage':None},NOW+timedelta(minutes=2))
+  self.assertFalse(row['newsEligible']);self.assertFalse(eligible(store,'alice',row,ANNOUNCEMENT_KIND,NOW+timedelta(minutes=2)))
+ def test_pending_main_role_source_clock_preserves_only_the_exact_source_period(self):
+  from collector import apply_notice_content_policy
+  fixture=OfficialAnnouncementNotificationTests();store,source=fixture.fixture(region='UNSPECIFIED',global_opt_in=True);source.update(schedule_extraction_approved=True,schedule_extraction_reviewed_at=NOW.isoformat(),schedule_extraction_evidence_url='https://steamcommunity.com/announcement/format')
+  rows=fixture.publish(store,source,text='■[Actual Story]\nDuring the Time-Limited Event [Actual Story], Commanders can receive rewards by participating in event Game Modes.\nEvent Period: 2026-10-15 10:00 - 2026-10-20 18:00 (UTC)');row=rows[0]
+  self.assertEqual(row['verificationStatus'],'pending');self.assertEqual(row['scheduleEvidence']['reasonCodes'],['SERVER_REGION_UNCONFIRMED']);self.assertTrue(row['calendarEligible']);self.assertTrue(row['sourceClockOnly']);self.assertFalse(eligible(store,'alice',row,'event:start',NOW+timedelta(minutes=2)))
+  for change in [{'candidateStartsAt':NOW},{'candidateTimezone':'Asia/Seoul'},{'calendarRole':'other'},{'scheduleEvidence':{**row['scheduleEvidence'],'reasonCodes':['SERVER_REGION_UNCONFIRMED','TIMEZONE_MISSING']}}]:
+   changed=apply_notice_content_policy({**row,**change},NOW+timedelta(minutes=2));self.assertFalse(changed['calendarEligible']);self.assertFalse(changed['sourceClockOnly'])
+ def test_exact_reviewed_image_policy_can_rebind_legacy_proof_without_guessing(self):
+  from collector import apply_notice_content_policy
+  fixture=OfficialAnnouncementNotificationTests();store,source=fixture.fixture();row=fixture.publish(store,source)[0];selected=row['displayTitle'];image=row['image'];row['image']={**image,'rightsStatus':'UNCONFIRMED','subjectEvidence':{k:v for k,v in image['subjectEvidence'].items()if k not in('sourceSha256','sourceTitle')}}
+  reference={'sourceSha256':row['rawSha256'],'sourceTitle':selected,'officialUrl':row['officialUrl'],'url':image['url'],'sourceUrl':'https://steamcommunity.com/announcement/exact-image','kind':'PICKUP_ART','characterNames':row.get('characterNames',[]),'evidenceText':selected,'checkedAt':NOW.isoformat()}
+  source['reviewed_notice_references']={'mode':'exact_reviewed_notice_links_v1','references':[reference]}
+  rebounded=apply_notice_content_policy(row,NOW+timedelta(minutes=2),source=source);self.assertTrue(rebounded['newsEligible']);self.assertEqual(rebounded['image']['subjectEvidence']['sourceSha256'],row['rawSha256']);self.assertEqual(rebounded['startsAt'],row['startsAt'])
+  source['reviewed_notice_references']['references'][0]['sourceSha256']='b'*64;self.assertFalse(apply_notice_content_policy(row,NOW+timedelta(minutes=2),source=source)['newsEligible'])
+ def test_rerun_weapon_and_parent_aggregate_remain_news_but_are_not_calendar_entries(self):
+  from collector import apply_notice_content_policy
+  fixture=OfficialAnnouncementNotificationTests();store,source=fixture.fixture();row=fixture.publish(store,source)[0];row.update(startsAt=NOW+timedelta(days=1),endsAt=NOW+timedelta(days=2),serverRegion='KR',scheduleStatus='DATE_VERIFIED',verificationStatus='verified')
+  for change in [{'announcementKind':'rerun'},{'announcementKind':'aggregate'},{'pickupKind':'weapon'},{'derivedCharacterAnnouncements':2},{'derivedSectionCount':2}]:
+   updated=apply_notice_content_policy({**row,**change},NOW+timedelta(minutes=2));self.assertTrue(updated['newsEligible']);self.assertFalse(updated['calendarEligible'])
 
 if __name__=='__main__':unittest.main()
