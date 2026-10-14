@@ -65,7 +65,7 @@
     "contentPublishedNotBefore": "2026-10-01T00:00:00+09:00",
     "publicationCutoffBasis": "original_published_at_only"
   },
-  "reviewedAt": "2026-10-10T08:40:00Z",
+  "reviewedAt": "2026-10-14T08:56:03.141324+00:00",
   "window": {
     "startsAt": "2026-10-07T08:40:00Z",
     "endsAt": "2026-10-10T08:40:00Z",
@@ -88,8 +88,8 @@
         "ja": "ブルーアーカイブ"
       },
       "officialWebsite": "https://bluearchive.nexon.com/home",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
       "sources": [
         {
           "id": "85d40a4d-2fba-512b-b179-379ba6199662",
@@ -136,6 +136,57 @@
             ],
             "notes": "Publisher-linked Korean channel and actual uploads playlist API response; language does not certify a regional game-server schedule."
           }
+        },
+        {
+          "id": "3044c335-21a4-53ba-b28f-49d23a6b3d8d",
+          "game_id": "blue-archive",
+          "game_slug": "blue-archive",
+          "url": "https://www.nexongames.co.kr/bbs/board.php?bo_table=media_event",
+          "parser": "official_html",
+          "publisher_identity_evidence_url": "https://www.nexongames.co.kr/bbs/board.php?bo_table=media_event&wr_id=518",
+          "publisher_identity_checked_at": "2026-10-14T08:56:03.141324+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://www.nexongames.co.kr/robots.txt",
+          "terms_checked_at": "2026-10-14T08:56:03.141324+00:00",
+          "notice_hosts_verified_at": "2026-10-14T08:56:03.141324+00:00",
+          "allowed_notice_hosts": [
+            "www.nexongames.co.kr"
+          ],
+          "feed_allowlist": [
+            "official_publisher_articles"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 게시물 · 지역별 일정 구분",
+          "collection_interval_minutes": 15,
+          "method": "public_page",
+          "official_host": "www.nexongames.co.kr",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ko",
+          "article_format": {
+            "mode": "nexon_board_v1",
+            "version": 1,
+            "reviewedAt": "2026-10-14T08:56:03.141324+00:00",
+            "evidenceUrl": "https://www.nexongames.co.kr/bbs/board.php?bo_table=media_event&wr_id=518",
+            "allowedImageHosts": [
+              "www.nexongames.co.kr"
+            ],
+            "timezone": "Asia/Seoul"
+          },
+          "game_title_filter": {
+            "version": 1,
+            "required": true,
+            "aliases": [
+              "블루 아카이브",
+              "블루아카이브"
+            ],
+            "checkedAt": "2026-10-14T08:56:03.141324+00:00",
+            "evidenceUrl": "https://www.nexongames.co.kr/bbs/board.php?bo_table=media_event&wr_id=518"
+          },
+          "access_review_notes": "Unauthenticated corporate press board and public robots read; source art stays an attributed original link with unconfirmed reuse status."
         }
       ],
       "serviceStatus": "UNKNOWN",
@@ -377,8 +428,8 @@
           "scrapingFallbackEnabled": false
         }
       ],
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "REVIEWED_PUBLISHER_FEED_SERVER_UNCONFIRMED",
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
       "sources": [
         {
           "id": "d641c1f0-5226-58e7-b5d2-d26a85604d29",
@@ -470,6 +521,60 @@
             ],
             "notes": "Publisher-linked Korean channel and actual uploads playlist API response; language does not certify a regional game-server schedule."
           }
+        },
+        {
+          "id": "6fda6570-af94-5fb6-8489-96f724445557",
+          "game_id": "girls-frontline-2",
+          "game_slug": "girls-frontline-2",
+          "url": "https://prtimes.jp/companyrdf.php?company_id=50327",
+          "parser": "official_rss",
+          "publisher_identity_evidence_url": "https://prtimes.jp/main/html/rd/p/000000328.000050327.html",
+          "publisher_identity_checked_at": "2026-10-14T08:56:03.141324+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://prtimes.jp/main/html/kiyaku",
+          "terms_checked_at": "2026-10-14T08:56:03.141324+00:00",
+          "notice_hosts_verified_at": "2026-10-14T08:56:03.141324+00:00",
+          "allowed_notice_hosts": [
+            "prtimes.jp"
+          ],
+          "feed_allowlist": [
+            "official_publisher_articles"
+          ],
+          "server_region": "JP",
+          "server_label": "공식 게시물 · 지역별 일정 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_feed",
+          "official_host": "prtimes.jp",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ja",
+          "article_format": {
+            "mode": "official_rss_v1",
+            "version": 1,
+            "reviewedAt": "2026-10-14T08:56:03.141324+00:00",
+            "evidenceUrl": "https://prtimes.jp/main/html/rd/p/000000328.000050327.html",
+            "allowedImageHosts": [
+              "prcdn.freetls.fastly.net"
+            ],
+            "linkedArticleFormat": "prtimes_release_v1"
+          },
+          "game_title_filter": {
+            "version": 1,
+            "required": true,
+            "aliases": [
+              "ドールズフロントライン2",
+              "ドールズフロントライン２",
+              "GIRLS' FRONTLINE 2",
+              "소녀전선2",
+              "少女前線2"
+            ],
+            "checkedAt": "2026-10-14T08:56:03.141324+00:00",
+            "evidenceUrl": "https://prtimes.jp/main/html/rd/p/000000328.000050327.html"
+          },
+          "access_review_notes": "Exact publisher profile declares company RSS; reporting terms Article3(1) and robots permit public press reporting; same company release only."
         }
       ],
       "serviceStatus": "UNKNOWN",
@@ -592,9 +697,57 @@
         "ja": "崩壊：スターレイル"
       },
       "officialWebsite": "https://hsr.hoyoverse.com/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "5d4aea15-af26-53f0-8045-d449158f4c33",
+          "game_id": "honkai-star-rail",
+          "game_slug": "honkai-star-rail",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UC2PeMPA8PAOp-bynLoCeMLA",
+          "youtube_uploads_playlist_id": "UU2PeMPA8PAOp-bynLoCeMLA",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "publisher_identity_evidence_url": "https://play.google.com/store/apps/details?id=com.HoYoverse.hkrpgoversea",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://play.google.com/store/apps/details?id=com.HoYoverse.hkrpgoversea",
+            "linkedChannelUrl": "https://www.youtube.com/@honkaistarrail",
+            "homepageSha256": null,
+            "channelTitle": "Honkai: Star Rail",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.557534+00:00",
+            "apiResponseSha256": "245e52e52c20a9b0bcc79c6a7968a8b179e3f1b2adc46cf327265188f1da08ea",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -607,9 +760,104 @@
         "ja": "崩壊 3rd"
       },
       "officialWebsite": "https://honkaiimpact3.hoyoverse.com/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "01756142-80fc-5ca8-934b-ca41c07d5300",
+          "game_id": "honkai-impact-3rd",
+          "game_slug": "honkai-impact-3rd",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCko6H6LokKM__B03i5_vBQQ",
+          "youtube_uploads_playlist_id": "UUko6H6LokKM__B03i5_vBQQ",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://honkaiimpact3.hoyoverse.com/_nuxt/febc43e.js",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://honkaiimpact3.hoyoverse.com/_nuxt/febc43e.js",
+            "linkedChannelUrl": "https://www.youtube.com/@HonkaiImpact3rd",
+            "homepageSha256": "f677355f67f874543a5c2c04f68e225d553778fe26385c7d38dffc166441f886",
+            "channelTitle": "Honkai Impact 3rd",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "05011afd436213e5a3cfed6679b132cb9dc64959e338efdc7f777bc6ea48c877",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        },
+        {
+          "id": "77c4b3c3-36dd-50c8-b0a2-a2af6c0f17dd",
+          "game_id": "honkai-impact-3rd",
+          "game_slug": "honkai-impact-3rd",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCHnxdu0qphnV3vrERNtCqpw",
+          "youtube_uploads_playlist_id": "UUHnxdu0qphnV3vrERNtCqpw",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "publisher_identity_evidence_url": "https://honkaiimpact3.hoyoverse.com/_nuxt/febc43e.js",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ko",
+          "identity_evidence": {
+            "url": "https://honkaiimpact3.hoyoverse.com/_nuxt/febc43e.js",
+            "linkedChannelUrl": "https://www.youtube.com/@HonkaIimpact3rd_KR",
+            "homepageSha256": "f677355f67f874543a5c2c04f68e225d553778fe26385c7d38dffc166441f886",
+            "channelTitle": "붕괴3rd",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.557534+00:00",
+            "apiResponseSha256": "73bd3b67abf00af1edc849db325110c88f89fbf9d901c3211595c16c7944a3c0",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -731,9 +979,57 @@
         "ja": "ゼンレスゾーンゼロ"
       },
       "officialWebsite": "https://zenless.hoyoverse.com/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "307110bc-1863-50d3-a4d4-9a84b816f70a",
+          "game_id": "zenless-zone-zero",
+          "game_slug": "zenless-zone-zero",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UC2SpC8rL9LaeQriE4YNdyzA",
+          "youtube_uploads_playlist_id": "UU2SpC8rL9LaeQriE4YNdyzA",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "publisher_identity_evidence_url": "https://zenless.hoyoverse.com/en-us/news/160138",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://zenless.hoyoverse.com/en-us/news/160138",
+            "linkedChannelUrl": "https://www.youtube.com/@ZZZ_Official/",
+            "homepageSha256": null,
+            "channelTitle": "Zenless Zone Zero",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.557534+00:00",
+            "apiResponseSha256": "dcb66be644a82d2da45fdeea66fa4b5247726ddc719a55d964dcdcbc94dab8d9",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -746,9 +1042,57 @@
         "ja": "アークナイツ"
       },
       "officialWebsite": "https://www.arknights.global/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "c8a6e905-cc5f-5519-914a-101b0b6ff697",
+          "game_id": "arknights",
+          "game_slug": "arknights",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCR0J2NYGuC8epsa1O4DMmXQ",
+          "youtube_uploads_playlist_id": "UUR0J2NYGuC8epsa1O4DMmXQ",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "publisher_identity_evidence_url": "https://webusstatic.yo-star.com/arknights-us/arknights-us-website/main/h5/assets/Home-50a0ade7.js",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://webusstatic.yo-star.com/arknights-us/arknights-us-website/main/h5/assets/Home-50a0ade7.js",
+            "linkedChannelUrl": "https://www.youtube.com/channel/UCR0J2NYGuC8epsa1O4DMmXQ",
+            "homepageSha256": "14f7f3d023e339455f5b57d82cbbdc1c426930c51319d082199dc03f8306e870",
+            "channelTitle": "Arknights Official - Yostar",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.557534+00:00",
+            "apiResponseSha256": "8dd6daaad2bb576ebb6ff2a5a45c4c9f414fa810755125eccab3e13b627b75a2",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -761,9 +1105,57 @@
         "ja": "リバース：1999"
       },
       "officialWebsite": "https://re1999.bluepoch.com/en/home/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "2d31c356-c96a-580f-a2a3-e5d18eb7e1e9",
+          "game_id": "reverse-1999",
+          "game_slug": "reverse-1999",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UC-gzFGel4VJqZuIquAwoCmQ",
+          "youtube_uploads_playlist_id": "UU-gzFGel4VJqZuIquAwoCmQ",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "publisher_identity_evidence_url": "https://re1999.bluepoch.com/en/home/config.js",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://re1999.bluepoch.com/en/home/config.js",
+            "linkedChannelUrl": "https://www.youtube.com/@Reverse1999",
+            "homepageSha256": "fd84bfd70fabc2c9b1bdda3fd5d6cde0f0c41021cc21e1a8650bb7c7c06142c7",
+            "channelTitle": "Reverse: 1999",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.557534+00:00",
+            "apiResponseSha256": "d60b612ed6242a2f83843a39a1ed56c188fe8862dbe4a5b198fc666b3347ead6",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -791,9 +1183,68 @@
         "ja": null
       },
       "officialWebsite": "https://trickcal.com/revive/intro/vivi_ui",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "8df77313-3e24-509c-a47e-2553c901e9b2",
+          "game_id": "trickcal-revive",
+          "game_slug": "trickcal-revive",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCI37oS0O5OlmQNeiyIywEAQ",
+          "youtube_uploads_playlist_id": "UUI37oS0O5OlmQNeiyIywEAQ",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://trickcal.com/revive/intro/vivi_ui",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://trickcal.com/revive/intro/vivi_ui",
+            "linkedChannelUrl": "https://www.youtube.com/@epidgames6350",
+            "homepageSha256": "4e9af277d4e138211230790c4aa34fce33f1c80dccd7851f632654a816d51294",
+            "channelTitle": "EPIDGames",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "d2c41e38e25dc6226b97af80f13b9694b5a44c60364f42f69c20a8607f2d5e88",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          },
+          "game_title_filter": {
+            "version": 1,
+            "required": true,
+            "aliases": [
+              "트릭컬 리바이브",
+              "트릭컬",
+              "Trickcal"
+            ],
+            "checkedAt": "2026-10-14T08:54:28.556531+00:00",
+            "evidenceUrl": "https://trickcal.com/revive/intro/vivi_ui"
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -821,9 +1272,57 @@
         "ja": "NTE: Neverness to Everness"
       },
       "officialWebsite": "https://nte.perfectworld.com/medium/ntekr/index.html",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "0f87e4cd-a010-59fb-b8a0-7bd10b07026c",
+          "game_id": "neverness-to-everness",
+          "game_slug": "neverness-to-everness",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCIc-uir_VVR8D2RlUyP29Aw",
+          "youtube_uploads_playlist_id": "UUIc-uir_VVR8D2RlUyP29Aw",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "publisher_identity_evidence_url": "https://play.google.com/store/apps/details?id=com.hottagames.nte",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://play.google.com/store/apps/details?id=com.hottagames.nte",
+            "linkedChannelUrl": "https://www.youtube.com/@NTE_Official",
+            "homepageSha256": null,
+            "channelTitle": "NTE Global",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.557534+00:00",
+            "apiResponseSha256": "b57ec2674cf32a506be62c63635191f501e8d920abeda78f2a435117219120f1",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -851,9 +1350,57 @@
         "ja": "アズールレーン"
       },
       "officialWebsite": "https://azurlane.xdg.com/gg",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "6ada3406-d7eb-5abb-ad1b-2978a9662cbc",
+          "game_id": "azur-lane",
+          "game_slug": "azur-lane",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCPeJaqP6WgxUVDcpYkXZKMQ",
+          "youtube_uploads_playlist_id": "UUPeJaqP6WgxUVDcpYkXZKMQ",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:29.266925+00:00",
+          "publisher_identity_evidence_url": "https://apps.apple.com/ca/app/azur-lane/id1411126549",
+          "publisher_identity_checked_at": "2026-10-14T08:54:29.266925+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:29.266925+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:29.266925+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://apps.apple.com/ca/app/azur-lane/id1411126549",
+            "linkedChannelUrl": "https://www.youtube.com/channel/UCPeJaqP6WgxUVDcpYkXZKMQ",
+            "homepageSha256": null,
+            "channelTitle": "Azur Lane Official - Yostar",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:29.266925+00:00",
+            "apiResponseSha256": "a832f41abb2e2d622fef5ac76b31915699bf9c09361d6d356af5c17f7a64067b",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -866,9 +1413,57 @@
         "ja": "ブラウンダスト2"
       },
       "officialWebsite": "https://www.browndust2.com/kr/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "78f0df76-6ad4-5df8-a2e4-9111b6bc0758",
+          "game_id": "brown-dust-2",
+          "game_slug": "brown-dust-2",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCJopevGi1TUs_nna_cOMwCw",
+          "youtube_uploads_playlist_id": "UUJopevGi1TUs_nna_cOMwCw",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://www.browndust2.com/kr/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ko",
+          "identity_evidence": {
+            "url": "https://www.browndust2.com/kr/",
+            "linkedChannelUrl": "https://www.youtube.com/channel/UCJopevGi1TUs_nna_cOMwCw",
+            "homepageSha256": "d1f23409263ac34b7207be992393db7288eebe4b319f2aa4b4297c54c229724b",
+            "channelTitle": "브라운더스트2 공식유튜브",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "24613e461d77029ee04785c07678e12e086d4f840c7cda749f2a8f4d4ac30ba7",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -881,9 +1476,57 @@
         "ja": "エーテルゲイザー"
       },
       "officialWebsite": "https://www.aethergazer.com/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "52828664-6712-5d6b-bdc7-6b6198ffa89d",
+          "game_id": "aether-gazer",
+          "game_slug": "aether-gazer",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCOQQOafLaOY8TENJApgMKgw",
+          "youtube_uploads_playlist_id": "UUOQQOafLaOY8TENJApgMKgw",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "publisher_identity_evidence_url": "https://www.aethergazer.com/assets/Gallery.34982d68.js",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://www.aethergazer.com/assets/Gallery.34982d68.js",
+            "linkedChannelUrl": "https://www.youtube.com/channel/UCOQQOafLaOY8TENJApgMKgw",
+            "homepageSha256": "8756f716b47f0b15af5c47c44ac3fb791b728eb3f8aa291b49faa94181f82898",
+            "channelTitle": "Aether Gazer Official ",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.557534+00:00",
+            "apiResponseSha256": "46494efbb93e9dbaa3d3fc6eb2f06a43c266394955ec7765319f28ad66642586",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -896,9 +1539,57 @@
         "ja": "スノウブレイク：禁域降臨"
       },
       "officialWebsite": "https://snowbreak.amazingseasun.com/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "6b96871a-9a0e-5a49-94f9-65fe04b41b83",
+          "game_id": "snowbreak-containment-zone",
+          "game_slug": "snowbreak-containment-zone",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UC15Vb7xjPCV2WSHjrGqQPaQ",
+          "youtube_uploads_playlist_id": "UU15Vb7xjPCV2WSHjrGqQPaQ",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.818092+00:00",
+          "publisher_identity_evidence_url": "https://play.google.com/store/apps/details?id=com.seasun.snowbreak.google",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.818092+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.818092+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.818092+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://play.google.com/store/apps/details?id=com.seasun.snowbreak.google",
+            "linkedChannelUrl": "https://www.youtube.com/@snowbreakEN",
+            "homepageSha256": null,
+            "channelTitle": "Snowbreak: Containment Zone",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.818092+00:00",
+            "apiResponseSha256": "0a5f73714e00c4001040e7bead3f767f2673333b319b7e72399bcf8bd4d21d0c",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -911,8 +1602,8 @@
         "ja": "ウマ娘 プリティーダービー"
       },
       "officialWebsite": "https://umamusume.kakaogames.com/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
       "sources": [
         {
           "id": "f1d6c6cd-eb23-57c1-a997-8317e6f4167e",
@@ -969,6 +1660,53 @@
           "server_region": "UNSPECIFIED",
           "server_label": null,
           "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        },
+        {
+          "id": "5c2922ac-e986-51ba-ba8e-e9e023f6c35f",
+          "game_id": "umamusume-pretty-derby",
+          "game_slug": "umamusume-pretty-derby",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCdgMWbAY387rhHy8Rrtzq3A",
+          "youtube_uploads_playlist_id": "UUdgMWbAY387rhHy8Rrtzq3A",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "publisher_identity_evidence_url": "https://umamusume.kakaogames.com/assets/js/data.v5.js?v=20260909",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ko",
+          "identity_evidence": {
+            "url": "https://umamusume.kakaogames.com/assets/js/data.v5.js?v=20260909",
+            "linkedChannelUrl": "https://www.youtube.com/channel/UCdgMWbAY387rhHy8Rrtzq3A",
+            "homepageSha256": "c620521b751e70b9a8ddd264a5c0b1a6461397e1a819d84844da10d75c8a795f",
+            "channelTitle": "우마무스메 프리티 더비",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.557534+00:00",
+            "apiResponseSha256": "7c642dd7fc3ba0ce1e9f72e9752f6651a6243df2586883c8722a7568e1ab6c8c",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
         }
       ],
       "serviceStatus": "UNKNOWN",
@@ -998,9 +1736,57 @@
         "ja": "無期迷途：Path to Nowhere"
       },
       "officialWebsite": "https://ptn.aisnogames.com/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "3dee9354-450b-544d-bbc2-ddd001488d1c",
+          "game_id": "path-to-nowhere",
+          "game_slug": "path-to-nowhere",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCvYsNXlwS6ZTkG0BzCGNjFQ",
+          "youtube_uploads_playlist_id": "UUvYsNXlwS6ZTkG0BzCGNjFQ",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:29.039852+00:00",
+          "publisher_identity_evidence_url": "https://play.google.com/store/apps/details?id=com.zy.wqmt.global",
+          "publisher_identity_checked_at": "2026-10-14T08:54:29.039852+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:29.039852+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:29.039852+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://play.google.com/store/apps/details?id=com.zy.wqmt.global",
+            "linkedChannelUrl": "https://www.youtube.com/channel/UCvYsNXlwS6ZTkG0BzCGNjFQ",
+            "homepageSha256": null,
+            "channelTitle": "Path to Nowhere",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:29.039852+00:00",
+            "apiResponseSha256": "4023002e0bf48000cb61e39491ff9b4361969c0c772f57ce51c51037c197d953",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -1013,8 +1799,8 @@
         "ja": null
       },
       "officialWebsite": "https://limbuscompany.com/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
       "sources": [
         {
           "id": "63569706-da34-5b72-acb5-1e6503021b56",
@@ -1071,6 +1857,66 @@
           "server_region": "UNSPECIFIED",
           "server_label": null,
           "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        },
+        {
+          "id": "e489a28a-70d9-5ef7-a254-8448832c717d",
+          "game_id": "limbus-company",
+          "game_slug": "limbus-company",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCpqyr6h4RCXCEswHlkSjykA",
+          "youtube_uploads_playlist_id": "UUpqyr6h4RCXCEswHlkSjykA",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://limbuscompany.com/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://limbuscompany.com/",
+            "linkedChannelUrl": "https://www.youtube.com/channel/UCpqyr6h4RCXCEswHlkSjykA",
+            "homepageSha256": "e06055e3a8a92722843b987616ce2cef2fd81b6ecb229da578a994ea37628cb5",
+            "channelTitle": "ProjectMoon Official",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "d0d45f4890528f5efe3ddc0f5a0400f0e375fca889ecb038aa088820cc6f73bc",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          },
+          "game_title_filter": {
+            "version": 1,
+            "required": true,
+            "aliases": [
+              "림버스 컴퍼니",
+              "Limbus Company",
+              "Limbus",
+              "림버스",
+              "リンバス"
+            ],
+            "checkedAt": "2026-10-14T08:54:28.556531+00:00",
+            "evidenceUrl": "https://limbuscompany.com/"
+          }
         }
       ],
       "serviceStatus": "UNKNOWN",
@@ -1085,9 +1931,68 @@
         "ja": "ガーディアンテイルズ"
       },
       "officialWebsite": "https://guardiantales.kakaogames.com/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "85e3a903-7840-5707-a960-5919f5ac4c73",
+          "game_id": "guardian-tales",
+          "game_slug": "guardian-tales",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UC41pPCX5hKw92fdL1Qd1c5g",
+          "youtube_uploads_playlist_id": "UU41pPCX5hKw92fdL1Qd1c5g",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://guardiantales.kakaogames.com/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ko",
+          "identity_evidence": {
+            "url": "https://guardiantales.kakaogames.com/",
+            "linkedChannelUrl": "https://www.youtube.com/channel/UC41pPCX5hKw92fdL1Qd1c5g",
+            "homepageSha256": "ed2b5a426c9f7af5f3bf263586f8ed121822f00d189c1200ac5b574fe889c611",
+            "channelTitle": "카카오게임즈",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "44b66bc3bec213e40343fda19088cf21345b5ec64b972411f4dd92dc09acecd3",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          },
+          "game_title_filter": {
+            "version": 1,
+            "required": true,
+            "aliases": [
+              "가디언 테일즈",
+              "Guardian Tales",
+              "ガーディアンテイルズ"
+            ],
+            "checkedAt": "2026-10-14T08:54:28.556531+00:00",
+            "evidenceUrl": "https://guardiantales.kakaogames.com/"
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -1100,9 +2005,57 @@
         "ja": "プリンセスコネクト！Re:Dive"
       },
       "officialWebsite": "https://priconne.kakaogames.com/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "7e11ee12-d36d-593f-b17d-478a37f1f9e2",
+          "game_id": "princess-connect-redive",
+          "game_slug": "princess-connect-redive",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCF8zvIqu8LyXVfo6yHyqShA",
+          "youtube_uploads_playlist_id": "UUF8zvIqu8LyXVfo6yHyqShA",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://priconne.kakaogames.com/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ko",
+          "identity_evidence": {
+            "url": "https://priconne.kakaogames.com/",
+            "linkedChannelUrl": "https://www.youtube.com/channel/UCF8zvIqu8LyXVfo6yHyqShA",
+            "homepageSha256": "45625ea3d9dc0392906bdf78bb67ffd198c9300da19f2d372bd35aea842bdf2f",
+            "channelTitle": "프린세스 커넥트! Re:Dive",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "9a98597e6ae625b514787b2093ae2d07948c4cbea8c1a0a1fb53cfd7c285c4a8",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -1115,8 +2068,8 @@
         "ja": "ヘブンバーンズレッド"
       },
       "officialWebsite": "https://kr.heaven-burns-red.com/",
-      "baselineStatus": "DATE_UNCONFIRMED",
-      "reasonCode": "REVIEWED_PUBLIC_FEED_AVAILABLE_REGIONAL_SCHEDULES_PENDING",
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
       "sources": [
         {
           "id": "2c01343f-655e-5de6-ac64-301eb2804f80",
@@ -1173,6 +2126,53 @@
           "server_region": "UNSPECIFIED",
           "server_label": null,
           "notes": "Reviewed public publisher-announcement API only. No Steam account, personal data, credentials, login bypass, page crawler or image-permission claim. Source registration does not approve game schedule dates or regional attribution. Registry enablement remains false; proposed operating activation is a separate parent review decision."
+        },
+        {
+          "id": "2f4ab89b-3dc4-51f6-ae5d-83cad7ca1b30",
+          "game_id": "heaven-burns-red",
+          "game_slug": "heaven-burns-red",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UC-QkTeq6BCQxFwHu25wNzSA",
+          "youtube_uploads_playlist_id": "UU-QkTeq6BCQxFwHu25wNzSA",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://kr.heaven-burns-red.com/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ko",
+          "identity_evidence": {
+            "url": "https://kr.heaven-burns-red.com/",
+            "linkedChannelUrl": "https://www.youtube.com/channel/UC-QkTeq6BCQxFwHu25wNzSA/?sub_confirmation=1",
+            "homepageSha256": "cce63fce8528f547847cbd7c84218135b46421c73109d11af9c2bcc0d70b3db2",
+            "channelTitle": "헤븐 번즈 레드【공식】",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "f15e941b0fed6d1d9b994d6fd4d3d1ad85127777434f80c3655653a554000886",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
         }
       ],
       "serviceStatus": "UNKNOWN",
@@ -1187,9 +2187,57 @@
         "ja": "エピックセブン"
       },
       "officialWebsite": "https://epic7.onstove.com/ko/brand",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "2087cfc7-d2c6-5d6f-8280-5b8539294a5f",
+          "game_id": "epic-seven",
+          "game_slug": "epic-seven",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UC4dV8Fy1GiqjxU4OQ6ZoKWw",
+          "youtube_uploads_playlist_id": "UU4dV8Fy1GiqjxU4OQ6ZoKWw",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://epic7.onstove.com/ko/brand",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ko",
+          "identity_evidence": {
+            "url": "https://epic7.onstove.com/ko/brand",
+            "linkedChannelUrl": "https://www.youtube.com/@EpicSevenKR",
+            "homepageSha256": "dc7570adf6967e05281be12e60dc8a084dc48ef0636d23e97c23959951baa938",
+            "channelTitle": "에픽세븐",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "b4cb917c9d9492b760ddf3d1f0d4c18fb10d366bb3276560602f8d6f22aab343",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -1202,9 +2250,104 @@
         "ja": "鈴蘭の剣"
       },
       "officialWebsite": "https://soc.xd.com/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "1f58dc42-cff2-53bf-9c2f-dbe79caf7710",
+          "game_id": "sword-of-convallaria",
+          "game_slug": "sword-of-convallaria",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCsxvXdYIu6Sjmm7j6ZREmrg",
+          "youtube_uploads_playlist_id": "UUsxvXdYIu6Sjmm7j6ZREmrg",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:29.485535+00:00",
+          "publisher_identity_evidence_url": "https://play.google.com/store/apps/details?id=com.xd.ssrpgen",
+          "publisher_identity_checked_at": "2026-10-14T08:54:29.485535+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:29.485535+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:29.485535+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://play.google.com/store/apps/details?id=com.xd.ssrpgen",
+            "linkedChannelUrl": "https://www.youtube.com/@SwordofConvallaria",
+            "homepageSha256": null,
+            "channelTitle": "Sword of Convallaria",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:29.485535+00:00",
+            "apiResponseSha256": "7aff7bb43215d4d171854d9612a95387f73cbc936240615033f9e48238aa3255",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        },
+        {
+          "id": "cf80f6db-9f56-5467-83fa-63aa309a6962",
+          "game_id": "sword-of-convallaria",
+          "game_slug": "sword-of-convallaria",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCFUwO_lBJCdEIME0r3TktPA",
+          "youtube_uploads_playlist_id": "UUFUwO_lBJCdEIME0r3TktPA",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:29.724392+00:00",
+          "publisher_identity_evidence_url": "https://play.google.com/store/apps/details?id=com.xd.ssrpgkr",
+          "publisher_identity_checked_at": "2026-10-14T08:54:29.724392+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:29.724392+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:29.724392+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ko",
+          "identity_evidence": {
+            "url": "https://play.google.com/store/apps/details?id=com.xd.ssrpgkr",
+            "linkedChannelUrl": "https://www.youtube.com/@Sword_Of_Convallaria_Ko",
+            "homepageSha256": null,
+            "channelTitle": "소드 오브 콘발라리아",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:29.724392+00:00",
+            "apiResponseSha256": "dcac3c4c98d0e5e840cb07e84c2ec9626ab79270710e21a086d73d8bb1d490ee",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -1232,9 +2375,57 @@
         "ja": "スターセイヴァー"
       },
       "officialWebsite": "https://www.starsavior.com/kr",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "2bbdb0d2-754a-5af7-b834-a1a378638b5e",
+          "game_id": "star-savior",
+          "game_slug": "star-savior",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCT53BvBBkR6Dp2vfPCjQemQ",
+          "youtube_uploads_playlist_id": "UUT53BvBBkR6Dp2vfPCjQemQ",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "publisher_identity_evidence_url": "https://www.starsavior.com/kr",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ko",
+          "identity_evidence": {
+            "url": "https://www.starsavior.com/kr",
+            "linkedChannelUrl": "https://www.youtube.com/@StarSavior_KR",
+            "homepageSha256": "c2daa029d15013d2491d555e365101907869e5cc0543671375ee4df9cc8fa91c",
+            "channelTitle": "스타세이비어",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.557534+00:00",
+            "apiResponseSha256": "9e705e58b6ee89a0837feeb6617bc7d615b1b44a21c5612cba334c11095b3917",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -1262,8 +2453,8 @@
         "ja": "Tower of Fantasy"
       },
       "officialWebsite": "https://store.steampowered.com/app/2064650/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
       "sources": [
         {
           "id": "50e604b7-3d9f-51c6-9e3d-e49ff153db8f",
@@ -1317,6 +2508,53 @@
           "server_region": "UNSPECIFIED",
           "server_label": null,
           "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        },
+        {
+          "id": "78cca58e-5bb6-5412-8f0d-2a8adb9b587e",
+          "game_id": "tower-of-fantasy",
+          "game_slug": "tower-of-fantasy",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UC1NbDLZjc41RQk-pV94mu_A",
+          "youtube_uploads_playlist_id": "UU1NbDLZjc41RQk-pV94mu_A",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://store.steampowered.com/app/2064650/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/2064650/",
+            "linkedChannelUrl": "https://www.youtube.com/@toweroffantasy/",
+            "homepageSha256": "ae2c9a7a2ddf6417ce95fb346e8d1c232821b4ee16e9b9746b38c36f01ed0554",
+            "channelTitle": "Tower of Fantasy",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "45ba824d170bfa0e55f09c728cae9e176bbf97e3a1f0f5ac738194b5cb1a41c0",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
         }
       ],
       "serviceStatus": "UNKNOWN",
@@ -1626,8 +2864,8 @@
         "ja": "GRANBLUE FANTASY: Relink"
       },
       "officialWebsite": "https://store.steampowered.com/app/881020/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
       "sources": [
         {
           "id": "8919e2ca-507f-5129-be72-04c31a3fb549",
@@ -1681,6 +2919,53 @@
           "server_region": "UNSPECIFIED",
           "server_label": null,
           "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        },
+        {
+          "id": "0da0c2dc-e5a2-5f8b-b391-8039ad3cbfd4",
+          "game_id": "granblue-fantasy-relink",
+          "game_slug": "granblue-fantasy-relink",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCn_aYp-WejEzxkHvD_fYUGQ",
+          "youtube_uploads_playlist_id": "UUn_aYp-WejEzxkHvD_fYUGQ",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://store.steampowered.com/app/881020/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/881020/",
+            "linkedChannelUrl": "https://www.youtube.com/@relink_official",
+            "homepageSha256": "ff5f02a06ee62312ed25f1a71395031d853bf09852c949a4b73049242b43725b",
+            "channelTitle": "Granblue Fantasy: Relink Official Channel",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "64265d84356aa52eee6e89a81526aa266a502960c5483cfcb386f93475b876fb",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
         }
       ],
       "serviceStatus": "UNKNOWN",
@@ -1695,8 +2980,8 @@
         "ja": "Granblue Fantasy Versus: Rising"
       },
       "officialWebsite": "https://store.steampowered.com/app/2157560/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
       "sources": [
         {
           "id": "4ab30b2c-fa73-51c6-8bfa-5b3eb20b7671",
@@ -1750,6 +3035,53 @@
           "server_region": "UNSPECIFIED",
           "server_label": null,
           "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        },
+        {
+          "id": "ac32d17b-4591-5a3b-9185-bea1909425ba",
+          "game_id": "granblue-fantasy-versus-rising",
+          "game_slug": "granblue-fantasy-versus-rising",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCYhP4CpF6ILT751stPPdoZg",
+          "youtube_uploads_playlist_id": "UUYhP4CpF6ILT751stPPdoZg",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://store.steampowered.com/app/2157560/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ja",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/2157560/",
+            "linkedChannelUrl": "https://www.youtube.com/@gbvs_official/",
+            "homepageSha256": "49ddd70ec5a52b564df0ea03c3ebb634ef0996f80c219becf40191cf0871f424",
+            "channelTitle": "【GBVS】グランブルーファンタジー ヴァーサス公式チャンネル",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "bf413c62b47c2f8e0061a95afefad30cf8b2fa3d363665a7653927052c7b235e",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
         }
       ],
       "serviceStatus": "UNKNOWN",
@@ -1971,8 +3303,8 @@
         "ja": "Atelier Resleriana: Forgotten Alchemy and the Polar Night Liberator"
       },
       "officialWebsite": "https://store.steampowered.com/app/2594920/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
       "sources": [
         {
           "id": "b73d495d-f9f0-515a-8796-fef116ea3310",
@@ -2026,6 +3358,53 @@
           "server_region": "UNSPECIFIED",
           "server_label": null,
           "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        },
+        {
+          "id": "6926c731-47ca-50f3-951a-0cc5160d07c6",
+          "game_id": "atelier-resleriana",
+          "game_slug": "atelier-resleriana",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCgix2EHq21jgPxBMPtwkfiw",
+          "youtube_uploads_playlist_id": "UUgix2EHq21jgPxBMPtwkfiw",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://store.steampowered.com/app/2594920/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/2594920/",
+            "linkedChannelUrl": "https://www.youtube.com/@Resleriana_EN",
+            "homepageSha256": "2c3e4d407e73e022a9e89a4ce16ae5aeafdaf1f2b67bbd1fa545b32cd3e368c3",
+            "channelTitle": "Atelier Resleriana",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "b3fd20872abfb2376451ad2a3016a3f15f460eb56f0f39967845e232f69aa759",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
         }
       ],
       "serviceStatus": "UNKNOWN",
@@ -2040,8 +3419,8 @@
         "ja": "紅の錬金術士と白の守護者 ～レスレリアーナのアトリエ～"
       },
       "officialWebsite": "https://store.steampowered.com/app/3259600/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
       "sources": [
         {
           "id": "4c14b6cf-84c1-58e9-a7f9-478fb22ea304",
@@ -2095,6 +3474,65 @@
           "server_region": "UNSPECIFIED",
           "server_label": null,
           "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        },
+        {
+          "id": "b38f73a4-8c0b-5a4e-a10f-6902946bd45a",
+          "game_id": "atelier-resleriana-red-alchemist-white-guardian",
+          "game_slug": "atelier-resleriana-red-alchemist-white-guardian",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCyF1q25e_j9MytZR4sGLiDA",
+          "youtube_uploads_playlist_id": "UUyF1q25e_j9MytZR4sGLiDA",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://store.steampowered.com/app/3259600/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ja",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/3259600/",
+            "linkedChannelUrl": "https://www.youtube.com/@GustCorporation",
+            "homepageSha256": "a75bf9305c03232e049803b95084f31634e9720300c92b4589ce45df442f59c2",
+            "channelTitle": "ガストチャンネル",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "76b64e2826940a1406c65fb3d00781c4d4e2e710545ffae6cffce35b0f778c4f",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          },
+          "game_title_filter": {
+            "version": 1,
+            "required": true,
+            "aliases": [
+              "진홍의 연금술사와 순백의 수호자 ~레슬레리아나의 아틀리에~",
+              "Atelier Resleriana: The Red Alchemist & the White Guardian",
+              "紅の錬金術士と白の守護者 ～レスレリアーナのアトリエ～",
+              "레스레리아나의 아틀리에 진홍의 연금술사와 순백의 수호자"
+            ],
+            "checkedAt": "2026-10-14T08:54:28.556531+00:00",
+            "evidenceUrl": "https://store.steampowered.com/app/3259600/"
+          }
         }
       ],
       "serviceStatus": "UNKNOWN",
@@ -2109,8 +3547,8 @@
         "ja": "ユミアのアトリエ ～追憶の錬金術士と幻創の地～"
       },
       "officialWebsite": "https://store.steampowered.com/app/3123410/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
       "sources": [
         {
           "id": "a7485622-3407-5a83-9e56-df44c9bba3dd",
@@ -2164,6 +3602,67 @@
           "server_region": "UNSPECIFIED",
           "server_label": null,
           "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        },
+        {
+          "id": "7ed31480-6f21-51a0-90ca-ffa9cd43dfb9",
+          "game_id": "atelier-yumia",
+          "game_slug": "atelier-yumia",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCyF1q25e_j9MytZR4sGLiDA",
+          "youtube_uploads_playlist_id": "UUyF1q25e_j9MytZR4sGLiDA",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://store.steampowered.com/app/3123410/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ja",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/3123410/",
+            "linkedChannelUrl": "https://www.youtube.com/@GustCorporation",
+            "homepageSha256": "00f9e755dd3711ac8117a36e2131d5caa280da6a23fa5db5d3791ac60dfae9ff",
+            "channelTitle": "ガストチャンネル",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "76b64e2826940a1406c65fb3d00781c4d4e2e710545ffae6cffce35b0f778c4f",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          },
+          "game_title_filter": {
+            "version": 1,
+            "required": true,
+            "aliases": [
+              "유미아의 아틀리에 ~추억의 연금술사와 창환의 땅~",
+              "Atelier Yumia: The Alchemist of Memories & the Envisioned Land",
+              "ユミアのアトリエ ～追憶の錬金術士と幻創の地～",
+              "유미아의 아틀리에",
+              "ユミア",
+              "Yumia"
+            ],
+            "checkedAt": "2026-10-14T08:54:28.556531+00:00",
+            "evidenceUrl": "https://store.steampowered.com/app/3123410/"
+          }
         }
       ],
       "serviceStatus": "UNKNOWN",
@@ -2385,8 +3884,8 @@
         "ja": "AFK Journey"
       },
       "officialWebsite": "https://store.steampowered.com/app/4195600/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
       "sources": [
         {
           "id": "39f76b2c-b0f5-54fb-9093-711d9dcfbfb1",
@@ -2440,6 +3939,53 @@
           "server_region": "UNSPECIFIED",
           "server_label": null,
           "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        },
+        {
+          "id": "64609ae3-274e-559d-b10d-80868656421e",
+          "game_id": "afk-journey",
+          "game_slug": "afk-journey",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCC71gqy9cyWTmqiRVcWJT4w",
+          "youtube_uploads_playlist_id": "UUC71gqy9cyWTmqiRVcWJT4w",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://store.steampowered.com/app/4195600/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/4195600/",
+            "linkedChannelUrl": "https://www.youtube.com/@AFKJourneyOfficial",
+            "homepageSha256": "9c3c81460172d2b7f6e04b198e625b2661f17bea7c5140f869b9e0ff295899ec",
+            "channelTitle": "AFK Journey",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "7ca951e0a6db85f4e22b76bcce85563e42769d7582290498b91ed0302ac961c7",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
         }
       ],
       "serviceStatus": "UNKNOWN",
@@ -2454,8 +4000,8 @@
         "ja": "七つの大罪：Origin"
       },
       "officialWebsite": "https://store.steampowered.com/app/3679080/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
       "sources": [
         {
           "id": "92a8726c-aa20-51ef-95e9-fb6a3a83c1fa",
@@ -2509,6 +4055,53 @@
           "server_region": "UNSPECIFIED",
           "server_label": null,
           "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        },
+        {
+          "id": "7a68124c-e18e-5733-a0ef-6468b0228518",
+          "game_id": "seven-deadly-sins-origin",
+          "game_slug": "seven-deadly-sins-origin",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCN5e4_jXE93vvuWGy_T0M0Q",
+          "youtube_uploads_playlist_id": "UUN5e4_jXE93vvuWGy_T0M0Q",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://store.steampowered.com/app/3679080/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/3679080/",
+            "linkedChannelUrl": "https://www.youtube.com/@7ds_origin_en",
+            "homepageSha256": "32c18967c794b2edcd3856f9de6cf51a9c58a3830213e01b6a52e04432d3d003",
+            "channelTitle": "The Seven Deadly Sins: Origin",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "55a11d9d970b28b966e164f3aa820486eeeaef5c6ed079a0e798eda312cf813b",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
         }
       ],
       "serviceStatus": "UNKNOWN",
@@ -2592,8 +4185,8 @@
         "ja": "アクション対魔忍"
       },
       "officialWebsite": "https://store.steampowered.com/app/1335200/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
       "sources": [
         {
           "id": "7962eafd-9d30-51a1-b18f-0f9a4091762a",
@@ -2647,6 +4240,53 @@
           "server_region": "UNSPECIFIED",
           "server_label": null,
           "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        },
+        {
+          "id": "db16c992-e757-5f95-88db-aa0b1a94f338",
+          "game_id": "action-taimanin",
+          "game_slug": "action-taimanin",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCgh5jkKAti-nPmXmQY3oaOQ",
+          "youtube_uploads_playlist_id": "UUgh5jkKAti-nPmXmQY3oaOQ",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://store.steampowered.com/app/1335200/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/1335200/",
+            "linkedChannelUrl": "https://www.youtube.com/channel/UCgh5jkKAti-nPmXmQY3oaOQ/",
+            "homepageSha256": "587c54af9ee6a72ddcd2d716a3cf5ae2834c095d786b0e02e3529cb9d92e6a58",
+            "channelTitle": "[OFFICIAL] Action Taimanin",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "1f47b24a932d9e7b5a41647f93b64e7c66b6869eaf30105e4c8cda0e12483e9e",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
         }
       ],
       "serviceStatus": "UNKNOWN",
@@ -2730,8 +4370,8 @@
         "ja": "BLUE REFLECTION TIE/帝"
       },
       "officialWebsite": "https://store.steampowered.com/app/1423600/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
       "sources": [
         {
           "id": "3637b87a-a848-562a-8cd6-a1e9212f2a20",
@@ -2785,6 +4425,65 @@
           "server_region": "UNSPECIFIED",
           "server_label": null,
           "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        },
+        {
+          "id": "e64d3597-21df-5bb6-85d9-5ac6ebbb65f7",
+          "game_id": "blue-reflection-second-light",
+          "game_slug": "blue-reflection-second-light",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCyF1q25e_j9MytZR4sGLiDA",
+          "youtube_uploads_playlist_id": "UUyF1q25e_j9MytZR4sGLiDA",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://store.steampowered.com/app/1423600/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ja",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/1423600/",
+            "linkedChannelUrl": "https://www.youtube.com/channel/UCyF1q25e_j9MytZR4sGLiDA/",
+            "homepageSha256": "bd56e0287671b72fa3f625efa1c38bf086368b9c663a703fab5104bb3d385772",
+            "channelTitle": "ガストチャンネル",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "76b64e2826940a1406c65fb3d00781c4d4e2e710545ffae6cffce35b0f778c4f",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          },
+          "game_title_filter": {
+            "version": 1,
+            "required": true,
+            "aliases": [
+              "BLUE REFLECTION: Second Light",
+              "BLUE REFLECTION TIE/帝",
+              "블루 리플렉션 타이",
+              "Second Light"
+            ],
+            "checkedAt": "2026-10-14T08:54:28.556531+00:00",
+            "evidenceUrl": "https://store.steampowered.com/app/1423600/"
+          }
         }
       ],
       "serviceStatus": "UNKNOWN",
@@ -2799,9 +4498,68 @@
         "ja": "グランサガ"
       },
       "officialWebsite": "https://gransaga.jp/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "755d462d-f22d-5d0a-bfb2-61f9ab8510ae",
+          "game_id": "gran-saga",
+          "game_slug": "gran-saga",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCt1SxDHFgdRg8DdUWg5bgHg",
+          "youtube_uploads_playlist_id": "UUt1SxDHFgdRg8DdUWg5bgHg",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://gransaga.jp/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ja",
+          "identity_evidence": {
+            "url": "https://gransaga.jp/",
+            "linkedChannelUrl": "https://www.youtube.com/channel/UCt1SxDHFgdRg8DdUWg5bgHg?sub_confirmation=1",
+            "homepageSha256": "16c3e7fea7fc147207aeaeb4fbc3df5f26486d70cc256756fceee47c5b778957",
+            "channelTitle": "GAMEPLEXチャンネル",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "884b670c28dbce4a98c3d792bc7526fe776681c0162a2665865bd40cdcdcdd89",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          },
+          "game_title_filter": {
+            "version": 1,
+            "required": true,
+            "aliases": [
+              "Gran Saga",
+              "グランサガ",
+              "그랑사가"
+            ],
+            "checkedAt": "2026-10-14T08:54:28.556531+00:00",
+            "evidenceUrl": "https://gransaga.jp/"
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -2859,9 +4617,57 @@
         "ja": "IDOLY PRIDE"
       },
       "officialWebsite": "https://idolypride.jp/game/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "a167dc97-27d8-52ce-8b18-e6c645363af3",
+          "game_id": "idoly-pride",
+          "game_slug": "idoly-pride",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCOuzrlRFF7aSkooORw0XWRA",
+          "youtube_uploads_playlist_id": "UUOuzrlRFF7aSkooORw0XWRA",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://idolypride.jp/game/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ja",
+          "identity_evidence": {
+            "url": "https://idolypride.jp/game/",
+            "linkedChannelUrl": "https://www.youtube.com/channel/UCOuzrlRFF7aSkooORw0XWRA",
+            "homepageSha256": "2b2642e9e2049e4b13a0bb44cc8157292d6ad7650ef85b142d75f3cd21b88832",
+            "channelTitle": "IDOLY PRIDE アイドリープライド（アイプラ）",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "6c018edb3c562b2c370f6914863ae9d14aba451bc7fc81348503b4d149286206",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -2889,9 +4695,70 @@
         "ja": "バンドリ！ ガールズバンドパーティ！"
       },
       "officialWebsite": "https://bang-dream.bushimo.jp/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "d331acbc-f196-5824-a321-073990b32ed4",
+          "game_id": "bang-dream-girls-band-party",
+          "game_slug": "bang-dream-girls-band-party",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCN-bFIdJM0gQlgX7h6LKcZA",
+          "youtube_uploads_playlist_id": "UUN-bFIdJM0gQlgX7h6LKcZA",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://bang-dream.bushimo.jp/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ja",
+          "identity_evidence": {
+            "url": "https://bang-dream.bushimo.jp/",
+            "linkedChannelUrl": "https://www.youtube.com/channel/UCN-bFIdJM0gQlgX7h6LKcZA",
+            "homepageSha256": "9e13ba9f17cc234ef01f4ae5817da3175f83419bf49b6853077937360279a8a2",
+            "channelTitle": "バンドリちゃんねる☆",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "87fd71858c149d86c1a76040056ba6cd2fea8ac80aa7957d8c61d444edbb6e71",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          },
+          "game_title_filter": {
+            "version": 1,
+            "required": true,
+            "aliases": [
+              "バンドリ！ ガールズバンドパーティ！",
+              "뱅드림 걸즈 밴드 파티",
+              "BanG Dream!",
+              "ガルパ",
+              "Girls Band Party"
+            ],
+            "checkedAt": "2026-10-14T08:54:28.556531+00:00",
+            "evidenceUrl": "https://bang-dream.bushimo.jp/"
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -2904,9 +4771,57 @@
         "ja": "プロジェクトセカイ カラフルステージ！ feat. 初音ミク"
       },
       "officialWebsite": "https://pjsekai.sega.jp/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "e4c3ebb1-b042-56a1-848b-a2f7351bd291",
+          "game_id": "project-sekai",
+          "game_slug": "project-sekai",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCdMGYXL38w6htx6Yf9YJa-w",
+          "youtube_uploads_playlist_id": "UUdMGYXL38w6htx6Yf9YJa-w",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://pjsekai.sega.jp/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ja",
+          "identity_evidence": {
+            "url": "https://pjsekai.sega.jp/",
+            "linkedChannelUrl": "https://www.youtube.com/channel/UCdMGYXL38w6htx6Yf9YJa-w?view_as=subscriber",
+            "homepageSha256": "bb9662380cae3c29f33fee76ddebbe172fb77e3678229c312a86dd90540b2f6a",
+            "channelTitle": "プロジェクトセカイ カラフルステージ! feat. 初音ミク",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "3a86d70e94550007ab65d2d01592c21d65012d00c17451f94897230d6af2bfed",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -2934,9 +4849,70 @@
         "ja": "ラブライブ！スクールアイドルフェスティバル ALL STARS"
       },
       "officialWebsite": "https://lovelive-as.bushimo.jp/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "9ad9ac6d-3292-58e2-a7c2-8af71c70a3cc",
+          "game_id": "love-live-school-idol-festival-all-stars",
+          "game_slug": "love-live-school-idol-festival-all-stars",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCTkyJbRhal4voLZxmdRSssQ",
+          "youtube_uploads_playlist_id": "UUTkyJbRhal4voLZxmdRSssQ",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://lovelive-as.bushimo.jp/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ja",
+          "identity_evidence": {
+            "url": "https://lovelive-as.bushimo.jp/",
+            "linkedChannelUrl": "https://www.youtube.com/channel/UCTkyJbRhal4voLZxmdRSssQ",
+            "homepageSha256": "033f0d8701cbb839ff54bd148cc5edbd155dbe382d9e003be3a7f0c03ba7e9aa",
+            "channelTitle": "(Love Live! series)ラブライブ！シリーズ公式チャンネル",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "8704f2ab44bb9b978e7ac2535ea0d496246119980d1652896b3e6e13c3327299",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          },
+          "game_title_filter": {
+            "version": 1,
+            "required": true,
+            "aliases": [
+              "ラブライブ！スクールアイドルフェスティバル ALL STARS",
+              "러브 라이브 스쿨 아이돌 페스티벌 올스타즈",
+              "스쿠스타",
+              "スクスタ",
+              "School Idol Festival All Stars"
+            ],
+            "checkedAt": "2026-10-14T08:54:28.556531+00:00",
+            "evidenceUrl": "https://lovelive-as.bushimo.jp/"
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -2949,9 +4925,57 @@
         "ja": "ドルフィンウェーブ"
       },
       "officialWebsite": "https://hpgames.jp/dolphin-wave/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "b4e10291-098c-5bdd-a289-05952f083b81",
+          "game_id": "dolphin-wave",
+          "game_slug": "dolphin-wave",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCMrcA5K_dsBlxjZ1wHb8RcQ",
+          "youtube_uploads_playlist_id": "UUMrcA5K_dsBlxjZ1wHb8RcQ",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://hpgames.jp/dolphin-wave/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ja",
+          "identity_evidence": {
+            "url": "https://hpgames.jp/dolphin-wave/",
+            "linkedChannelUrl": "https://www.youtube.com/channel/UCMrcA5K_dsBlxjZ1wHb8RcQ",
+            "homepageSha256": "3fdfcb86855376c64f9550e65d3c7c739dd52fb64212f5a28542259bbd11ee0c",
+            "channelTitle": "ドルウェブ公式チャンネル",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "87e84ce304e24eb7d40cbec9e11fb327a6044dd2dc810fe33833dd81a6ca72b2",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -2964,9 +4988,57 @@
         "ja": "ラストオリジン"
       },
       "officialWebsite": "https://www.last-origin.com/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "3d30db35-d126-5b27-82ae-9606f613769a",
+          "game_id": "last-origin",
+          "game_slug": "last-origin",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCNGQT4lMoqJwoc-bbRCLGkQ",
+          "youtube_uploads_playlist_id": "UUNGQT4lMoqJwoc-bbRCLGkQ",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://www.last-origin.com/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ja",
+          "identity_evidence": {
+            "url": "https://www.last-origin.com/",
+            "linkedChannelUrl": "https://www.youtube.com/channel/UCNGQT4lMoqJwoc-bbRCLGkQ",
+            "homepageSha256": "6852bb445b27812bd1c954575b94864c1b120ad3b0e8b3fe8376a466b08f631f",
+            "channelTitle": "ラストオリジン【公式】",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "b0f4ed30bff6f1c9682a3041ef47442695db8b400e156948ebdddee5cee30630",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -2994,9 +5066,57 @@
         "ja": null
       },
       "officialWebsite": "https://sena.netmarble.com/en/kimetsunoyaiba",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "7d8f1e6f-b58d-5f6b-951c-f100e8ac625c",
+          "game_id": "seven-knights-rebirth",
+          "game_slug": "seven-knights-rebirth",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UC4XtG2VYEfoilA_jLwSLfFw",
+          "youtube_uploads_playlist_id": "UU4XtG2VYEfoilA_jLwSLfFw",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "publisher_identity_evidence_url": "https://sena.netmarble.com/en/kimetsunoyaiba",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://sena.netmarble.com/en/kimetsunoyaiba",
+            "linkedChannelUrl": "https://www.youtube.com/@sena_rebirth_global",
+            "homepageSha256": "74c90507da8c61effc9694984cbd925133680dbfd23e6e016930f201a1e98d8a",
+            "channelTitle": "Seven Knights Re:BIRTH",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.557534+00:00",
+            "apiResponseSha256": "f101ecc2fd136eb7b129aa12cae5a2d0634464f753bd290b63e980972f7d13bc",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -3084,9 +5204,50 @@
         "ja": "東方LostWord"
       },
       "officialWebsite": "https://touhoulostword.com/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "ae4fad00-80f7-56b1-88aa-61114c62f03c",
+          "game_id": "touhou-lostword",
+          "game_slug": "touhou-lostword",
+          "url": "https://touhoulostword.com/feed/",
+          "parser": "official_rss",
+          "publisher_identity_evidence_url": "https://touhoulostword.com/",
+          "publisher_identity_checked_at": "2026-10-14T08:56:03.141324+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://touhoulostword.com/feed/",
+          "terms_checked_at": "2026-10-14T08:56:03.141324+00:00",
+          "notice_hosts_verified_at": "2026-10-14T08:56:03.141324+00:00",
+          "allowed_notice_hosts": [
+            "touhoulostword.com"
+          ],
+          "feed_allowlist": [
+            "official_publisher_articles"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 게시물 · 지역별 일정 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_feed",
+          "official_host": "touhoulostword.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ja",
+          "article_format": {
+            "mode": "official_rss_v1",
+            "version": 1,
+            "reviewedAt": "2026-10-14T08:56:03.141324+00:00",
+            "evidenceUrl": "https://touhoulostword.com/",
+            "allowedImageHosts": [
+              "touhoulostword.com"
+            ]
+          },
+          "access_review_notes": "Publisher homepage declares this syndication feed; dates are original offset-aware pubDate, current feed is not full history proof."
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -3099,9 +5260,57 @@
         "ja": "アリス・ギア・アイギス"
       },
       "officialWebsite": "https://colopl.co.jp/alicegearaegis/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "36c36d96-2b47-5c32-9e1c-e4cdf98ec998",
+          "game_id": "alice-gear-aegis",
+          "game_slug": "alice-gear-aegis",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCLiZObJhShqwMhOLm3xjGyA",
+          "youtube_uploads_playlist_id": "UULiZObJhShqwMhOLm3xjGyA",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://colopl.co.jp/alicegearaegis/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ja",
+          "identity_evidence": {
+            "url": "https://colopl.co.jp/alicegearaegis/",
+            "linkedChannelUrl": "https://www.youtube.com/@alicegear_official",
+            "homepageSha256": "c91b5605c54e4569f0c0028294bdb9aa9f78df78af8fe15157cc4b048aeb0132",
+            "channelTitle": "アリス・ギア・アイギス 【公式】",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "e312d8e3da673031e58f85aed288a7e2ae89330e373d1736584df3f6509befb1",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -3129,9 +5338,57 @@
         "ja": "アズールプロミリア"
       },
       "officialWebsite": "https://azurpromilia.jp/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "c4d2e1cc-d754-57f9-926c-c80c917a3357",
+          "game_id": "azur-promilia",
+          "game_slug": "azur-promilia",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UC8Y1ecushe-u55Ggte9NS-w",
+          "youtube_uploads_playlist_id": "UU8Y1ecushe-u55Ggte9NS-w",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "publisher_identity_evidence_url": "https://azurpromilia.jp/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ja",
+          "identity_evidence": {
+            "url": "https://azurpromilia.jp/",
+            "linkedChannelUrl": "https://www.youtube.com/@AzurPromilia_JP",
+            "homepageSha256": "9a3456da74090192b8aa89c5207f5f6f09090479ab5c45e0d8469a69eb3f99ad",
+            "channelTitle": "アズールプロミリア-Azur Promilia-",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.557534+00:00",
+            "apiResponseSha256": "79e4439f0ca79fe4ec3f3bcb0c24bf852924e8124b05490648b0bef8bb9cd374",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -3624,8 +5881,8 @@
         "ja": null
       },
       "officialWebsite": "https://store.steampowered.com/app/5009850/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
       "sources": [
         {
           "id": "10ccf2c7-3738-5f3d-8b86-b3a9cf4a5e1e",
@@ -3679,6 +5936,53 @@
           "server_region": "UNSPECIFIED",
           "server_label": null,
           "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        },
+        {
+          "id": "d995c4b9-a725-5b96-b7d3-6a8099f7f00d",
+          "game_id": "lost-sword",
+          "game_slug": "lost-sword",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCIYg8xTrRl2A0dpGANLTfRg",
+          "youtube_uploads_playlist_id": "UUIYg8xTrRl2A0dpGANLTfRg",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://store.steampowered.com/app/5009850/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/5009850/",
+            "linkedChannelUrl": "https://www.youtube.com/@lostsword_en",
+            "homepageSha256": "eb2acc66fcb9aa28c748d71026f22b9794cab7cc3321c7284773f731a4c88c1d",
+            "channelTitle": "Lost Sword",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "728aedaef02a3918ff02bb62ce3a2f096a3553f5ab9e648651a591b6948f5d05",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
         }
       ],
       "serviceStatus": "UNKNOWN",
@@ -3693,9 +5997,57 @@
         "ja": null
       },
       "officialWebsite": "https://www.stellasora.global/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "b34f15bd-8808-5f02-a6bc-a0d2639697bf",
+          "game_id": "stella-sora",
+          "game_slug": "stella-sora",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCHz0Vg07OPVBLpv6sx2QVnQ",
+          "youtube_uploads_playlist_id": "UUHz0Vg07OPVBLpv6sx2QVnQ",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "publisher_identity_evidence_url": "https://novaweb-usstatic.yo-star.com/h5/assets/main-41555564.js",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://novaweb-usstatic.yo-star.com/h5/assets/main-41555564.js",
+            "linkedChannelUrl": "https://www.youtube.com/@StellaSoraEN",
+            "homepageSha256": "fc6fc5f2600caa7909d6bad41bd0b27284f09eed0dfd7b728fbebbc7ca41f6df",
+            "channelTitle": "Stella Sora",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.557534+00:00",
+            "apiResponseSha256": "fd583b107cd54d2e5b4a030ffc963a80ff041d4ca400fa4a33100ff9679ad21b",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -3777,9 +6129,57 @@
         "ja": null
       },
       "officialWebsite": "https://newsroom.smilegate.com/en/eng/1731386793",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "0d022546-230b-5dd4-9212-91c47879d731",
+          "game_id": "chaos-zero-nightmare",
+          "game_slug": "chaos-zero-nightmare",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCQ7YAXPdiccbFBmwuGvO3Jg",
+          "youtube_uploads_playlist_id": "UUQ7YAXPdiccbFBmwuGvO3Jg",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://newsroom.smilegate.com/en/eng/1731386793",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://newsroom.smilegate.com/en/eng/1731386793",
+            "linkedChannelUrl": "https://www.youtube.com/@ChaosZeroNightmare_EN",
+            "homepageSha256": "e0bdbb00058acbdcca6ee300348ca4f66c2f571163c54e5b3942ac192504c8aa",
+            "channelTitle": "Chaos Zero Nightmare",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "6951fc386d9c072b76e12474c27d98e6899fc50776dfa45dcab482d77971d3f7",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -3792,8 +6192,8 @@
         "ja": null
       },
       "officialWebsite": "https://store.steampowered.com/app/3839850/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
       "sources": [
         {
           "id": "8782f1e1-7dab-5c8c-a3b8-e4e53ff26837",
@@ -3847,6 +6247,53 @@
           "server_region": "UNSPECIFIED",
           "server_label": null,
           "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        },
+        {
+          "id": "d93175b7-6c50-53bd-88a5-154a0e1cfc6d",
+          "game_id": "crystal-of-atlan",
+          "game_slug": "crystal-of-atlan",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCKbYYCynzC0rF3D-De16L5A",
+          "youtube_uploads_playlist_id": "UUKbYYCynzC0rF3D-De16L5A",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://store.steampowered.com/app/3839850/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/3839850/",
+            "linkedChannelUrl": "https://www.youtube.com/@CoA_Global",
+            "homepageSha256": "e1045274d18a581ff8403b90a4d0fc07ed067d5aa37a331ff87f1379bb1b395f",
+            "channelTitle": "Crystal of Atlan",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "c9fefcafb7604e5ebe89f190e23e4423bc23e4f1b5a5656fa3eeb633830a215e",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
         }
       ],
       "serviceStatus": "UNKNOWN",
@@ -3861,8 +6308,8 @@
         "ja": null
       },
       "officialWebsite": "https://store.steampowered.com/app/3950020/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
       "sources": [
         {
           "id": "c6798fe0-b7e7-56fd-a244-5e70cf464462",
@@ -3916,6 +6363,53 @@
           "server_region": "UNSPECIFIED",
           "server_label": null,
           "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        },
+        {
+          "id": "df2e55af-813a-5736-90aa-a16437ddbb21",
+          "game_id": "duet-night-abyss",
+          "game_slug": "duet-night-abyss",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCEds5pTo7cw1rUUkr2slzwg",
+          "youtube_uploads_playlist_id": "UUEds5pTo7cw1rUUkr2slzwg",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://store.steampowered.com/app/3950020/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/3950020/",
+            "linkedChannelUrl": "https://www.youtube.com/@DuetNightAbyss_Official?sub_confirmation=1",
+            "homepageSha256": "bd3a66342ebb886b4e58dbef0a1effa01fea30bd48c962e22c8a8b63ac0f3087",
+            "channelTitle": "Duet Night Abyss",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "99438560a8a2344e4325a35686514aa4823f82235105e6cec291d4f1a202d456",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
         }
       ],
       "serviceStatus": "UNKNOWN",
@@ -3930,9 +6424,57 @@
         "ja": "takt op. 運命は真紅き旋律の街を"
       },
       "officialWebsite": "https://game.takt-op.jp/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "1e911f93-174c-5976-a2fd-0e0c75e2030c",
+          "game_id": "takt-op-symphony",
+          "game_slug": "takt-op-symphony",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UClzecP1i04x7D6J_-l3Ry3w",
+          "youtube_uploads_playlist_id": "UUlzecP1i04x7D6J_-l3Ry3w",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://game.takt-op.jp/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ja",
+          "identity_evidence": {
+            "url": "https://game.takt-op.jp/",
+            "linkedChannelUrl": "https://www.youtube.com/channel/UClzecP1i04x7D6J_-l3Ry3w",
+            "homepageSha256": "2feb047492d56a30b81c3fb7862ed14b92a80e563674981fed199bfd5343c4e3",
+            "channelTitle": "「takt op.」公式チャンネル",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "0742745c791414324bba9a6c96c1e3117475e5b2ddb3afa3a1c890ca3f16688e",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -4020,8 +6562,8 @@
         "ja": null
       },
       "officialWebsite": "https://store.steampowered.com/app/3164330/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
       "sources": [
         {
           "id": "22a268ae-6ba2-56b5-b625-101645edf678",
@@ -4075,6 +6617,53 @@
           "server_region": "UNSPECIFIED",
           "server_label": null,
           "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        },
+        {
+          "id": "c246fa81-6c52-5d98-9697-0f1afb0fe234",
+          "game_id": "infinity-nikki",
+          "game_slug": "infinity-nikki",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCb9j4NrCfwOZucU0VQunegA",
+          "youtube_uploads_playlist_id": "UUb9j4NrCfwOZucU0VQunegA",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://store.steampowered.com/app/3164330/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/3164330/",
+            "linkedChannelUrl": "https://www.youtube.com/channel/UCb9j4NrCfwOZucU0VQunegA",
+            "homepageSha256": "926e6149fa4424dfd14665d2370904ea1aacee05203bdc71cc5ecfbdb1e3d82d",
+            "channelTitle": "Infinity Nikki",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "7bce4e3cefb10cb927667cb6976843be3fc4281674147f67445cb03775d23569",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
         }
       ],
       "serviceStatus": "UNKNOWN",
@@ -4089,9 +6678,57 @@
         "ja": null
       },
       "officialWebsite": "https://www.papegames.com/en/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "33a87fe8-4fbd-59b1-a0ee-fd6eb64eaaee",
+          "game_id": "shining-nikki",
+          "game_slug": "shining-nikki",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UClHpiutob-DW0Hylg6Jk4kw",
+          "youtube_uploads_playlist_id": "UUlHpiutob-DW0Hylg6Jk4kw",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "publisher_identity_evidence_url": "https://www.papegames.com/en/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://www.papegames.com/en/",
+            "linkedChannelUrl": "https://www.youtube.com/@ShiningNikkiGlobal",
+            "homepageSha256": "3eab9a179e7847d3d30b52de4f4bfb7b518a58e2ea021a21bd72c7126dc32532",
+            "channelTitle": "Shining Nikki",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.557534+00:00",
+            "apiResponseSha256": "b80398573ea14b7b6e8e43c850c7749f1ad3047c99c711e3a5da4879121f095d",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -4104,9 +6741,57 @@
         "ja": null
       },
       "officialWebsite": "https://lovenikki.elexapp.com/index.php",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "055ec80a-92e3-5df7-81d0-fbb8eab9a63e",
+          "game_id": "love-nikki",
+          "game_slug": "love-nikki",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCOYGRc2lA6vWLvql-YF4bzA",
+          "youtube_uploads_playlist_id": "UUOYGRc2lA6vWLvql-YF4bzA",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "publisher_identity_evidence_url": "https://lovenikki.elexapp.com/index.php",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.557534+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.557534+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://lovenikki.elexapp.com/index.php",
+            "linkedChannelUrl": "https://www.youtube.com/channel/UCOYGRc2lA6vWLvql-YF4bzA",
+            "homepageSha256": "6d07922337447d0c6148491d7f72be1ce92f3c5fdfa3567c0cd51ce7fa57d23c",
+            "channelTitle": "Love Nikki-Dress Up Queen",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.557534+00:00",
+            "apiResponseSha256": "38d801aa0616260090fde0f751228279773619e9e9e5027196e2f4165b477aee",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -4188,9 +6873,57 @@
         "ja": "決戦！平安京"
       },
       "officialWebsite": "https://www.onmyojiarena.us/global/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "2e9ba728-487d-5642-8198-b51611a908b2",
+          "game_id": "onmyoji-arena",
+          "game_slug": "onmyoji-arena",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCd6dATiHEWVyKp1TIAzkX9g",
+          "youtube_uploads_playlist_id": "UUd6dATiHEWVyKp1TIAzkX9g",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://www.onmyojiarena.us/global/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://www.onmyojiarena.us/global/",
+            "linkedChannelUrl": "https://www.youtube.com/channel/UCd6dATiHEWVyKp1TIAzkX9g?view_as=subscriber",
+            "homepageSha256": "faeaf2a20464514192239ccae4f35da8fdd0a8b56869eebab257448f21c50122",
+            "channelTitle": "Onmyoji Arena",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "642c5253bddef8a8359f44e5bb0d2397b4407a124e33ea4f73f0430ebbfe6eb6",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -4287,9 +7020,67 @@
         "ja": "ブループロトコル"
       },
       "officialWebsite": "https://www.bandainamcostudios.com/products/blue-protocol.html",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "f82703b2-a337-5d26-a69d-c063dea4854c",
+          "game_id": "blue-protocol",
+          "game_slug": "blue-protocol",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCYC5taNHZWnASB-Z0Mf3BHA",
+          "youtube_uploads_playlist_id": "UUYC5taNHZWnASB-Z0Mf3BHA",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://www.bandainamcostudios.com/products/blue-protocol.html",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ja",
+          "identity_evidence": {
+            "url": "https://www.bandainamcostudios.com/products/blue-protocol.html",
+            "linkedChannelUrl": "https://www.youtube.com/@BandainamcoStudios",
+            "homepageSha256": "2bd275651dfc9c300be0bf2d89a7aa287ed0a99c8ea1af14fe5032c88ae74c33",
+            "channelTitle": "株式会社バンダイナムコスタジオ",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "81596df0ec39ea7604ca5cb11079f434c947c6fd265a39c20196cc117ee48471",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          },
+          "game_title_filter": {
+            "version": 1,
+            "required": true,
+            "aliases": [
+              "BLUE PROTOCOL",
+              "ブループロトコル"
+            ],
+            "checkedAt": "2026-10-14T08:54:28.556531+00:00",
+            "evidenceUrl": "https://www.bandainamcostudios.com/products/blue-protocol.html"
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -4347,9 +7138,57 @@
         "ja": "この素晴らしい世界に祝福を！ファンタスティックデイズ"
       },
       "officialWebsite": "https://konosubafd.jp/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "44d7202b-1ece-5e74-abc8-9215a1792946",
+          "game_id": "konosuba-fantastic-days",
+          "game_slug": "konosuba-fantastic-days",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UChR0pzeaikeQOheRXrr7gHQ",
+          "youtube_uploads_playlist_id": "UUhR0pzeaikeQOheRXrr7gHQ",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://konosubafd.jp/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "ja",
+          "identity_evidence": {
+            "url": "https://konosubafd.jp/",
+            "linkedChannelUrl": "https://www.youtube.com/channel/UChR0pzeaikeQOheRXrr7gHQ",
+            "homepageSha256": "3f069f98c5fbec43ff55db2e7e33fcbc1d64762505822445b6c6c9699e28afa1",
+            "channelTitle": "このファン公式チャンネル",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "b8d07d04c24b7f2ac1d02aa77674e57d24fb60732a7e47a34b389cf63bb92b96",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -4452,9 +7291,57 @@
         "ja": null
       },
       "officialWebsite": "https://tot.hoyoverse.com/en/",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "NO_REVIEWED_MACHINE_READABLE_SOURCE",
-      "sources": [],
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
+      "sources": [
+        {
+          "id": "9e35b4d3-00b0-575d-9d13-eb72feb69f89",
+          "game_id": "tears-of-themis",
+          "game_slug": "tears-of-themis",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UCsH_thMW9_3rau-K8v4yAxw",
+          "youtube_uploads_playlist_id": "UUsH_thMW9_3rau-K8v4yAxw",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://tot.hoyoverse.com/en/",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://tot.hoyoverse.com/en/",
+            "linkedChannelUrl": "https://www.youtube.com/channel/UCsH_thMW9_3rau-K8v4yAxw",
+            "homepageSha256": "5edb80886f433170f3434d5152aa4fd1b4c9ee34f3ee6638f1651257aff0dd39",
+            "channelTitle": "Tears of Themis",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "189bda347140e2fb96cacaa393562856dd066ed8ff208b0b3fd308415f7aedb0",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          }
+        }
+      ],
       "serviceStatus": "UNKNOWN",
       "serverRegion": "UNSPECIFIED"
     },
@@ -4965,8 +7852,8 @@
         "ja": "メタファー：リファンタジオ"
       },
       "officialWebsite": "https://store.steampowered.com/app/2679460/?l=english",
-      "baselineStatus": "NO_SOURCE",
-      "reasonCode": "APPROVED_PUBLIC_API_NOT_YET_FETCHED",
+      "baselineStatus": "REVIEWED_SOURCE_CONFIGURED_INACTIVE_UNTIL_DEPLOYMENT",
+      "reasonCode": "ACTUAL_PUBLISHER_LINK_AND_PUBLIC_PROVIDER_IDENTITY_VERIFIED",
       "sources": [
         {
           "id": "4a1a96ef-63dd-5e20-8d5f-08d2bfd9a77c",
@@ -5020,6 +7907,66 @@
           "server_region": "UNSPECIFIED",
           "server_label": null,
           "notes": "Public publisher-announcement API only; no store HTML crawl, credentials or game-account access. Operating enablement remains false. Feed publication is not an event date."
+        },
+        {
+          "id": "2bfac93b-1f6b-5e59-af3a-93bda4ee0a26",
+          "game_id": "metaphor-refantazio",
+          "game_slug": "metaphor-refantazio",
+          "url": "https://www.googleapis.com/youtube/v3/playlistItems",
+          "parser": "youtube_data_api",
+          "youtube_channel_id": "UC7hgDFSPvJVIUx_b8i1cILA",
+          "youtube_uploads_playlist_id": "UU7hgDFSPvJVIUx_b8i1cILA",
+          "youtube_uploads_playlist_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "publisher_identity_evidence_url": "https://store.steampowered.com/app/2679460/?l=english",
+          "publisher_identity_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "approved_for_staging": true,
+          "access_status": "approved",
+          "terms_url": "https://developers.google.com/youtube/terms/api-services-terms-of-service",
+          "terms_checked_at": "2026-10-14T08:54:28.556531+00:00",
+          "documentation_url": "https://developers.google.com/youtube/v3/docs/playlistItems/list",
+          "notice_hosts_verified_at": "2026-10-14T08:54:28.556531+00:00",
+          "allowed_notice_hosts": [
+            "www.youtube.com"
+          ],
+          "feed_allowlist": [
+            "youtube_uploads_playlist"
+          ],
+          "server_region": "UNSPECIFIED",
+          "server_label": "공식 YouTube · 게시 언어와 게임 서버 구분",
+          "collection_interval_minutes": 15,
+          "method": "official_api",
+          "official_host": "www.googleapis.com",
+          "enabled": false,
+          "request_timeout_seconds": 20,
+          "max_response_bytes": 2097152,
+          "schedule_extraction_approved": false,
+          "content_language": "en",
+          "identity_evidence": {
+            "url": "https://store.steampowered.com/app/2679460/?l=english",
+            "linkedChannelUrl": "https://www.youtube.com/@atlus",
+            "homepageSha256": "27767338d4a1a5671ff6645276045510a21a66bf8e20c3c5f712d2c6b821b8d9",
+            "channelTitle": "Official ATLUS West",
+            "channelMetadataVerifiedAt": "2026-10-14T08:54:28.556531+00:00",
+            "apiResponseSha256": "41e6afbd36495871581ee02608c287cd6b71700a9f9ef3ca54658864d016a441",
+            "verifiedFields": [
+              "youtubeChannelId",
+              "youtubeUploadsPlaylistId"
+            ],
+            "notes": "Existing publisher/store page directly links this channel; actual public channels API confirms stable identity and uploads playlist. Regional game-server dates remain unspecified."
+          },
+          "game_title_filter": {
+            "version": 1,
+            "required": true,
+            "aliases": [
+              "Metaphor: ReFantazio",
+              "메타포: 리판타지오",
+              "メタファー：リファンタジオ",
+              "Metaphor",
+              "メタファー"
+            ],
+            "checkedAt": "2026-10-14T08:54:28.556531+00:00",
+            "evidenceUrl": "https://store.steampowered.com/app/2679460/?l=english"
+          }
         }
       ],
       "serviceStatus": "UNKNOWN",
@@ -5371,5 +8318,6 @@
       "serverRegion": "UNSPECIFIED"
     }
   ],
-  "contentPublishedNotBefore": "2026-10-01T00:00:00+09:00"
+  "contentPublishedNotBefore": "2026-10-01T00:00:00+09:00",
+  "contentPublishedBefore": "2026-11-01T00:00:00+09:00"
 }
