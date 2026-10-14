@@ -8,7 +8,11 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import re
-from urllib.parse import urlencode, urlsplit, parse_qsl
+from html.parser import HTMLParser
+from urllib.parse import urlencode, urlsplit, parse_qsl, urljoin
+from zoneinfo import ZoneInfo
+import xml.etree.ElementTree as ET
+from email.utils import parsedate_to_datetime
 from engine import ValidationError, normalize_url
 
 UTC = timezone.utc
@@ -199,6 +203,10 @@ def parse_youtube_api_documents(raw, source, observed_at):
         if (not isinstance(title,str) or not 1 <= len(title.strip()) <= 500 or not isinstance(content,str) or len(content)>200000
             or not isinstance(playlist_item,str) or not 1 <= len(playlist_item) <= 256 or any(ord(char)<32 for char in playlist_item)):
             raise ValidationError("youtube_api_document_fields_invalid")
+        # ORBIT stores the source title, thumbnail and watch link, not video
+        # descriptions. Discard before building the persisted snapshot/hash or
+        # classification hints; descriptions never establish event dates.
+        content = ""
         published_time = aware_timestamp(published)
         added = snippet.get("publishedAt")
         if added is not None: aware_timestamp(added)
@@ -235,6 +243,261 @@ def parse_youtube_api_documents(raw, source, observed_at):
             "source_provider":"youtube","source_channel_id":channel,"source_video_id":video})
     return documents, {"items_seen":len(items),"items_accepted":len(documents),"items_skipped":len(skipped),"skip_reasons":skipped,
         "next_page_token":continuation,"window_coverage_verified":False,"coverage_reason":"PAGINATED_UPLOADS_BOUNDARY_NOT_YET_VERIFIED"}
+
+
+def official_html_request(source,page=1,article_url=None):
+    """Reviewed publisher board, not arbitrary selectors, login or scraping."""
+    policy=source.get("article_format") or {}
+    if (source.get("parser")!="official_html" or policy.get("mode")!="nexon_board_v1" or policy.get("version")!=1
+        or set(policy)-{"mode","version","reviewedAt","evidenceUrl","timezone","allowedImageHosts"}
+        or policy.get("timezone")!="Asia/Seoul" or not policy.get("reviewedAt") or not policy.get("evidenceUrl")):
+        raise ValidationError("reviewed_official_article_format_required")
+    aware_timestamp(policy["reviewedAt"])
+    if not normalize_url(policy["evidenceUrl"]).startswith("https://"):raise ValidationError("article_format_evidence_required")
+    base=urlsplit(normalize_url(source.get("url")))
+    if base.scheme!="https" or base.hostname!="www.nexongames.co.kr" or base.path!="/bbs/board.php" or base.fragment:
+        raise ValidationError("exact_publisher_board_required")
+    pairs=parse_qsl(base.query,keep_blank_values=True)
+    if len(pairs)!=1 or pairs!=[("bo_table","media_event")]:raise ValidationError("exact_publisher_board_required")
+    hosts=policy.get("allowedImageHosts")
+    if not isinstance(hosts,list) or hosts!=["www.nexongames.co.kr"]:raise ValidationError("exact_article_image_hosts_required")
+    if article_url:
+        article=urlsplit(normalize_url(article_url));params=parse_qsl(article.query,keep_blank_values=True);query=dict(params)
+        if (article.scheme!="https" or article.hostname!=base.hostname or article.path!=base.path or article.fragment
+            or len(params)!=len(query) or set(query)-{"bo_table","wr_id","page"} or query.get("bo_table")!="media_event"
+            or not re.fullmatch(r"[1-9]\d{0,8}",query.get("wr_id","")) or "page"in query and not re.fullmatch(r"[1-9]\d{0,4}",query["page"])):
+            raise ValidationError("exact_publisher_article_required")
+        query={"bo_table":"media_event","wr_id":query["wr_id"]}
+    else:
+        if type(page)is not int or not 1<=page<=1000:raise ValidationError("bounded_publisher_page_required")
+        query={"bo_table":"media_event","page":page}
+    return {**source,"url":"https://www.nexongames.co.kr/bbs/board.php?"+urlencode(query),"official_host":base.hostname,"enabled":True,"method":"public_page"}
+
+
+class _PublisherBoardHTML(HTMLParser):
+    """Exact reviewed board DOM fields; menus, profiles and scripts are omitted."""
+    def __init__(self,source,url):
+        super().__init__(convert_charrefs=True);self.source=source;self.url=url;self.stack=[];self.values={"title":[],"date":[],"body":[],"listdate":[]};self.images=[];self.links=[];self.anchor=None
+    def handle_starttag(self,tag,attributes):
+        attrs=dict(attributes);classes=attrs.get("class","").split();active={}
+        if "bo_v_tit"in classes:active["title"]=True
+        if "header_date"in classes:active["date"]=True
+        if "wr_date"in classes:active["listdate"]=True;self.values["listdate"]=[]
+        if attrs.get("id")=="bo_v_con":active["body"]=True
+        if self.source.get("article_format",{}).get("linkedArticleFormat")=="prtimes_release_v1":
+            if attrs.get("id")=="press-release-title":active["title"]=True
+            if attrs.get("id")=="press-release-body":active["body"]=True
+        if self.source.get("article_format",{}).get("linkedArticleFormat")=="ticketlink_notice_v1":
+            if attrs.get("id")=="noticeTitle":active["title"]=True
+            if "list_cont"in classes:active["body"]=True
+            if "thumb"in classes:active["thumbnail"]=True
+        body=any(node[1].get("body") for node in self.stack)
+        if tag=="img" and (body or any(node[1].get("thumbnail")for node in self.stack)):
+            try:
+                url=normalize_url(urljoin(self.url,attrs.get("src","")))
+                if urlsplit(url).hostname in self.source["article_format"]["allowedImageHosts"] and url not in self.images:self.images.append(url)
+            except (ValidationError,ValueError,TypeError):pass
+        if tag=="a":self.anchor={"href":urljoin(self.url,attrs.get("href","")),"text":[],"listTitle":"bo_tit"in classes,"publishedDate":"".join(self.values["listdate"]).strip()}
+        if body and tag in ("p","br","div","li"):self.values["body"].append("\n")
+        if tag not in ("img","br","hr","meta","link","input","source","area","base","embed","param","wbr"):self.stack.append((tag,active))
+    def handle_startendtag(self,tag,attributes):
+        self.handle_starttag(tag,attributes)
+        if tag not in ("img","br","hr","meta","link","input","source","area","base","embed","param","wbr"):self.handle_endtag(tag)
+    def handle_data(self,value):
+        if any(node[0] in ("script","style") for node in self.stack):return
+        for key in self.values:
+            if any(node[1].get(key) for node in self.stack):self.values[key].append(value)
+        if self.anchor:self.anchor["text"].append(value)
+    def handle_endtag(self,tag):
+        if tag=="a" and self.anchor:
+            if self.anchor["listTitle"]:self.links.append({"url":self.anchor["href"],"title":re.sub(r"\s+"," ","".join(self.anchor["text"])).strip(),"publishedDate":self.anchor["publishedDate"]})
+            self.anchor=None
+        positions=[index for index,node in enumerate(self.stack)if node[0]==tag]
+        if positions:self.stack=self.stack[:positions[-1]]
+
+
+def parse_official_html_index(raw,source,page=1):
+    request=official_html_request(source,page)
+    if not isinstance(raw,(bytes,str)) or len(raw)>2097152:raise ValidationError("publisher_index_body_limit")
+    parser=_PublisherBoardHTML(source,request["url"])
+    try:parser.feed(raw.decode("utf-8-sig") if isinstance(raw,bytes) else raw)
+    except (UnicodeError,ValueError)as error:raise ValidationError("publisher_index_html_invalid")from error
+    found=[];seen=set()
+    for link in parser.links:
+        try:article=official_html_request(source,article_url=link["url"])
+        except (ValidationError,ValueError,TypeError):continue
+        if article["url"]not in seen:
+            if not re.fullmatch(r"20\d{2}\.\d{2}\.\d{2}",link["publishedDate"]):raise ValidationError("publisher_list_date_required")
+            seen.add(article["url"]);found.append({"url":article["url"],"title":link["title"],"publishedDate":link["publishedDate"]})
+    if len(found)>100:raise ValidationError("bounded_publisher_article_list_required")
+    return found
+
+
+def parse_official_html_article(raw,source,url,observed_at):
+    request=official_html_request(source,article_url=url)
+    if not isinstance(raw,(bytes,str)) or len(raw)>2097152:raise ValidationError("publisher_article_body_limit")
+    parser=_PublisherBoardHTML(source,request["url"])
+    try:parser.feed(raw.decode("utf-8-sig") if isinstance(raw,bytes) else raw)
+    except (UnicodeError,ValueError)as error:raise ValidationError("publisher_article_html_invalid")from error
+    title=re.sub(r"\s+"," ","".join(parser.values["title"])).strip();day="".join(parser.values["date"]).strip();body="".join(parser.values["body"]).strip()
+    if not 1<=len(title)<=500 or not 1<=len(body)<=200000 or not re.fullmatch(r"20\d{2}\.\d{2}\.\d{2}",day):raise ValidationError("explicit_article_title_publication_body_required")
+    # The publisher prints a date, not a posting time. Midnight represents the
+    # beginning of that reviewed local date; publicationPrecision preserves it.
+    published=datetime.strptime(day,"%Y.%m.%d").replace(tzinfo=ZoneInfo(source["article_format"]["timezone"])).astimezone(UTC)
+    identity=dict(parse_qsl(urlsplit(request["url"]).query))["wr_id"]
+    snapshot={"articleId":identity,"title":title,"body":body,"publishedDate":day,"publicationPrecision":"day","publicationTimezone":source["article_format"]["timezone"],"officialUrl":request["url"],"imageUrls":parser.images[:20]}
+    hints=[kind for kind,patterns in TYPES.items()if any(re.search(pattern,title+"\n"+body,re.I)for pattern in patterns)]
+    return {"external_key":identity,"raw_sha256":hashlib.sha256(json.dumps(snapshot,ensure_ascii=False,sort_keys=True).encode()).hexdigest(),"raw_json":snapshot,
+        "raw_publication_timestamp":day,"publication_precision":"day","publication_local_date":day.replace(".","-"),"published_at":published.isoformat(),"source_updated_at":None,"observed_at":observed_at,
+        "official_url":request["url"],"original_title":title,"original_description":body,"original_language":source.get("content_language")or"unknown",
+        "server_region":source.get("server_region")or"UNSPECIFIED","server_label":source.get("server_label"),"event_type_candidates":hints,"pickups":[],
+        "source_provider":"official-site","source_image_urls":parser.images[:20],"official_article_image_urls":parser.images[:20]}
+
+
+def official_rss_request(source):
+    policy=source.get("article_format")or{}
+    if (source.get("parser")!="official_rss" or policy.get("mode")!="official_rss_v1" or policy.get("version")!=1
+        or set(policy)-{"mode","version","reviewedAt","evidenceUrl","allowedImageHosts","linkedArticleFormat"}
+        or not isinstance(policy.get("allowedImageHosts"),list)or not 1<=len(policy["allowedImageHosts"])<=20):raise ValidationError("reviewed_publisher_rss_required")
+    aware_timestamp(policy.get("reviewedAt"));normalize_url(policy.get("evidenceUrl"))
+    url=normalize_url(source.get("url"));parsed=urlsplit(url)
+    if parsed.scheme!="https"or parsed.hostname not in source.get("allowed_notice_hosts",[])or parsed.fragment:raise ValidationError("official_rss_host_required")
+    linked=policy.get("linkedArticleFormat")
+    if linked not in(None,"prtimes_release_v1"):raise ValidationError("reviewed_linked_article_format_required")
+    if linked:
+        query=parse_qsl(parsed.query,keep_blank_values=True)
+        if (parsed.hostname!="prtimes.jp"or parsed.path!="/companyrdf.php"or len(query)!=1 or query[0][0]!="company_id"
+            or not re.fullmatch(r"[1-9]\d{0,7}",query[0][1])or policy["allowedImageHosts"]!=["prcdn.freetls.fastly.net"]):raise ValidationError("exact_publisher_prtimes_rss_required")
+    for host in policy["allowedImageHosts"]:
+        if not isinstance(host,str)or not re.fullmatch(r"[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?",host):raise ValidationError("exact_article_image_hosts_required")
+    return {**source,"url":url,"official_host":parsed.hostname,"enabled":True,"method":"official_feed"}
+
+
+def parse_official_rss_documents(raw,source,observed_at):
+    official_rss_request(source)
+    if not isinstance(raw,(bytes,str))or len(raw)>2097152:raise ValidationError("official_rss_body_limit")
+    encoded=raw.encode()if isinstance(raw,str)else raw
+    if b"\x00"in encoded or re.search(br"<!\s*(?:DOCTYPE|ENTITY)\b",encoded,re.I):raise ValidationError("official_rss_xml_unsafe")
+    try:root=ET.fromstring(encoded.decode("utf-8-sig"))
+    except (ET.ParseError,UnicodeError)as error:raise ValidationError("official_rss_xml_invalid")from error
+    rdf_ns="{http://www.w3.org/1999/02/22-rdf-syntax-ns#}";rss_ns="{http://purl.org/rss/1.0/}";dc_ns="{http://purl.org/dc/elements/1.1/}"
+    rdf=root.tag==rdf_ns+"RDF"
+    if root.tag!="rss"and not rdf:raise ValidationError("official_rss_format_required")
+    items=root.findall(rss_ns+"item")if rdf else root.findall("channel/item")
+    if len(items)>(250 if rdf else 100):raise ValidationError("bounded_official_rss_items_required")
+    content_ns="{http://purl.org/rss/1.0/modules/content/}";documents=[];seen=set()
+    for item in items:
+        prefix=rss_ns if rdf else ""
+        title=item.findtext(prefix+"title")or"";url=normalize_url(item.findtext(prefix+"link")or"");date=item.findtext(dc_ns+"date")if rdf else item.findtext("pubDate");content=item.findtext(content_ns+"encoded")or item.findtext(prefix+"description")or""
+        if not 1<=len(title)<=500 or len(content)>200000 or urlsplit(url).hostname not in source.get("allowed_notice_hosts",[]):raise ValidationError("official_rss_article_identity_required")
+        try:clock=aware_timestamp(date)if rdf else parsedate_to_datetime(date)
+        except (ValueError,TypeError)as error:raise ValidationError("official_rss_publication_required")from error
+        if clock.tzinfo is None:raise ValidationError("official_rss_publication_timezone_required")
+        if url in seen:raise ValidationError("official_rss_duplicate_article")
+        seen.add(url);images=[]
+        for value in re.findall(r"<img\b[^>]*\bsrc\s*=\s*['\"]([^'\"]+)['\"]",content,re.I):
+            try:
+                image=normalize_url(urljoin(url,value))
+                if urlsplit(image).hostname in source["article_format"]["allowedImageHosts"]and image not in images:images.append(image)
+            except (ValidationError,ValueError,TypeError):pass
+        snapshot={"title":title,"body":content,"published":date,"officialUrl":url,"imageUrls":images[:20]}
+        hints=[kind for kind,patterns in TYPES.items()if any(re.search(pattern,title+"\n"+content,re.I)for pattern in patterns)]
+        if rdf and item.get(rdf_ns+"about")!=url:raise ValidationError("official_rdf_article_identity_mismatch")
+        documents.append({"external_key":item.findtext("guid")or url,"raw_sha256":hashlib.sha256(json.dumps(snapshot,ensure_ascii=False,sort_keys=True).encode()).hexdigest(),"raw_json":snapshot,
+            "raw_publication_timestamp":date,"published_at":clock.astimezone(UTC).isoformat(),"source_updated_at":None,"observed_at":observed_at,
+            "official_url":url,"original_title":title,"original_description":content,"original_language":source.get("content_language")or"unknown",
+            "server_region":source.get("server_region")or"UNSPECIFIED","server_label":source.get("server_label"),"event_type_candidates":hints,"pickups":[],
+            "source_provider":"official-site","source_image_urls":images[:20],"official_article_image_urls":images[:20],
+            "linked_article_required":source["article_format"].get("linkedArticleFormat")=="prtimes_release_v1"})
+    return documents,{"items_seen":len(items),"items_accepted":len(documents),"items_skipped":0,"skip_reasons":[],"window_coverage_verified":False,"coverage_reason":"RECENT_PUBLISHER_RSS_WITHOUT_HISTORY_PAGINATION"}
+
+
+def official_rss_article_request(source,document):
+    official_rss_request(source)
+    if source["article_format"].get("linkedArticleFormat")!="prtimes_release_v1":raise ValidationError("reviewed_linked_article_format_required")
+    company=dict(parse_qsl(urlsplit(source["url"]).query))["company_id"]
+    url=normalize_url(document.get("official_url"));parsed=urlsplit(url)
+    if parsed.scheme!="https"or parsed.hostname!="prtimes.jp"or parsed.query or not re.fullmatch(r"/main/html/rd/p/\d{9}\."+re.escape(company.zfill(9))+r"\.html",parsed.path):raise ValidationError("same_company_prtimes_article_required")
+    return {**source,"url":url,"official_host":"prtimes.jp","enabled":True,"method":"public_page"}
+
+
+def attach_official_rss_article(raw,source,document):
+    request=official_rss_article_request(source,document)
+    prior=document.get("raw_json")or{}
+    if (prior.get("title")!=document.get("original_title")or prior.get("officialUrl")!=document.get("official_url")
+        or hashlib.sha256(json.dumps(prior,ensure_ascii=False,sort_keys=True).encode()).hexdigest()!=document.get("raw_sha256")):
+        raise ValidationError("publisher_rss_document_hash_mismatch")
+    if not isinstance(raw,(bytes,str))or len(raw)>2097152:raise ValidationError("publisher_article_body_limit")
+    parser=_PublisherBoardHTML(source,request["url"])
+    # HTML parsing ignores NULL in publisher text; remove it before comparing
+    # the DOM title to the separately authenticated/date-bearing RSS title.
+    try:parser.feed((raw.decode("utf-8-sig")if isinstance(raw,bytes)else raw).replace("\x00",""))
+    except (UnicodeError,ValueError)as error:raise ValidationError("publisher_article_html_invalid")from error
+    title=re.sub(r"\s+"," ","".join(parser.values["title"])).strip();body="".join(parser.values["body"]).strip()
+    if title!=document["original_title"]or not 1<=len(body)<=200000:raise ValidationError("publisher_rss_article_title_body_mismatch")
+    # The signed/date-bearing publisher feed establishes the posting timestamp;
+    # a timezone-free HTML/JSON-LD timestamp never replaces that explicit fact.
+    snapshot={"title":title,"body":body,"published":document["raw_publication_timestamp"],"officialUrl":request["url"],"imageUrls":parser.images[:20]}
+    result={**document,"original_description":body,"raw_json":snapshot,"raw_sha256":hashlib.sha256(json.dumps(snapshot,ensure_ascii=False,sort_keys=True).encode()).hexdigest(),
+        "source_image_urls":parser.images[:20],"official_article_image_urls":parser.images[:20]}
+    dates=re.findall(r"開催日[：:]\s*(20\d{2})年(\d{1,2})月(\d{1,2})日",body)
+    if len(set(dates))==1:
+        year,month,day=map(int,dates[0]);local=datetime(year,month,day).date().isoformat()
+        result["announced_local_date"]={"localDate":local,"precision":"day","evidenceText":"開催日："+"年".join([str(year),str(month)])+"月"+str(day)+"日","sourceUrl":request["url"]}
+    return result
+
+
+def paired_ticket_notice_request(source,document):
+    """Exactly reviewed October parent + official ticket auxiliary notice.
+
+    The auxiliary notice may be older: it never becomes a new October post or
+    supplies the parent publication date. Changed parent facts fail closed.
+    """
+    policy=source.get("paired_ticket_notice")or{}
+    fields={"mode","version","reviewedAt","evidenceUrl","parentArticleUrl","parentSourceSha256","parentTitle","noticeUrl","allowedImageHosts"}
+    if (not isinstance(policy,dict)or set(policy)-fields or policy.get("mode")!="exact_ticketlink_notice_v1"or policy.get("version")!=1
+        or source.get("game_id")!="blue-archive"or source.get("parser")!="official_html"
+        or policy.get("allowedImageHosts")!=["image.toast.com"]or not re.fullmatch(r"[a-f0-9]{64}",str(policy.get("parentSourceSha256","")))):
+        raise ValidationError("exact_paired_ticket_policy_required")
+    aware_timestamp(policy.get("reviewedAt"));normalize_url(policy.get("evidenceUrl"))
+    parent="https://www.nexongames.co.kr/bbs/board.php?bo_table=media_event&wr_id=518";notice="https://www.ticketlink.co.kr/help/notice/66055"
+    if normalize_url(policy.get("parentArticleUrl"))!=normalize_url(parent)or policy.get("noticeUrl")!=notice:raise ValidationError("exact_paired_ticket_routes_required")
+    if not isinstance(policy.get("parentTitle"),str)or not 1<=len(policy["parentTitle"])<=500:raise ValidationError("exact_paired_parent_title_required")
+    if (document.get("official_url")!=normalize_url(parent)or document.get("raw_sha256")!=policy["parentSourceSha256"]or document.get("original_title")!=policy["parentTitle"]
+        or document.get("external_key")!="518"or document.get("_section_key")):
+        raise ValidationError("paired_ticket_parent_changed")
+    compact=re.sub(r"\s+","",document.get("original_description",""))
+    required=["블루아카이브","5주년페스티벌","10월13일","10월15일","10월14일오후8시","10월16일오후8시","11월7일","8일"]
+    if any(value not in compact for value in required):raise ValidationError("paired_ticket_parent_dates_not_corroborated")
+    return {**source,"url":notice,"official_host":"www.ticketlink.co.kr","parser":"official_auxiliary_notice","enabled":True,"method":"public_page"}
+
+
+def parse_paired_ticket_notice(raw,source,document):
+    request=paired_ticket_notice_request(source,document)
+    if not isinstance(raw,(bytes,str))or len(raw)>2097152:raise ValidationError("publisher_article_body_limit")
+    text=raw.decode("utf-8-sig")if isinstance(raw,bytes)else raw
+    adapter={**source,"article_format":{"linkedArticleFormat":"ticketlink_notice_v1","allowedImageHosts":["image.toast.com"]}}
+    parser=_PublisherBoardHTML(adapter,request["url"]);parser.feed(text)
+    title=re.sub(r"\s+"," ","".join(parser.values["title"])).strip();body="".join(parser.values["body"]).strip()
+    if ("블루 아카이브 5주년 페스티벌"not in title or "티켓오픈 안내"not in title or len(body)>200000
+        or parser.images!=["https://image.toast.com/aaaaab/ticketlink/TKL_2/5th_open1012.png"]):raise ValidationError("exact_paired_festival_title_image_required")
+    stages=[]
+    for round_,kind,day,hour,label in [(1,"membership",13,12,"멤버십 인증"),(1,"ticket",14,20,"티켓 오픈"),(2,"membership",15,12,"멤버십 인증"),(2,"ticket",16,20,"티켓 오픈")]:
+        pattern=str(round_)+r"차\s*"+label+r"[^\n:：]*[:：]\s*2026년\s*10월\s*"+str(day)+r"일[^\n\d]*"+str(hour)+r"시"
+        matches=re.findall(pattern,body)
+        if len(matches)!=1:raise ValidationError("exact_paired_ticket_stage_unconfirmed")
+        stages.append({"round":round_,"kind":kind,"startsAt":datetime(2026,10,day,hour,tzinfo=ZoneInfo("Asia/Seoul")).astimezone(UTC),"evidenceText":matches[0]})
+    compact=re.sub(r"\s+","",body)
+    if any(value not in compact for value in ["공연기간:2026년11월7일(토)~11월8일(일)","공연시간:10시~18시","공연장소:킨텍스제2전시장9홀"]):raise ValidationError("exact_paired_festival_period_venue_required")
+    registered=re.search(r"function\s+setNoticeRegisterDate\s*\([^)]*\)\s*\{\s*var\s+miliSeconds\s*=\s*(\d{13})",text)
+    if not registered:raise ValidationError("ticket_auxiliary_publication_required")
+    auxiliary_published=datetime.fromtimestamp(int(registered[1])/1000,UTC)
+    if auxiliary_published>=aware_timestamp(document["published_at"]):raise ValidationError("expected_older_auxiliary_notice_required")
+    snapshot={"title":title,"body":body,"imageUrls":parser.images,"publishedAt":auxiliary_published.isoformat(),"officialUrl":request["url"]}
+    return {"title":title,"body":body,"imageUrls":parser.images,"publishedAt":auxiliary_published,
+        "snapshotSha256":hashlib.sha256(json.dumps(snapshot,ensure_ascii=False,sort_keys=True).encode()).hexdigest(),"stages":stages,
+        "startsAt":datetime(2026,11,7,10,tzinfo=ZoneInfo("Asia/Seoul")).astimezone(UTC),"endsAt":datetime(2026,11,8,18,tzinfo=ZoneInfo("Asia/Seoul")).astimezone(UTC),
+        "timezone":"Asia/Seoul","dailyOpeningHours":{"start":"10:00","end":"18:00"},"venue":"킨텍스 제2전시장 9홀","noticeUrl":request["url"]}
 
 
 def parse_steam_documents(raw, source, observed_at):
