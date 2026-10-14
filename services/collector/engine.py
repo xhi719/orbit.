@@ -299,6 +299,11 @@ def fetch_source(source: dict) -> tuple[int, bytes, dict]:
         raise ValidationError("source_access_not_approved")
     url = source["url"]
     headers = {"User-Agent": "SubcultureHubCollector/1.0 (official-source; terms-reviewed)", "Accept": "application/json,application/rss+xml,application/atom+xml,text/html"}
+    # This reviewed auxiliary route negotiates JSON when JSON appears first.
+    # Its exact DOM adapter needs the publisher's public HTML representation;
+    # retain the same identity, URL, access checks and redirect restrictions.
+    if source.get("parser") == "official_auxiliary_notice":
+        headers["Accept"] = "text/html"
     youtube_api = source.get("parser") == "youtube_data_api"
     if youtube_api:
         endpoint = urlsplit(normalize_url(url))
