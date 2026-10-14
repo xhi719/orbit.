@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "recordedAt": "2026-10-14T09:25:14.622682+00:00",
+  "recordedAt": "2026-10-14T09:52:39.767359+00:00",
   "scope": "APPROVED_PUBLIC_WORKER_EXPECTED_BYTES",
-  "sourceBaseCommit": "c4da7e1c5e346e8e3c880766583cb5db0423318e",
+  "sourceBaseCommit": "4b6928ea1586dcc292e6295871a3fe1cf777a47f",
   "files": [
     {
       "path": ".github/workflows/firebase-free-collector.yml",
@@ -41,8 +41,8 @@
     },
     {
       "path": "services/collector/engine.py",
-      "bytes": 20533,
-      "sha256": "0a935144f54df8b82d15598e15ce97c29ca879a6d1f3bb9e74a65de817f6c5e2"
+      "bytes": 20866,
+      "sha256": "73e268252d7a2d55eae56e6f40142815edab4f0fbd427ae3b13e109ec5edebb2"
     },
     {
       "path": "services/collector/official_adapter.py",
@@ -61,8 +61,8 @@
     },
     {
       "path": "services/firebase/collector.py",
-      "bytes": 193920,
-      "sha256": "25f47d0884c720b66aaf11b43f13fd829fbc5632672dd379ee7709d37ec2b2a5"
+      "bytes": 194561,
+      "sha256": "c23437cf1fc9650623c5c012431508da7b6971ab9c5a55a049616c19977aab06"
     },
     {
       "path": "services/firebase/iam/orbit-free-fcm-sender-role.json",
@@ -96,11 +96,11 @@
     },
     {
       "path": "services/firebase/tests/test_firebase.py",
-      "bytes": 276319,
-      "sha256": "4365d6b6d3ea055ea97a8dbc104494917485c71d2aab982ca7ac00b8a25f001e"
+      "bytes": 279504,
+      "sha256": "8e6ba7e572d84b17ae356c807559201448e8cd15786be1c8072a17925e31add7"
     }
   ],
-  "payloadBytes": 1487955,
+  "payloadBytes": 1492114,
   "excluded": [
     "images",
     "native apps",
