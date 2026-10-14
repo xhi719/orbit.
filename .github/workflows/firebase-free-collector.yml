@@ -5,7 +5,7 @@ on:
       mode:
         description: Collection scope
         type: choice
-        options: [incremental, backfill, reverify]
+        options: [incremental, backfill, content-backfill, reverify]
         default: backfill
       seed:
         description: Seed candidate catalogue and disabled reviewed sources
@@ -29,6 +29,7 @@ jobs:
     env:
       FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
       FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+      YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
       ORBIT_FIREBASE_APPLY: 'true'
       ORBIT_FIREBASE_SPARK_CONFIRMED: ${{ vars.ORBIT_FIREBASE_SPARK_CONFIRMED }}
       ORBIT_FIREBASE_NOTIFICATIONS_ENABLED: ${{ vars.ORBIT_FIREBASE_NOTIFICATIONS_ENABLED }}
