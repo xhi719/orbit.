@@ -2017,6 +2017,54 @@ class OctoberCatalogueResumeTests(unittest.TestCase):
   for change in [{'checkedAt':None},{'required':False},{'aliases':['x']},{'aliases':['x'*151]},{'evidenceUrl':'http://localhost/'},{'regex':'.*'}]:
    policy={'version':1,'required':True,'aliases':['Game Name'],'checkedAt':NOW.isoformat(),'evidenceUrl':'https://official.example/games',**change}
    self.assertFalse(reviewed(FirebaseYouTubeDataApiCollectionTests().source(game_title_filter=policy)))
+ def test_shared_franchise_filter_rejects_other_game_even_when_base_name_matches(self):
+  from collector import source_document_allowed
+  policy={'version':1,'required':True,'aliases':['Girls Frontline','少女前線'],'excludedAliases':['Girls Frontline 2','Neural Cloud','少女前線2'],'checkedAt':NOW.isoformat(),'evidenceUrl':'https://official.example/games'}
+  source=FirebaseYouTubeDataApiCollectionTests().source(game_title_filter=policy)
+  self.assertTrue(reviewed(source))
+  for title in ['Girls Frontline 2 Character PV','少女前線2イベントPV','Girls Frontline × Neural Cloud collaboration preview']:
+   with self.subTest(title=title):self.assertFalse(source_document_allowed(source,title))
+  self.assertTrue(source_document_allowed(source,'Girls Frontline Character PV'))
+ def test_shared_franchise_exclusion_keeps_ordinal_anniversary_and_existing_policy(self):
+  from collector import source_document_allowed
+  policy={'version':1,'required':True,'aliases':['Granblue Fantasy'],'excludedAliases':['Granblue Fantasy Relink','Versus'],'checkedAt':NOW.isoformat(),'evidenceUrl':'https://official.example/games'}
+  source=FirebaseYouTubeDataApiCollectionTests().source(game_title_filter=policy)
+  self.assertFalse(source_document_allowed(source,'Granblue Fantasy Relink Event PV'))
+  self.assertTrue(source_document_allowed(source,'Granblue Fantasy 2nd Anniversary Event PV'))
+  old={**policy};old.pop('excludedAliases')
+  self.assertTrue(source_document_allowed({**source,'game_title_filter':old},'Granblue Fantasy Relink Event PV'))
+ def test_shared_franchise_filter_roundtrip_preserves_exclusions(self):
+  policy={'version':1,'required':True,'aliases':['Game Name'],'excludedAliases':['Game Name 2'],'checkedAt':NOW.isoformat(),'evidenceUrl':'https://official.example/games'}
+  source=FirebaseYouTubeDataApiCollectionTests().source(game_title_filter=policy)
+  public=source_row(source,'blue-archive')
+  self.assertEqual(operating_source(validate_change('gameSources','api-source',public))['game_title_filter'],policy)
+ def test_shared_franchise_filter_rejects_unbounded_or_invalid_exclusions(self):
+  from collector import source_document_allowed
+  for invalid in [None,'Game Name 2',['x'],['x'*151],['Game']*21,['<script>'],['bad\nname']]:
+   with self.subTest(invalid=invalid):
+    policy={'version':1,'required':True,'aliases':['Game Name'],'excludedAliases':invalid,'checkedAt':NOW.isoformat(),'evidenceUrl':'https://official.example/games'}
+    source=FirebaseYouTubeDataApiCollectionTests().source(game_title_filter=policy)
+    self.assertFalse(reviewed(source));self.assertFalse(source_document_allowed(source,'Game Name Character PV'))
+ def test_opt_in_publisher_news_scope_skips_administrative_notice_without_writes(self):
+  source=OfficialPublisherArticleAdapterTests().source(news_scope='relevant_game_news_v1')
+  document={'external_key':'590','raw_sha256':'a'*64,'published_at':NOW.isoformat(),'official_url':'https://www.nexongames.co.kr/bbs/board.php?bo_table=media_event&wr_id=590','original_title':'블루 아카이브 문의 창구 연락처','original_description':'인게임 이벤트라는 단어가 본문에만 있어도 수집하지 않습니다.','original_language':'ko'}
+  store=MemoryStore()
+  self.assertEqual(upsert_notice(store,source,document,NOW,image_fetch=lambda _:self.fail('unrelated article image request')),'contentExcluded')
+  self.assertEqual(store.writes,0);self.assertEqual(store.records,{})
+ def test_opt_in_publisher_news_scope_roundtrip_and_policy_are_explicit(self):
+  from collector import source_policy
+  source=OfficialPublisherArticleAdapterTests().source(news_scope='relevant_game_news_v1')
+  row=source_row(source,'blue-archive')
+  restored=operating_source(validate_change('gameSources','site-source',row))
+  self.assertTrue(reviewed(restored));self.assertEqual(restored['news_scope'],'relevant_game_news_v1')
+  self.assertEqual(source_policy(restored)['news_scope'],'relevant_game_news_v1')
+  self.assertNotIn('news_scope',source_policy(OfficialPublisherArticleAdapterTests().source()))
+ def test_opt_in_publisher_news_scope_rejects_unreviewed_or_broad_modes(self):
+  for value in ['all',True,{},'relevant_game_news_v2']:
+   with self.subTest(value=value):
+    source=OfficialPublisherArticleAdapterTests().source(news_scope=value)
+    self.assertFalse(reviewed(source))
+    with self.assertRaisesRegex(SafetyError,'reviewed_game_news_scope_required'):validate_change('gameSources','site-source',source_row(source,'blue-archive'))
  def test_shared_channel_other_game_video_is_not_persisted(self):
   fixture=FirebaseYouTubeDataApiCollectionTests();source=fixture.source(game_title_filter={'version':1,'required':True,'aliases':['블루 아카이브'],'checkedAt':NOW.isoformat(),'evidenceUrl':'https://official.example/game'})
   payload=fixture.payload();payload['items'][0]['snippet']['title']='다른 게임 캐릭터 PV 「앨리스」';store=MemoryStore()
