@@ -13,7 +13,7 @@ from pathlib import Path
 import uuid
 import unicodedata
 from zoneinfo import ZoneInfo
-from collector import digest, operating_source, reviewed, reviewed_calendar_role, safe_public_url, content_publication_status, apply_notice_content_policy
+from collector import digest, operating_source, reviewed, reviewed_calendar_role, safe_public_url, content_publication_status, apply_notice_content_policy, source_document_allowed, verified_paired_ticket_event
 from urllib.parse import urlsplit
 from store import FirestoreStore, MemoryStore, SafetyError, timestamp
 
@@ -42,8 +42,18 @@ def content_policy_allows(event, now, *, calendar=False):
 
 
 def announcement_identity(store,event,now,source_cache=None):
-    """Current official source and source-bound main role, never date approval."""
-    if not event or not content_policy_allows(event,now) or content_publication_status(event.get("publishedAt"),now)!="INCLUDED" or event.get("calendarRole") not in ("main-character","main-event") or event.get("status") in ("cancelled","canceled","postponed","ended"):return None
+    """Current source-bound eligible game news, independent of event dates.
+
+    PVs, reruns and sale/collaboration notices can announce their publication.
+    Missing schedule/region approval still cannot create event-time reminders.
+    October history is never replayed to a newly armed user subscription.
+    """
+    if not event or not content_policy_allows(event,now) or content_publication_status(event.get("publishedAt"),now)!="INCLUDED" or event.get("status") in ("cancelled","canceled","postponed","ended"):return None
+    classified=event.get("contentClassification")
+    broad_news=bool(isinstance(classified,dict) and classified.get("status")=="verified" and event.get("newsEligible") is True
+        and event.get("contentKind") in ("character-pv","event-pv","broadcast-preview","offline-preview","pickup-preview","event-preview","goods-preview","collaboration-preview","game-notice"))
+    main_role=event.get("calendarRole") in ("main-character","main-event")
+    if not broad_news and not main_role:return None
     source_id=event.get("sourceId");cache=source_cache if source_cache is not None else {}
     if not isinstance(source_id,str) or not source_id or "/" in source_id:return None
     if source_id not in cache:cache[source_id]=store.get("gameSources/"+source_id)
@@ -51,6 +61,7 @@ def announcement_identity(store,event,now,source_cache=None):
     if not public or public.get("id",source_id)!=source_id or public.get("enabled") is not True:return None
     source=operating_source({**public,"id":source_id})
     if not reviewed(source) or source.get("game_id") not in event.get("gameIds",[]):return None
+    if not source_document_allowed(source,event.get("originalTitle") or event.get("title")):return None
     try:
         if not safe_public_url(source.get("terms_url")) or any(timestamp(source.get(field))>now for field in ("terms_checked_at","notice_hosts_verified_at")):return None
     except (ValueError,TypeError):return None
@@ -64,10 +75,15 @@ def announcement_identity(store,event,now,source_cache=None):
     if raw_key not in cache:cache[raw_key]=store.get("collectionDocuments/"+raw_key[1])
     raw=cache[raw_key] or {}
     if any(raw.get(field)!=value for field,value in [("sourceId",source_id),("externalKey",external),("rawSha256",sha),("officialUrl",event.get("officialUrl"))]):return None
-    proof=event.get("calendarRoleEvidence") or {};verified=reviewed_calendar_role(dict(event),source)
-    if (proof.get("status")!="verified" or proof.get("sourceSha256")!=sha or proof.get("sourceTitle")!=selected
-        or proof.get("role")!=event["calendarRole"] or verified.get("calendarRole")!=event["calendarRole"]
-        or verified.get("calendarRoleEvidence")!=proof):return None
+    if broad_news and not main_role:
+        if classified.get("sourceSha256")!=sha or classified.get("sourceTitle")!=selected:return None
+        role=event["calendarRole"] if main_role else event["contentKind"]
+    else:
+        proof=event.get("calendarRoleEvidence") or {};verified=reviewed_calendar_role(dict(event),source)
+        if (proof.get("status")!="verified" or proof.get("sourceSha256")!=sha or proof.get("sourceTitle")!=selected
+            or proof.get("role")!=event["calendarRole"] or verified.get("calendarRole")!=event["calendarRole"]
+            or verified.get("calendarRoleEvidence")!=proof):return None
+        role=event["calendarRole"]
     signature=digest([sha,selected,event.get("characterNames",[])])
     revision=event.get("announcementRevision")
     if event.get("announcementContentSha256")!=signature or not isinstance(revision,int) or isinstance(revision,bool) or not 1<=revision<=1000000:return None
@@ -78,11 +94,14 @@ def announcement_identity(store,event,now,source_cache=None):
         if timestamp(event.get("announcementPublishedAt"))!=clock or clock>now or clock<now-ANNOUNCEMENT_LOOKBACK:return None
     except (ValueError,TypeError):return None
     region=event.get("serverRegion")
-    if region not in ("KR","JP","GLOBAL","UNSPECIFIED") or region!=source.get("server_region"):return None
+    if region not in ("KR","JP","GLOBAL","UNSPECIFIED") or region!=source.get("server_region")and not verified_paired_ticket_event(event,source):return None
     category=event.get("categoryCandidate") or event.get("category")
-    if event["calendarRole"]=="main-character" and category!="recruitment":return None
-    if event["calendarRole"]=="main-event" and category not in ("limited-event","login-reward"):return None
-    return {"gameId":source["game_id"],"sourceId":source_id,"sourceSha256":sha,"sourceTitle":selected,"role":event["calendarRole"],
+    if not broad_news and role=="main-character" and category!="recruitment":return None
+    if not broad_news and role=="main-event" and category not in ("limited-event","login-reward"):return None
+    if broad_news and category in (None,"unclassified"):
+        category={"character-pv":"limited-event","event-pv":"limited-event","broadcast-preview":"broadcast","offline-preview":"offline-event",
+            "pickup-preview":"recruitment","event-preview":"limited-event","goods-preview":"goods-sale","collaboration-preview":"collaboration","game-notice":"update"}[event["contentKind"]]
+    return {"gameId":source["game_id"],"sourceId":source_id,"sourceSha256":sha,"sourceTitle":selected,"role":role,
         "revision":revision,"publishedAt":clock,"category":category,"region":region,
         "scope":"unscoped_official_notice" if region=="UNSPECIFIED" else "regional_official_notice"}
 
@@ -384,7 +403,8 @@ def eligible(store,uid,event,kind,now):
         return bool(context and event.get("cycleKey")==context["cycleKey"])
     if profile.get("notificationsEnabled") is False:return False
     if quiet({"quietStart":profile.get("dndStart"),"quietEnd":profile.get("dndEnd"),"timezone":profile.get("timezone","UTC")},now):return False
-    if kind not in {anchor+":"+stage for anchor in ["event","reservation"] for stage in OFFSETS}:return False
+    paired_kind=re.fullmatch(r"(membership|ticket):([12]):(7d|1d|1h|start)",kind)
+    if kind not in {anchor+":"+stage for anchor in ["event","reservation"] for stage in OFFSETS}and not paired_kind:return False
     if not event or not content_policy_allows(event,now,calendar=True) or content_publication_status(event.get("publishedAt"),now)!="INCLUDED" or event.get("verificationStatus")!="verified" or event.get("status") in ["cancelled","canceled","postponed","ended"]:return False
     if event.get("sourceProvider")=="youtube" or event.get("sourceChannelId") or event.get("sourceVideoId"):
         try:
@@ -396,6 +416,12 @@ def eligible(store,uid,event,kind,now):
     global_settings=store.get(f"users/{uid}/notificationSettings/global") or {"enabled":True,"regions":profile.get("regions",[]),"timezone":profile.get("timezone","UTC")}
     if global_settings.get("enabled") is False or quiet(global_settings,now):return False
     anchor_kind,stage=kind.split(":",1)
+    if paired_kind:
+        source_row=store.get("gameSources/"+str(event.get("sourceId")))
+        if not source_row or source_row.get("enabled")is not True:return False
+        source=operating_source(source_row)
+        if not reviewed(source)or not verified_paired_ticket_event(event,source):return False
+        anchor_kind="reservation";stage=paired_kind[3]
     if "types" in global_settings and anchor_kind not in global_settings["types"]:return False
     for game_id in event.get("gameIds",[]):
         selected=store.get(f"users/{uid}/userGames/{game_id}")
@@ -408,8 +434,8 @@ def eligible(store,uid,event,kind,now):
         if "all" not in categories and event.get("category") not in categories:continue
         regions=settings.get("regions",profile.get("regions",[]))
         if region not in regions:continue  # GLOBAL must be explicitly chosen; unknown is never GLOBAL
-        if kind.startswith("reservation") and settings.get("reservationEnabled") is False:continue
-        if kind.startswith("event") and settings.get("eventEnabled") is False:continue
+        if anchor_kind=="reservation" and settings.get("reservationEnabled") is False:continue
+        if anchor_kind=="event" and settings.get("eventEnabled") is False:continue
         return True
     return False
 
@@ -417,9 +443,15 @@ def eligible(store,uid,event,kind,now):
 def plan_user(store,uid,events,now):
     planned=0
     for event in events:
-        for anchor_kind,field in [("event","startsAt"),("reservation","reservationStartsAt")]:
-            if not event.get(field):continue
-            anchor=timestamp(event[field])
+        pairs=[]
+        if event.get("announcementStages"):
+            public=store.get("gameSources/"+str(event.get("sourceId")))
+            if public and public.get("enabled")is True and reviewed(operating_source(public))and verified_paired_ticket_event(event,operating_source(public)):
+                pairs=[(row["kind"]+":"+str(row["round"]),timestamp(row["startsAt"]))for row in event["announcementStages"]]
+        anchors=[("event",timestamp(event["startsAt"]))]if event.get("startsAt")else[]
+        if pairs:anchors.extend(pairs)
+        elif event.get("reservationStartsAt"):anchors.append(("reservation",timestamp(event["reservationStartsAt"])))
+        for anchor_kind,anchor in anchors:
             for stage,minutes in OFFSETS.items():
                 due=anchor-timedelta(minutes=minutes)
                 # Frequent cron with 30-minute catchup; outage older than this is explicit missed.
@@ -463,6 +495,12 @@ def fixed_payload(store,uid,job,event=None,now=None):
     if job["kind"]==ANNOUNCEMENT_KIND and not eligible_games:raise SafetyError("announcement_became_ineligible")
     presented={**event,"category":event.get("categoryCandidate") or event.get("category")} if job["kind"]==ANNOUNCEMENT_KIND else event
     title,body=localized_event_payload(presented,lang)
+    paired_kind=re.fullmatch(r"(membership|ticket):([12]):(7d|1d|1h|start)",job["kind"])
+    if paired_kind:
+        labels={"ko":{"membership":"멤버십 인증","ticket":"티켓 예매"},"en":{"membership":"Membership verification","ticket":"Ticket booking"},"ja":{"membership":"メンバーシップ認証","ticket":"チケット予約"}}
+        selected=labels.get(lang,labels["en"])[paired_kind[1]]
+        title=title+" · "+selected+" "+paired_kind[2]
+        body={"ko":"공식 공지에 확인된 신청·예매 시작 일정입니다. 자세한 조건은 공식 공지에서 확인해 주세요.","en":"This registration or ticket opening time is confirmed in the official notice. Check that notice for conditions.","ja":"公式告知で確認した認証・予約開始日時です。条件は公式告知をご確認ください。"}.get(lang,labels["en"][paired_kind[1]])
     if job["kind"]==ANNOUNCEMENT_KIND:
         lead={"ko":"공식에서 새 공지를 게시했습니다.","en":"A new official announcement was published.","ja":"公式から新しいお知らせが公開されました。"}.get(lang,"A new official announcement was published.")
         if event.get("serverRegion")=="UNSPECIFIED":lead+=" "+{"ko":"서버 지역이 확인되지 않은 소식입니다.","en":"The server region has not been confirmed.","ja":"サーバー地域は未確認です。"}.get(lang,"The server region has not been confirmed.")
@@ -536,9 +574,12 @@ def dispatch(store,uid,job_id,sender,now=None):
 
 def run(store,sender,now=None,max_users=50):
     now=now or datetime.now(UTC);events=[value for _,value in store.list("gameEvents",200)]
+    dates=sorted({(now+timedelta(minutes=offset+edge)).date().isoformat()for offset in OFFSETS.values()for edge in(-30,15)})
+    stage_rows=store.list_stage_dates(dates,50)
+    event_by_id={event["id"]:event for event in events if event.get("id")};event_by_id.update({doc_id:row for doc_id,row in stage_rows});events=list(event_by_id.values())
     announcement_rows=store.list_since("gameEvents","announcementPublishedAt",now-ANNOUNCEMENT_LOOKBACK,200)
     announcements=[value for _,value in announcement_rows];source_cache={}
-    stats={"users":0,"planned":0,"announcementPlanned":0,"announcementScanned":len(announcements),"announcementScanLimitReached":len(announcement_rows)==200,"attendancePlanned":0,"providerAcceptedJobs":0,"inAppOnly":0,"cancelled":0}
+    stats={"users":0,"planned":0,"announcementPlanned":0,"announcementScanned":len(announcements),"announcementScanLimitReached":len(announcement_rows)==200,"stageSchedulesScanned":len(stage_rows),"stageScheduleScanLimitReached":len(stage_rows)==50,"attendancePlanned":0,"providerAcceptedJobs":0,"inAppOnly":0,"cancelled":0}
     for uid,profile in store.list("users",max_users):
         if profile.get("deletionRequestedAt"):continue
         stats["users"]+=1;stats["planned"]+=plan_user(store,uid,events,now)
@@ -588,4 +629,8 @@ def main():
         return messaging.send(fcm_message(messaging,token,payload),app=store.app)
     result=run(store,send);store.finish_usage();print(json.dumps(result))
 
-if __name__=="__main__":main()
+if __name__=="__main__":
+    try:main()
+    except SafetyError as error:
+        if str(error)not in("collector_daily_soft_budget_exhausted","worker_run_soft_budget_exhausted"):raise
+        print(json.dumps({"status":"DEFERRED_QUOTA_BUDGET","reasonCode":str(error),"physicalReceiptVerified":False}))

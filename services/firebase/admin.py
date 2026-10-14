@@ -14,10 +14,11 @@ from store import FirestoreStore,MemoryStore,SafetyError,timestamp
 
 FIELDS={
  "games":{"id","slug","names","aliases","developer","publisher","platforms","regions","officialWebsite","officialNoticeUrl","officialSocialUrls","serviceStatus","collectionSupport","dailyReset","weeklyReset","resetTimezone","officialIntegration","metadataStatus","nameProvenance","sourceEvidence","image","resetRules","verifiedResetRuleIds","resetRuleById","enabled","createdAt","updatedAt"},
- "gameSources":{"id","gameId","url","parser","steamAppid","youtubeChannelId","youtubeUploadsPlaylistId","youtubeUploadsPlaylistVerifiedAt","publisherIdentityEvidenceUrl","publisherIdentityCheckedAt","enabled","accessStatus","approvedForStaging","termsUrl","termsCheckedAt","noticeHostsVerifiedAt","allowedNoticeHosts","feedAllowlist","intervalMinutes","serverRegion","serverLabel","health","lastCheckedAt","lastSuccessAt","lastErrorAt","lastReverifiedAt","nextRunAt","scheduleExtractionApproved","scheduleExtractionReviewedAt","scheduleExtractionEvidenceUrl","contentLanguage","highestCharacterRarity","imageReuse","sectionScheduleFormat","pairedRecruitmentPeriodApproved","contentLocalization","originalImageReference","reviewedNoticeReferences","calendarRolePolicy","localizationRoster"},
+ "gameSources":{"id","gameId","url","parser","steamAppid","youtubeChannelId","youtubeUploadsPlaylistId","youtubeUploadsPlaylistVerifiedAt","publisherIdentityEvidenceUrl","publisherIdentityCheckedAt","enabled","accessStatus","approvedForStaging","termsUrl","termsCheckedAt","noticeHostsVerifiedAt","allowedNoticeHosts","feedAllowlist","intervalMinutes","serverRegion","serverLabel","health","lastCheckedAt","lastSuccessAt","lastErrorAt","lastReverifiedAt","nextRunAt","scheduleExtractionApproved","scheduleExtractionReviewedAt","scheduleExtractionEvidenceUrl","contentLanguage","highestCharacterRarity","imageReuse","sectionScheduleFormat","pairedRecruitmentPeriodApproved","contentLocalization","originalImageReference","reviewedNoticeReferences","calendarRolePolicy","localizationRoster","gameTitleFilter","articleFormat"},
  "gameEvents":{"id","sourceId","externalKey","gameIds","serverRegion","serverLabel","title","description","originalTitle","originalDescription","originalLanguage","officialUrl","publishedAt","sourceUpdatedAt","rawSha256","eventTypeCandidates","firstCheckedAt","lastCheckedAt","lastChangedAt","lastVerifiedAt","verificationStatus","revision","startsAt","endsAt","reservationStartsAt","reservationEndsAt","ticketSalesAt","originalTimezone","category","scheduleStatus","status","venue","imageRightsStatus","translations"},
  "pickupSchedules":{"id","eventId","gameId","serverRegion","serverLabel","officialUrl","verificationStatus","lastCheckedAt","firstCheckedAt","firstConfirmedAt","lastChangedAt","pickupKind","characters","weapons","outfits","startsAt","endsAt","lastVerifiedAt"},
 }
+FIELDS["gameSources"].add("pairedTicketNotice")
 TIME_FIELDS={"termsCheckedAt","noticeHostsVerifiedAt","publisherIdentityCheckedAt","youtubeUploadsPlaylistVerifiedAt","lastCheckedAt","lastSuccessAt","lastErrorAt","lastReverifiedAt","nextRunAt","publishedAt","sourceUpdatedAt","firstCheckedAt","lastChangedAt","lastVerifiedAt","startsAt","endsAt","reservationStartsAt","reservationEndsAt","ticketSalesAt","firstConfirmedAt","createdAt","updatedAt"}
 
 
@@ -114,6 +115,10 @@ def validate_change(collection,document_id,data,old=None):
   row['verifiedResetRuleIds']=ids
   row['resetRuleById']=by_id # Derived from reviewed rules; callers cannot substitute a different index.
  if collection=='gameSources':
+  from collector import reviewed_title_filter,operating_source
+  if not reviewed_title_filter({'game_title_filter':row.get('gameTitleFilter')}):raise SafetyError('reviewed_literal_game_title_filter_required')
+  from collector import reviewed_paired_ticket_policy
+  if row.get('pairedTicketNotice')is not None and not reviewed_paired_ticket_policy(operating_source({**row,'gameId':row.get('gameId','pending')})):raise SafetyError('reviewed_paired_ticket_notice_required')
   if not https(row.get('url')):raise SafetyError('reviewed_source_adapter_required')
   if row.get('parser')=='youtube_atom':
    from collector import youtube_request,operating_source
@@ -124,10 +129,13 @@ def validate_change(collection,document_id,data,old=None):
    from official_adapter import youtube_api_request
    try:youtube_api_request(operating_source({**row,'gameId':row.get('gameId','pending')}))
    except Exception as error:raise SafetyError('reviewed_youtube_uploads_playlist_required') from error
+  elif row.get('parser')in ['official_html','official_rss']:
+   from collector import operating_source,reviewed
+   if not reviewed(operating_source({**row,'gameId':row.get('gameId','pending')})):raise SafetyError('reviewed_publisher_article_source_required')
   elif row.get('parser')!='steam_news' or not isinstance(row.get('steamAppid'),int):raise SafetyError('reviewed_source_adapter_required')
   if row.get('intervalMinutes',0)<15:raise SafetyError('minimum_source_interval_15_minutes')
   if row.get('enabled') is True:
-   if row.get('parser')in ['youtube_atom','youtube_data_api']:
+   if row.get('parser')in ['youtube_atom','youtube_data_api','official_html','official_rss']:
     from collector import reviewed,operating_source
     if not reviewed(operating_source({**row,'gameId':row.get('gameId','pending')})):raise SafetyError('source_permission_evidence_required')
    elif row.get('accessStatus')!='approved' or not row.get('termsCheckedAt') or not row.get('noticeHostsVerifiedAt') or not https(row.get('termsUrl')) or row.get('feedAllowlist')!=['steam_community_announcements'] or not row.get('allowedNoticeHosts'):raise SafetyError('source_permission_evidence_required')
@@ -298,4 +306,8 @@ def main():
  if not args.apply:print(json.dumps({'status':'PLAN_ONLY','remoteWrites':0}));return
  store=FirestoreStore();result={'adminRequests':apply_requests(store),'accountCleanup':cleanup_accounts(store),'executionRetention':cleanup_execution_retention(store),'remoteWrites':store.writes};store.finish_usage();print(json.dumps(result))
 
-if __name__=='__main__':main()
+if __name__=='__main__':
+ try:main()
+ except SafetyError as error:
+  if str(error)not in('collector_daily_soft_budget_exhausted','worker_run_soft_budget_exhausted'):raise
+  print(json.dumps({'status':'DEFERRED_QUOTA_BUDGET','reasonCode':str(error)}))

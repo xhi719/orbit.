@@ -118,6 +118,11 @@ class MemoryStore:
         rows=sorted(rows,key=lambda item:(timestamp(item[1][field]),item[0]),reverse=True)[:limit]
         self.reads+=max(1,len(rows));return rows
 
+    def list_stage_dates(self,date_keys,limit=50):
+        if not isinstance(date_keys,list)or not 1<=len(date_keys)<=8 or any(not isinstance(day,str)or not re.fullmatch(r"20\d{2}-\d{2}-\d{2}",day)for day in date_keys)or not 1<=limit<=50:raise SafetyError("bounded_public_stage_date_query_required")
+        rows=[(path.split("/",1)[1],deepcopy(row))for path,row in self.records.items()if path.startswith("gameEvents/")and "/"not in path.split("/",1)[1]and set(row.get("announcementStageDateKeys",[])).intersection(date_keys)][:limit]
+        self.reads+=max(1,len(rows));return rows
+
     def list_expired_youtube(self,collection,before,limit=50):
         if collection not in ("gameEvents","collectionDocuments") or not 1<=limit<=50:raise SafetyError("bounded_public_youtube_expiry_query_required")
         cutoff=timestamp(before);rows=[];prefix=collection+"/"
@@ -189,11 +194,13 @@ class FirestoreStore:
         self.quota_day = datetime.now(timezone.utc).astimezone(ZoneInfo("America/Los_Angeles")).date().isoformat()
         prior = self.db.document("quotaBudgets/" + self.quota_day).get(timeout=20).to_dict() or {}
         self.reads += 1
+        self.daily_remaining_reads=max(0,35000-prior.get("reads",0))
+        self.daily_remaining_writes=max(0,14000-prior.get("writes",0))
         if prior.get("writes",0) >= 14000 or prior.get("reads",0) >= 35000:
             raise SafetyError("collector_daily_soft_budget_exhausted")
 
     def guard(self, writing=False):
-        if self.reads >= self.max_reads or writing and self.writes >= self.max_writes:
+        if self.reads >= self.max_reads or self.reads>=getattr(self,"daily_remaining_reads",self.max_reads+1)or writing and(self.writes>=self.max_writes or self.writes>=max(0,getattr(self,"daily_remaining_writes",self.max_writes+3)-2)):
             raise SafetyError("worker_run_soft_budget_exhausted")
 
     def get(self, path):
@@ -285,6 +292,15 @@ class FirestoreStore:
         remaining=min(limit,self.max_reads-self.reads)
         query=self.db.collection(collection).where(filter=FieldFilter(field,">=",timestamp(since))).order_by(field,direction="DESCENDING").limit(remaining)
         rows=[(document.id,document.to_dict()) for document in query.stream(timeout=20)]
+        self.reads+=max(1,len(rows));return rows
+
+    def list_stage_dates(self,date_keys,limit=50):
+        self.guard()
+        if not isinstance(date_keys,list)or not 1<=len(date_keys)<=8 or any(not isinstance(day,str)or not re.fullmatch(r"20\d{2}-\d{2}-\d{2}",day)for day in date_keys)or not 1<=limit<=50:raise SafetyError("bounded_public_stage_date_query_required")
+        from google.cloud.firestore_v1.base_query import FieldFilter
+        remaining=min(limit,self.max_reads-self.reads)
+        query=self.db.collection("gameEvents").where(filter=FieldFilter("announcementStageDateKeys","array_contains_any",date_keys)).limit(remaining)
+        rows=[(document.id,document.to_dict())for document in query.stream(timeout=20)]
         self.reads+=max(1,len(rows));return rows
 
     def list_expired_youtube(self,collection,before,limit=50):
