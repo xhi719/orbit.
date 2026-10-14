@@ -105,7 +105,7 @@ class FirebaseOfficialSocialFeedTests(unittest.TestCase):
  def test_non_channel_handle_is_not_a_verified_channel_id(self):
   with self.assertRaises(ValidationError):youtube_request(self.source(youtube_channel_id='@OfficialGame'))
  def test_feed_parser_keeps_raw_publication_update_and_video_url(self):
-  docs,metrics=parse_youtube_documents(self.feed(),self.source(),NOW.isoformat());self.assertEqual(len(docs),1);self.assertEqual(docs[0]['official_url'],'https://www.youtube.com/watch?v='+self.VIDEO);self.assertTrue(docs[0]['source_updated_at']);self.assertEqual(docs[0]['original_description'],'Announcement');self.assertFalse(metrics['window_coverage_verified'])
+  docs,metrics=parse_youtube_documents(self.feed(),self.source(),NOW.isoformat());self.assertEqual(len(docs),1);self.assertEqual(docs[0]['official_url'],'https://www.youtube.com/watch?v='+self.VIDEO);self.assertTrue(docs[0]['source_updated_at']);self.assertEqual(docs[0]['original_description'],'');self.assertNotIn('Announcement',json.dumps(docs[0]['raw_json']));self.assertFalse(metrics['window_coverage_verified'])
  def test_video_publication_is_never_an_event_schedule(self):
   docs,_=parse_youtube_documents(self.feed(),self.source(),NOW.isoformat());row=enrich_document(docs[0],self.source());self.assertIsNone(row['schedule']['startsAt']);self.assertFalse(row['schedule_verified']);self.assertEqual(row['category_candidate'],'official_broadcast')
  def test_thumbnails_remain_unapproved_source_evidence(self):
@@ -1581,7 +1581,7 @@ class FirebaseYouTubeDataApiCollectionTests(unittest.TestCase):
   with patch.dict('os.environ',{},clear=True):result=run(registry,MemoryStore(),NOW-timedelta(hours=72),NOW,max_sources=1,fetch=lambda _:(200,response(),{}),sleep=lambda _:None)
   self.assertEqual(result['sourceAttempts'],1);self.assertEqual({row['sourceId']for row in result['results']},{'api-source','source'})
  def test_api_collect_stores_exact_notice_image_metadata_and_no_confirmed_schedule(self):
-  store=MemoryStore();result=self.collect(store);self.assertEqual(result['status'],'success');self.assertEqual(result['metrics']['apiUnitsEstimated'],1);self.assertFalse(result['metrics']['windowCoverageVerified'])
+  store=MemoryStore();result=self.collect(store);self.assertEqual(result['status'],'success');self.assertEqual(result['metrics']['apiUnitsEstimated'],1);self.assertTrue(result['metrics']['windowCoverageVerified']);self.assertTrue(result['metrics']['providerPaginationComplete'])
   event=store.list('gameEvents')[0][1];self.assertEqual(event['sourceVideoId'],YOUTUBE_API_FIXTURE_VIDEO);self.assertEqual(event['noticeImage']['subjectEvidence']['rawSha256'],event['rawSha256']);self.assertIsNone(event['startsAt']);self.assertIsNone(event['image']);self.assertEqual(store.list('pickupSchedules'),[])
  def test_publication_before_cutoff_is_skipped_even_if_added_in_october(self):
   payload=self.payload();item=payload['items'][0];item['contentDetails']['videoPublishedAt']=(CONTENT_CUTOFF-timedelta(seconds=1)).isoformat();item['snippet']['publishedAt']=NOW.isoformat();store=MemoryStore()
@@ -1948,5 +1948,271 @@ class SelectiveOfficialSocialContentTests(unittest.TestCase):
   fixture=OfficialAnnouncementNotificationTests();store,source=fixture.fixture();row=fixture.publish(store,source)[0];row.update(startsAt=NOW+timedelta(days=1),endsAt=NOW+timedelta(days=2),serverRegion='KR',scheduleStatus='DATE_VERIFIED',verificationStatus='verified')
   for change in [{'announcementKind':'rerun'},{'announcementKind':'aggregate'},{'pickupKind':'weapon'},{'derivedCharacterAnnouncements':2},{'derivedSectionCount':2}]:
    updated=apply_notice_content_policy({**row,**change},NOW+timedelta(minutes=2));self.assertTrue(updated['newsEligible']);self.assertFalse(updated['calendarEligible'])
+
+class OctoberCatalogueResumeTests(unittest.TestCase):
+ """Mocked public provider pages; no cloud credential or physical device."""
+ def test_month_upper_boundary_excludes_november_even_if_recent(self):
+  from collector import CONTENT_MONTH_END
+  self.assertEqual(content_publication_status(CONTENT_MONTH_END,NOW+timedelta(days=40)), 'PUBLISHED_AFTER_CONTENT_MONTH')
+  self.assertEqual(content_publication_status(CONTENT_MONTH_END-timedelta(seconds=1),NOW+timedelta(days=40)), 'INCLUDED')
+ def test_youtube_description_is_discarded_before_hash_and_date_extraction(self):
+  fixture=FirebaseYouTubeDataApiCollectionTests();payload=fixture.payload();payload['items'][0]['snippet']['description']='PRIVATE DESCRIPTION\nEvent starts at 2026-10-12T01:00:00Z and ends at 2026-10-20T01:00:00Z'
+  docs,_=parse_youtube_api_documents(json.dumps(payload).encode(),fixture.source(),NOW.isoformat());doc=docs[0]
+  self.assertEqual(doc['original_description'],'');self.assertNotIn('PRIVATE DESCRIPTION',json.dumps(doc));self.assertNotIn('2026-10-20',json.dumps(doc))
+  original=doc['raw_sha256'];payload['items'][0]['snippet']['description']='Different forbidden detailed description'
+  self.assertEqual(parse_youtube_api_documents(json.dumps(payload).encode(),fixture.source(),NOW.isoformat())[0][0]['raw_sha256'],original)
+ def test_unknown_and_pre_october_dates_remain_rejected(self):
+  self.assertEqual(content_publication_status(None,NOW),'PUBLICATION_DATE_UNCONFIRMED')
+  self.assertEqual(content_publication_status(CONTENT_CUTOFF-timedelta(seconds=1),NOW),'PUBLISHED_BEFORE_CONTENT_CUTOFF')
+ def test_second_bounded_run_resumes_saved_page_instead_of_restarting(self):
+  fixture=FirebaseYouTubeDataApiCollectionTests();store=MemoryStore();first=fixture.payload(nextPageToken='resume_2==');requests=[]
+  def fetch(request):
+   requests.append(parse_qs(urlsplit(request['url']).query).get('pageToken',[None])[0]);return 200,json.dumps(first).encode(),{}
+  one=fixture.collect(store,fetch=fetch,max_pages=1)
+  self.assertEqual(one['status'],'SUCCESS_BOUNDED');self.assertEqual(store.get('collectorLocks/api-source')['contentBackfill']['pageToken'],'resume_2==')
+  store.records['collectorLocks/api-source']['nextRunAt']=NOW
+  def second(request):
+   requests.append(parse_qs(urlsplit(request['url']).query).get('pageToken',[None])[0]);return 200,json.dumps(fixture.payload()).encode(),{}
+  two=fixture.collect(store,fetch=second,max_pages=1)
+  self.assertEqual(requests,[None,'resume_2==']);self.assertTrue(two['metrics']['backfillResumeUsed']);self.assertTrue(two['metrics']['windowCoverageVerified'])
+  self.assertTrue(store.get('collectorLocks/api-source')['contentBackfill']['complete']);self.assertEqual(len(store.list('gameEvents')),1)
+ def test_policy_change_invalidates_previous_resume_cursor(self):
+  fixture=FirebaseYouTubeDataApiCollectionTests();store=MemoryStore();fixture.collect(store,fetch=lambda _:(200,json.dumps(fixture.payload(nextPageToken='resume_2==')).encode(),{}),max_pages=1)
+  store.records['collectorLocks/api-source']['nextRunAt']=NOW;requests=[];changed=fixture.source(content_language='ja')
+  result=fixture.collect(store,source=changed,fetch=lambda request:(requests.append(request['url'])or(200,json.dumps(fixture.payload()).encode(),{})),max_pages=1)
+  self.assertFalse(result['metrics']['backfillResumeUsed']);self.assertNotIn('pageToken=',requests[0])
+ def test_source_collection_is_independent_of_private_registration(self):
+  class PublicStore(MemoryStore):
+   def get(self,path):
+    if path.startswith('users/'):raise AssertionError('collector read private subscriptions')
+    return super().get(path)
+  store=PublicStore();result=run({'games':[{'gameId':'blue-archive','sources':[SOURCE]}]},store,CONTENT_CUTOFF,NOW,mode='content-backfill',fetch=lambda _:(200,response(),{}),sleep=lambda _:None)
+  self.assertEqual(result['collectionScope'],'PUBLIC_CATALOGUE_NOT_USER_SUBSCRIPTIONS');self.assertEqual(len(store.list('gameEvents')),1)
+ def test_new_relevant_news_kinds_and_rerun_headings_are_classified(self):
+  from collector import classify_notice_content
+  for title,kind in [('신규 굿즈 예약 판매 안내','goods-preview'),('게임 콜라보 공개','collaboration-preview'),('정기 점검 안내','game-notice'),('Targeted Procurement | Returning Doll','pickup-preview')]:
+   with self.subTest(title=title):self.assertEqual(classify_notice_content({'originalTitle':title,'rawSha256':'a'*64})['kind'],kind)
+ def test_malformed_page_budget_cannot_expand_unbounded_requests(self):
+  for value in [0,201,True,None]:
+   with self.subTest(value=value),self.assertRaisesRegex(SafetyError,'bounded_page_budget_required'):
+    collect_one(MemoryStore(),SOURCE,CONTENT_CUTOFF,NOW,mode='content-backfill',max_pages=value,fetch=lambda _:self.fail('budget validation HTTP'))
+ def test_shared_channel_literal_title_filter_is_bounded_and_game_specific(self):
+  from collector import source_document_allowed
+  policy={'version':1,'required':True,'aliases':['Limbus Company','림버스 컴퍼니'],'checkedAt':NOW.isoformat(),'evidenceUrl':'https://official.example/games'}
+  source=FirebaseYouTubeDataApiCollectionTests().source(game_title_filter=policy)
+  self.assertTrue(reviewed(source));self.assertTrue(source_document_allowed(source,'[Limbus Company] Character PV - Alice'));self.assertTrue(source_document_allowed(source,'림버스 컴퍼니 이벤트 예고'))
+  self.assertFalse(source_document_allowed(source,'Other Company Character PV'));self.assertFalse(source_document_allowed(source,'ExtraLimbus CompanyName character PV'))
+  public=source_row(source,'blue-archive');self.assertEqual(operating_source(validate_change('gameSources','api-source',public))['game_title_filter'],policy)
+ def test_shared_channel_filter_missing_review_fails_closed(self):
+  for change in [{'checkedAt':None},{'required':False},{'aliases':['x']},{'aliases':['x'*151]},{'evidenceUrl':'http://localhost/'},{'regex':'.*'}]:
+   policy={'version':1,'required':True,'aliases':['Game Name'],'checkedAt':NOW.isoformat(),'evidenceUrl':'https://official.example/games',**change}
+   self.assertFalse(reviewed(FirebaseYouTubeDataApiCollectionTests().source(game_title_filter=policy)))
+ def test_shared_channel_other_game_video_is_not_persisted(self):
+  fixture=FirebaseYouTubeDataApiCollectionTests();source=fixture.source(game_title_filter={'version':1,'required':True,'aliases':['블루 아카이브'],'checkedAt':NOW.isoformat(),'evidenceUrl':'https://official.example/game'})
+  payload=fixture.payload();payload['items'][0]['snippet']['title']='다른 게임 캐릭터 PV 「앨리스」';store=MemoryStore()
+  result=fixture.collect(store,source=source,fetch=lambda _:(200,json.dumps(payload).encode(),{}))
+  self.assertEqual(result['metrics']['sharedChannelOtherGameSkipped'],1);self.assertEqual(store.list('gameEvents'),[]);self.assertEqual(store.list('collectionDocuments'),[])
+
+class BroadOfficialNewsNotificationTests(unittest.TestCase):
+ def fixture(self,title):
+  from collector import digest
+  source,doc,_=SelectiveOfficialSocialContentTests().video(title);store=MemoryStore();row=source_row(source,'blue-archive');row['enabled']=True;store.put('gameSources/'+source['id'],row)
+  upsert_notice(store,source,doc,NOW,image_fetch=synthetic_thumbnail_fetch);event=store.list('gameEvents')[0][1]
+  store.records.update({'users/alice':{'uid':'alice','language':'ko','regions':['KR'],'timezone':'UTC'},
+   'users/alice/userGames/blue-archive':{'uid':'alice','gameId':'blue-archive','enabled':True,'createdAt':NOW-timedelta(days=2)},
+   'users/alice/notificationSettings/global':{'uid':'alice','enabled':True,'announcementEnabled':True,'eventEnabled':True,'globalAnnouncementsEnabled':True,'eventCategories':['all'],'regions':['KR'],'timezone':'UTC'},
+   'users/alice/announcementNotificationState/blue-archive':{'uid':'alice','gameId':'blue-archive','active':True,'baselineAt':NOW-timedelta(days=2)}})
+  return store,event
+ def test_pvs_and_related_previews_create_one_publication_job_without_dates(self):
+  for title in ['캐릭터 PV 「앨리스」','이벤트 PV 「여름」','굿즈 예약 판매 안내','콜라보 이벤트 공개','정기 점검 안내','픽업 복각 안내']:
+   with self.subTest(title=title):
+    store,event=self.fixture(title);self.assertTrue(event['newsEligible']);self.assertIsNone(event['startsAt'])
+    self.assertIsNotNone(announcement_identity(store,event,NOW+timedelta(minutes=1)))
+    self.assertEqual(plan_announcement_user(store,'alice',[event],NOW+timedelta(minutes=1)),1)
+    self.assertEqual(plan_announcement_user(store,'alice',[event],NOW+timedelta(minutes=2)),0)
+    self.assertFalse(eligible(store,'alice',event,'event:start',NOW+timedelta(minutes=2)))
+ def test_missing_thumbnail_blocks_news_notifications(self):
+  store,event=self.fixture('캐릭터 PV 「앨리스」');event['noticeImage']=None;event['image']=None
+  self.assertIsNone(announcement_identity(store,event,NOW+timedelta(minutes=1)))
+ def test_unsubscribed_games_cannot_create_publication_jobs(self):
+  store,event=self.fixture('캐릭터 PV 「앨리스」');store.delete('users/alice/userGames/blue-archive')
+  self.assertEqual(plan_announcement_user(store,'alice',[event],NOW+timedelta(minutes=1)),0)
+ def test_new_subscription_arms_without_replaying_october_history(self):
+  store,event=self.fixture('캐릭터 PV 「앨리스」');store.delete('users/alice/announcementNotificationState/blue-archive')
+  self.assertEqual(plan_announcement_user(store,'alice',[event],NOW+timedelta(minutes=1)),0)
+
+class OfficialPublisherArticleAdapterTests(unittest.TestCase):
+ OBSERVED=datetime(2026,10,14,10,tzinfo=UTC)
+ def source(self,**extra):
+  return {**SOURCE,'id':'official-board','game_id':'blue-archive','parser':'official_html','url':'https://www.nexongames.co.kr/bbs/board.php?bo_table=media_event',
+   'allowed_notice_hosts':['www.nexongames.co.kr'],'feed_allowlist':['official_publisher_articles'],'publisher_identity_evidence_url':'https://www.nexongames.co.kr/game/bluearchive.php','publisher_identity_checked_at':NOW.isoformat(),
+   'content_language':'ko','server_region':'KR','game_title_filter':{'version':1,'required':True,'aliases':['블루 아카이브'],'checkedAt':NOW.isoformat(),'evidenceUrl':'https://www.nexongames.co.kr/game/bluearchive.php'},
+   'article_format':{'mode':'nexon_board_v1','version':1,'reviewedAt':NOW.isoformat(),'evidenceUrl':'https://www.nexongames.co.kr/bbs/board.php?bo_table=media_event','timezone':'Asia/Seoul','allowedImageHosts':['www.nexongames.co.kr']},**extra}
+ def article(self,title='블루 아카이브 신규 이벤트 예고',day='2026.10.13',image='https://www.nexongames.co.kr/data/editor/2610/event.png'):
+  return ('<html><img src="https://www.nexongames.co.kr/logo.png"><script>fake private title</script><h2 id="bo_v_title"><span class="bo_v_cate">Game</span><span class="bo_v_tit">'+title+'</span></h2><span class="header_date">'+day+'</span><div id="bo_v_con"><p>공식 이벤트를 소개합니다.</p><img src="'+image+'"></div><footer>Other games and menu text</footer></html>').encode()
+ def index(self):
+  return ('<ul><li><span class="wr_date">2026.10.13</span><a class="bo_tit" href="https://www.nexongames.co.kr/bbs/board.php?bo_table=media_event&amp;wr_id=518&amp;page=1">블루 아카이브 신규 이벤트 예고</a></li><li><span class="wr_date">2026.09.13</span><a class="bo_tit" href="https://www.nexongames.co.kr/bbs/board.php?bo_table=media_event&amp;wr_id=480&amp;page=1">블루 아카이브 이전 이벤트 예고</a></li></ul>').encode()
+ def parse(self,raw=None):
+  from official_adapter import parse_official_html_article
+  return parse_official_html_article(raw or self.article(),self.source(),'https://www.nexongames.co.kr/bbs/board.php?bo_table=media_event&wr_id=518',self.OBSERVED.isoformat())
+ def test_reviewed_article_and_admin_source_round_trip(self):
+  source=self.source();self.assertTrue(reviewed(source));public=source_row(source,'blue-archive');public['enabled']=True
+  self.assertTrue(reviewed(operating_source(validate_change('gameSources','official-board',public))))
+  for extra in [{'game_title_filter':None},{'article_format':{}},{'publisher_identity_checked_at':None}]:self.assertFalse(reviewed(self.source(**extra)))
+ def test_exact_title_day_body_and_body_only_image_extraction(self):
+  doc=self.parse();self.assertEqual(doc['original_title'],'블루 아카이브 신규 이벤트 예고');self.assertEqual(doc['published_at'],'2026-10-12T15:00:00+00:00')
+  self.assertEqual(doc['publication_precision'],'day');self.assertEqual(doc['publication_local_date'],'2026-10-13');self.assertNotIn('Other games',doc['original_description']);self.assertNotIn('private title',doc['original_description'])
+  self.assertEqual(doc['source_image_urls'],['https://www.nexongames.co.kr/data/editor/2610/event.png'])
+ def test_missing_date_or_title_or_unreviewed_route_cannot_invent_article(self):
+  from official_adapter import official_html_request
+  for raw in [self.article(day='13 days ago'),self.article(title=''),b'<html>whole site menu</html>']:
+   with self.assertRaises(ValidationError):self.parse(raw)
+  for url in ['https://other.example/bbs/board.php?bo_table=media_event&wr_id=518','https://www.nexongames.co.kr/bbs/board.php?bo_table=admin&wr_id=518','https://www.nexongames.co.kr/bbs/board.php?bo_table=media_event&wr_id=518&key=forbidden']:
+   with self.assertRaises(ValidationError):official_html_request(self.source(),article_url=url)
+ def test_bad_image_host_and_game_logo_never_become_article_artwork(self):
+  from collector import automatic_official_notice_image
+  foreign=self.parse(self.article(image='https://other.example/event.png'));self.assertEqual(foreign['source_image_urls'],[])
+  logo=self.parse(self.article(image='https://www.nexongames.co.kr/logo.png'));self.assertIsNone(automatic_official_notice_image(logo,self.source(),event_identity(logo,self.source()),self.OBSERVED,image_fetch=lambda _:self.fail('generic image fetch')))
+ def test_exact_article_image_is_bound_to_source_hash_and_never_copied_bytes(self):
+  from collector import automatic_official_notice_image,notice_has_representative_image
+  doc=self.parse();source=self.source();store=MemoryStore()
+  def fetch(_):return synthetic_thumbnail_fetch({'url':'https://i.ytimg.com/vi/AbcDef_1234/hqdefault.jpg'})
+  upsert_notice(store,source,doc,self.OBSERVED,image_fetch=fetch);event=store.list('gameEvents')[0][1]
+  self.assertEqual(event['sourceProvider'],'official-site');self.assertEqual(event['publicationPrecision'],'day');self.assertTrue(event['newsEligible']);self.assertTrue(notice_has_representative_image(event,self.OBSERVED));self.assertFalse(event['calendarEligible'])
+  self.assertEqual(event['image']['subjectEvidence']['sourceSha256'],doc['raw_sha256']);self.assertNotIn('pixels',json.dumps(store.records,default=str))
+  broken={**doc,'raw_sha256':'b'*64};self.assertIsNone(automatic_official_notice_image(broken,source,'event',self.OBSERVED,fetch))
+ def test_image_fetch_failure_is_retried_on_later_collection(self):
+  doc=self.parse();source=self.source();store=MemoryStore();upsert_notice(store,source,doc,self.OBSERVED,image_fetch=lambda _:(503,b'',{}));self.assertFalse(store.list('gameEvents')[0][1]['newsEligible'])
+  outcome=upsert_notice(store,source,doc,self.OBSERVED+timedelta(minutes=20),image_fetch=lambda _:synthetic_thumbnail_fetch({'url':'https://i.ytimg.com/vi/AbcDef_1234/hqdefault.jpg'}));self.assertEqual(outcome,'updated');self.assertTrue(store.list('gameEvents')[0][1]['newsEligible'])
+ def test_month_index_fetch_uses_only_matching_october_articles(self):
+  source=self.source();store=MemoryStore();requests=[]
+  def fetch(request):
+   requests.append(request['url'])
+   if request.get('parser')=='official_image_probe':return synthetic_thumbnail_fetch({'url':'https://i.ytimg.com/vi/AbcDef_1234/hqdefault.jpg'})
+   return (200,self.article()if'wr_id='in request['url']else self.index(),{})
+  result=collect_one(store,source,CONTENT_CUTOFF,self.OBSERVED,'content-backfill',fetch=fetch,sleep=lambda _:None,now=self.OBSERVED)
+  self.assertEqual(result['status'],'success');self.assertEqual(result['metrics']['publisherArticleRequests'],1);self.assertTrue(result['metrics']['publicationCutoffReached']);self.assertTrue(result['metrics']['windowCoverageVerified']);self.assertEqual(len(store.list('gameEvents')),1)
+  self.assertFalse(any('wr_id=480'in url for url in requests))
+ def test_rss_exact_article_dates_and_images_without_full_history_claim(self):
+  from official_adapter import parse_official_rss_documents
+  source=self.source(parser='official_rss',game_id='touhou-lostword',url='https://touhoulostword.com/feed/',allowed_notice_hosts=['touhoulostword.com'],content_language='ja',game_title_filter=None,
+   article_format={'mode':'official_rss_v1','version':1,'reviewedAt':NOW.isoformat(),'evidenceUrl':'https://touhoulostword.com/','allowedImageHosts':['touhoulostword.com']})
+  self.assertTrue(reviewed(source));raw='<rss xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><item><title>復刻イベント開催</title><link>https://touhoulostword.com/news/123</link><guid>official-123</guid><pubDate>Tue, 13 Oct 2026 01:00:00 GMT</pubDate><content:encoded><![CDATA[<p>公式イベント</p><img src="https://touhoulostword.com/event.png">]]></content:encoded></item></channel></rss>'.encode()
+  docs,metrics=parse_official_rss_documents(raw,source,self.OBSERVED.isoformat());self.assertEqual(docs[0]['source_image_urls'],['https://touhoulostword.com/event.png']);self.assertEqual(docs[0]['published_at'],'2026-10-13T01:00:00+00:00');self.assertFalse(metrics['window_coverage_verified'])
+  for altered in [raw.replace(b'GMT',b''),b'<!DOCTYPE rss [<!ENTITY x SYSTEM "file:///secret">]><rss/>']:
+   with self.assertRaises(ValidationError):parse_official_rss_documents(altered,source,self.OBSERVED.isoformat())
+ def rdf_fixture(self):
+  title='GF2 オーケストラコンサート開催予告';url='https://prtimes.jp/main/html/rd/p/000000328.000050327.html'
+  source=self.source(parser='official_rss',game_id='girls-frontline-2',url='https://prtimes.jp/companyrdf.php?company_id=50327',allowed_notice_hosts=['prtimes.jp'],content_language='ja',game_title_filter={'version':1,'required':True,'aliases':['GF2'],'checkedAt':NOW.isoformat(),'evidenceUrl':'https://official.example/gf2'},
+   article_format={'mode':'official_rss_v1','version':1,'reviewedAt':NOW.isoformat(),'evidenceUrl':url,'allowedImageHosts':['prcdn.freetls.fastly.net'],'linkedArticleFormat':'prtimes_release_v1'})
+  xml=('<rdf:RDF xmlns="http://purl.org/rss/1.0/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/elements/1.1/"><channel><title>Official Company</title></channel><item rdf:about="'+url+'"><title>'+title+'</title><link>'+url+'</link><description>Source feed summary</description><dc:date>2026-10-09T22:38:07+09:00</dc:date></item></rdf:RDF>').encode()
+  body=('<html><h1 id="press-release-title">'+title+'</h1><div id="press-release-body"><p>開催日：2027年1月15日(金)</p><img src="https://prcdn.freetls.fastly.net/release_image/50327/328/concert.jpg"></div><footer>Unrelated site announcements</footer></html>').encode()
+  return source,xml,body
+ def test_rdf_aware_publication_and_exact_same_company_article_body(self):
+  from official_adapter import parse_official_rss_documents,attach_official_rss_article
+  source,xml,body=self.rdf_fixture();docs,metrics=parse_official_rss_documents(xml,source,self.OBSERVED.isoformat());self.assertTrue(reviewed(source));self.assertEqual(docs[0]['published_at'],'2026-10-09T13:38:07+00:00');self.assertFalse(metrics['window_coverage_verified'])
+  article=attach_official_rss_article(body,source,docs[0]);self.assertEqual(article['source_image_urls'],['https://prcdn.freetls.fastly.net/release_image/50327/328/concert.jpg']);self.assertNotIn('Unrelated',article['original_description']);self.assertEqual(article['announced_local_date']['localDate'],'2027-01-15');self.assertEqual(article['announced_local_date']['precision'],'day')
+  self.assertEqual(article['published_at'],docs[0]['published_at']);self.assertNotIn('starts_at',article);self.assertNotIn('2027-01-15T',json.dumps(article))
+ def test_rdf_rejects_naive_clock_and_foreign_article_identity(self):
+  from official_adapter import parse_official_rss_documents,official_rss_article_request
+  source,xml,_=self.rdf_fixture()
+  with self.assertRaises(ValidationError):parse_official_rss_documents(xml.replace(b'+09:00',b''),source,self.OBSERVED.isoformat())
+  with self.assertRaises(ValidationError):parse_official_rss_documents(xml.replace(b'rdf:about="https://prtimes.jp/main/html/rd/p/000000328.000050327.html"',b'rdf:about="https://prtimes.jp/foreign"'),source,self.OBSERVED.isoformat())
+  docs,_=parse_official_rss_documents(xml,source,self.OBSERVED.isoformat())
+  with self.assertRaisesRegex(ValidationError,'same_company'):official_rss_article_request(source,{**docs[0],'official_url':'https://prtimes.jp/main/html/rd/p/000000328.000050328.html'})
+ def test_linked_rss_article_title_and_snapshot_changes_fail_closed(self):
+  from official_adapter import parse_official_rss_documents,attach_official_rss_article
+  source,xml,body=self.rdf_fixture();doc=parse_official_rss_documents(xml,source,self.OBSERVED.isoformat())[0][0]
+  with self.assertRaisesRegex(ValidationError,'title_body_mismatch'):attach_official_rss_article(body.replace(b'GF2',b'Other'),source,doc)
+  with self.assertRaisesRegex(ValidationError,'hash_mismatch'):attach_official_rss_article(body,source,{**doc,'raw_sha256':'b'*64})
+ def test_rdf_collection_fetches_only_october_matching_source_and_stores_exact_picture(self):
+  source,xml,body=self.rdf_fixture();requests=[];store=MemoryStore()
+  def fetch(request):
+   requests.append(request['url'])
+   if request.get('parser')=='official_image_probe':return synthetic_thumbnail_fetch({'url':'https://i.ytimg.com/vi/AbcDef_1234/hqdefault.jpg'})
+   return 200,(body if'/main/html/rd/p/'in request['url']else xml),{}
+  result=collect_one(store,source,CONTENT_CUTOFF,self.OBSERVED,'content-backfill',fetch=fetch,sleep=lambda _:None,now=self.OBSERVED)
+  self.assertEqual(result['status'],'success');self.assertEqual(result['metrics']['publisherArticleRequests'],1);self.assertEqual(len(requests),3);event=store.list('gameEvents')[0][1]
+  self.assertTrue(event['newsEligible']);self.assertFalse(event['calendarEligible']);self.assertIsNone(event['startsAt']);self.assertEqual(event['announcedLocalDate']['localDate'],'2027-01-15');self.assertEqual(event['image']['sourceUrl'],event['officialUrl'])
+
+class PairedOctoberFestivalTests(unittest.TestCase):
+ """Synthetic two-source evidence and pixels, not a real send/device test."""
+ OBSERVED=datetime(2026,10,14,10,tzinfo=UTC)
+ def fixture(self):
+  from official_adapter import parse_official_html_article
+  base=OfficialPublisherArticleAdapterTests();source=base.source(server_region='UNSPECIFIED')
+  title='블루 아카이브 업데이트 및 5주년 페스티벌 예매 진행!'
+  body='블루 아카이브 5주년 페스티벌 11월 7일과 8일 개최. 1차는10월13일, 2차는10월15일, 10월14일오후8시와 10월16일오후8시에 티켓 예매.'
+  html=('<span class="bo_v_tit">'+title+'</span><span class="header_date">2026.10.13</span><div id="bo_v_con">'+body+'<img src="https://www.nexongames.co.kr/data/editor/2610/story.png"></div>').encode()
+  doc=parse_official_html_article(html,source,'https://www.nexongames.co.kr/bbs/board.php?bo_table=media_event&wr_id=518',self.OBSERVED.isoformat())
+  source['paired_ticket_notice']={'mode':'exact_ticketlink_notice_v1','version':1,'reviewedAt':NOW.isoformat(),'evidenceUrl':'https://www.ticketlink.co.kr/help/notice/66055','parentArticleUrl':doc['official_url'],'parentSourceSha256':doc['raw_sha256'],'parentTitle':doc['original_title'],'noticeUrl':'https://www.ticketlink.co.kr/help/notice/66055','allowedImageHosts':['image.toast.com']}
+  ticket=('<dd class="thumb"><img src="//image.toast.com/aaaaab/ticketlink/TKL_2/5th_open1012.png"></dd><dd id="noticeTitle">[단독판매] 블루 아카이브 5주년 페스티벌 ( Blue Archive 5th Anniversary Festival ) 티켓오픈 안내</dd><dd class="list_cont"><p>공연 기간 : 2026년 11월 7일(토) ~ 11월 8일(일)</p><p>공연 시간 : 10시 ~ 18시</p><p>공연 장소 : 킨텍스 제2전시장 9홀</p><p>1차 멤버십 인증(계정 레벨 70 이상) : 2026년 10월 13일(화) 12시 ~ 매진 시까지</p><p>1차 티켓 오픈(계정 레벨 70 이상) : 2026년 10월 14일(수) 20시 ~ 매진 시까지</p><p>2차 멤버십 인증(계정 레벨 30 이상) : 2026년 10월 15일(목) 12시 ~ 매진 시까지</p><p>2차 티켓 오픈(계정 레벨 30 이상) : 2026년 10월 16일(금) 20시 ~ 매진 시까지</p></dd><script>function setNoticeRegisterDate () { var miliSeconds = 1790649679000; }</script>').encode()
+  def fetch(request):
+   if request.get('parser')=='official_auxiliary_notice':return 200,ticket,{}
+   return synthetic_thumbnail_fetch({'url':'https://i.ytimg.com/vi/AbcDef_1234/hqdefault.jpg'})
+  return source,doc,ticket,fetch
+ def publish(self):
+  source,doc,ticket,fetch=self.fixture();store=MemoryStore();store.put('gameSources/'+source['id'],{**source_row(source,'blue-archive'),'enabled':True});upsert_notice(store,source,doc,self.OBSERVED,image_fetch=fetch)
+  child=next(row for _,row in store.list('gameEvents')if row.get('parentEventId'))
+  return store,source,doc,child,fetch
+ def owner(self,store):
+  store.records.update({'users/alice':{'uid':'alice','language':'ko','regions':['KR'],'timezone':'UTC'},'users/alice/userGames/blue-archive':{'uid':'alice','gameId':'blue-archive','enabled':True,'createdAt':NOW-timedelta(days=1)},
+   'users/alice/notificationSettings/global':{'uid':'alice','enabled':True,'reservationEnabled':True,'eventEnabled':True,'regions':['KR'],'eventCategories':['all'],'stages':['1h'],'offsets':[60],'timezone':'UTC'},
+   'users/alice/announcementNotificationState/blue-archive':{'uid':'alice','gameId':'blue-archive','active':True,'baselineAt':NOW}})
+ def test_scoped_policy_admin_roundtrip_requires_exact_parent_hash(self):
+  source,_,_,_=self.fixture();self.assertTrue(reviewed(source));public=validate_change('gameSources',source['id'],source_row(source,'blue-archive'));self.assertEqual(operating_source(public)['paired_ticket_notice'],source['paired_ticket_notice'])
+  for field,value in [('parentSourceSha256','guess'),('parentArticleUrl','https://www.nexongames.co.kr/bbs/board.php?bo_table=media_event&wr_id=519'),('noticeUrl','https://www.ticketlink.co.kr/product/66055')]:
+   modified={**source,'paired_ticket_notice':{**source['paired_ticket_notice'],field:value}};self.assertFalse(reviewed(modified))
+ def test_september_notice_is_only_auxiliary_to_october_parent(self):
+  store,source,doc,child,_=self.publish();self.assertEqual(len(store.list('gameEvents')),2);self.assertEqual(len(store.list('collectionDocuments')),1)
+  self.assertEqual(child['publishedAt'],timestamp(doc['published_at']));self.assertEqual(child['originalTitle'],doc['original_title']);self.assertEqual(child['originalDescription'],doc['original_description'])
+  self.assertEqual(child['scheduleEvidence']['auxiliaryPublishedAt'],'2026-09-29T02:41:19+00:00');self.assertTrue(child['newsEligible']);self.assertTrue(child['calendarEligible']);self.assertEqual(len(child['announcementStages']),4)
+  self.assertEqual(child['startsAt'],datetime(2026,11,7,1,tzinfo=UTC));self.assertEqual(child['endsAt'],datetime(2026,11,8,9,tzinfo=UTC));self.assertIsNone(child['reservationEndsAt'])
+  self.assertEqual(child['reservationStartsAt'],datetime(2026,10,15,3,tzinfo=UTC));self.assertEqual(child['ticketSalesAt'],datetime(2026,10,16,11,tzinfo=UTC))
+ def test_venue_region_never_changes_parent_game_server_region(self):
+  from collector import verified_paired_ticket_event
+  store,source,doc,child,_=self.publish();parent=store.get('gameEvents/'+child['parentEventId']);self.assertEqual(parent['serverRegion'],'UNSPECIFIED');self.assertEqual(child['serverRegion'],'KR');self.assertEqual(child['regionBasis'],'venue');self.assertEqual(child['gameServerRegion'],'UNSPECIFIED');self.assertIsNotNone(verified_paired_ticket_event(child,source))
+  self.assertIsNone(verified_paired_ticket_event({**child,'gameServerRegion':'KR'},source))
+ def test_changed_parent_or_missing_auxiliary_date_cannot_generate_scoped_schedule(self):
+  from official_adapter import parse_paired_ticket_notice
+  source,doc,ticket,_=self.fixture()
+  with self.assertRaises(ValidationError):parse_paired_ticket_notice(ticket,source,{**doc,'raw_sha256':'b'*64})
+  with self.assertRaises(ValidationError):parse_paired_ticket_notice(ticket.replace('10월 15일'.encode(),'10월 17일'.encode()),source,doc)
+ def test_unmodified_two_source_content_is_idempotent(self):
+  store,source,doc,_,fetch=self.publish();writes=store.writes;self.assertEqual(upsert_notice(store,source,doc,self.OBSERVED+timedelta(minutes=20),image_fetch=fetch),'unchanged');self.assertEqual(store.writes,writes)
+ def test_round_specific_notification_has_one_key_and_respects_subscription(self):
+  store,source,doc,child,_=self.publish();self.owner(store)
+  self.assertEqual(plan_user(store,'alice',[child],self.OBSERVED),1);self.assertEqual(plan_user(store,'alice',[child],self.OBSERVED+timedelta(minutes=1)),0)
+  key,job=store.list('users/alice/notificationJobs')[0];self.assertEqual(job['kind'],'ticket:1:1h');self.assertNotEqual(job['kind'],'reservation:1h')
+  store.delete('users/alice/userGames/blue-archive');self.assertEqual(dispatch(store,'alice',key,lambda *_:self.fail('unregistered real sender call'),self.OBSERVED),'cancelled')
+ def test_membership_second_round_does_not_duplicate_legacy_reservation_job(self):
+  store,_,_,child,_=self.publish();self.owner(store);now=datetime(2026,10,15,2,tzinfo=UTC)
+  self.assertEqual(plan_user(store,'alice',[child],now),1);self.assertEqual(store.list('users/alice/notificationJobs')[0][1]['kind'],'membership:2:1h')
+  store.records['users/alice/notificationSettings/global']['reservationEnabled']=False;self.assertFalse(eligible(store,'alice',child,'membership:2:1h',now))
+ def test_stage_calendar_outside_first_200_public_posts_is_still_discovered(self):
+  source,doc,_,fetch=self.fixture();store=MemoryStore({'gameEvents/irrelevant-'+str(index):{'id':'irrelevant-'+str(index),'gameIds':[],'publishedAt':NOW}for index in range(201)})
+  store.put('gameSources/'+source['id'],{**source_row(source,'blue-archive'),'enabled':True});upsert_notice(store,source,doc,self.OBSERVED,image_fetch=fetch);self.owner(store)
+  result=notification_run(store,lambda *_:self.fail('no device registered; external FCM forbidden'),self.OBSERVED)
+  self.assertEqual(result['stageSchedulesScanned'],1);self.assertEqual(result['planned'],1);self.assertEqual(result['announcementPlanned'],1);self.assertEqual(result['inAppOnly'],2)
+ def test_stage_lookup_is_public_and_bounded(self):
+  store=MemoryStore()
+  for keys in [[],['not a date'],['2026-10-14']*9]:
+   with self.assertRaisesRegex(SafetyError,'bounded_public_stage_date_query'):store.list_stage_dates(keys)
+
+class AdaptiveFreeWorkerBudgetTests(unittest.TestCase):
+ def store(self,writes=14000,reads=35000):
+  class BudgetStore(MemoryStore):remote=True
+  store=BudgetStore();store.daily_remaining_writes=writes;store.daily_remaining_reads=reads;return store
+ def test_116_sources_cannot_claim_every_15_minutes_on_free_writes(self):
+  from collector import adaptive_source_budget
+  policy=adaptive_source_budget(self.store(),200,116,datetime(2026,10,14,7,tzinfo=UTC))
+  self.assertEqual(policy['unadaptedMaintenanceWritesPerDay'],44544);self.assertEqual(policy['effectiveSourceAttempts'],24);self.assertEqual(policy['estimatedMinimumRotationMinutes'],75);self.assertFalse(policy['allSourcesEvery15MinutesVerified']);self.assertFalse(policy['clientUsageIncluded'])
+ def test_low_daily_headroom_returns_deferred_cap_without_paid_upgrade(self):
+  from collector import adaptive_source_budget
+  for store in [self.store(writes=100),self.store(reads=100)]:
+   policy=adaptive_source_budget(store,200,116,datetime(2026,10,14,7,tzinfo=UTC));self.assertEqual(policy['effectiveSourceAttempts'],0);self.assertEqual(policy['reasonCode'],'WORKER_FREE_QUOTA_HEADROOM_LOW')
+ def test_local_validation_does_not_invent_live_daily_usage(self):
+  from collector import adaptive_source_budget
+  policy=adaptive_source_budget(MemoryStore(),50,116);self.assertFalse(policy['enabled']);self.assertEqual(policy['effectiveSourceAttempts'],50)
 
 if __name__=='__main__':unittest.main()
