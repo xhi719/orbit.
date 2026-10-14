@@ -21,6 +21,7 @@ import time
 import uuid
 import unicodedata
 import xml.etree.ElementTree as ET
+from zoneinfo import ZoneInfo
 from urllib.parse import urlsplit, parse_qsl, urlencode, urljoin
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "collector"))
@@ -2232,7 +2233,7 @@ def collect_one(store, source, start, end, mode="backfill", fetch=fetch_source, 
                 dates_for_index=[entry["publishedDate"]for entry in entries]
                 for entry in entries:
                     date=datetime.strptime(entry["publishedDate"],"%Y.%m.%d").replace(tzinfo=UTC)
-                    if date.date()<CONTENT_CUTOFF.astimezone(timezone(timedelta(hours=9))).date()or date.date()>=CONTENT_MONTH_END.astimezone(timezone(timedelta(hours=9))).date()or date.date()>observed.date():continue
+                    if date.date()<CONTENT_CUTOFF.astimezone(timezone(timedelta(hours=9))).date()or date.date()>=CONTENT_MONTH_END.astimezone(timezone(timedelta(hours=9))).date()or date.date()>observed.astimezone(ZoneInfo(source["article_format"]["timezone"])).date():continue
                     if not source_document_allowed(source,entry["title"]):metrics["sharedChannelOtherGameSkipped"]+=1;continue
                     if source.get("news_scope")=="relevant_game_news_v1" and classify_notice_content({"originalTitle":entry["title"],"rawSha256":"a"*64})["kind"]=="other":metrics["contentExcluded"]+=1;continue
                     if metrics.get("publisherArticleRequests",0)>=40:raise SafetyError("publisher_article_request_limit")
