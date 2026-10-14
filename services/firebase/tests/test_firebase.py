@@ -9,7 +9,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from store import MemoryStore,FirestoreStore,SafetyError,timestamp
 from collector import reviewed,seed_catalogue,event_identity,upsert_notice,claim_source,collect_one,run,enrich_document,extract_schedule,highest_rarity_targets,source_row,operating_source,section_documents,confirmed_window_overlap,youtube_request,parse_youtube_documents,YOUTUBE_FEED_DOCUMENTATION,source_policy,EXTRACTION_VERSION,parse_official_roster,refresh_localization_roster,GF2_ROSTER_URLS
 from engine import ValidationError
-from notifications import quiet,eligible,plan_user,dispatch,fixed_payload,fcm_message,run as notification_run,reset_cycle,completed_cycle,attendance_context,plan_attendance_user
+from notifications import quiet,eligible,plan_user,dispatch,fixed_payload,fcm_message,run as notification_run,reset_cycle,completed_cycle,attendance_context,plan_attendance_user,plan_announcement_user,announcement_identity,ANNOUNCEMENT_KIND
 from admin import validate_change,apply_requests,cleanup_accounts,cleanup_execution_retention
 from import_pending_pickups import validate_bundle,apply_bundle
 
@@ -1019,5 +1019,213 @@ class AdminEnrichmentPolicyTests(unittest.TestCase):
  def test_admin_rejects_unreviewed_or_replaced_roster_endpoint(self):
   source=OfficialPairedRosterRefreshTests().source();source['localization_roster']['targetUrls']['ko']='https://other.example/allroles.html'
   with self.assertRaisesRegex(SafetyError,'exact_paired_roster_policy_required'):validate_change('gameSources','source',source_row(source,'girls-frontline-2'))
+
+class OfficialAnnouncementNotificationTests(unittest.TestCase):
+ """Synthetic official-source/user fixtures; zero provider/network requests."""
+ GAME='girls-frontline-2'
+ def source(self,region='KR'):
+  return {**SOURCE,'game_id':self.GAME,'server_region':region,'enabled':True,'section_schedule_format':'heading_period_v1',
+   'highest_character_rarity':{'labels':['Elite'],'evidenceUrl':'https://steamcommunity.com/announcement/tiers','checkedAt':NOW.isoformat()},
+   'calendar_role_policy':{'mode':'reviewed_main_roles_v1','roles':[],'automaticRules':{'mode':'explicit_main_role_extraction_v1','gameId':self.GAME,'parser':'steam_news','newHighestCharacter':True,
+    'mainEventFormat':'gf2_story_event_v1','evidenceUrl':'https://steamcommunity.com/announcement/format','checkedAt':NOW.isoformat()}}}
+ def fixture(self,region='KR',global_opt_in=False,arm=True):
+  source=self.source(region);store=MemoryStore({
+   'users/alice':{'uid':'alice','language':'ko','regions':['KR'],'timezone':'UTC','notificationsEnabled':True},
+   'users/alice/userGames/'+self.GAME:{'uid':'alice','gameId':self.GAME,'enabled':True,'createdAt':NOW-timedelta(days=1)},
+   'users/alice/notificationSettings/global':{'uid':'alice','enabled':True,'types':['event'],'eventEnabled':True,'announcementEnabled':True,
+    'globalAnnouncementsEnabled':global_opt_in,'announcementSubscribedAt':NOW-timedelta(days=1),'regions':['KR'],'eventCategories':['all'],'stages':[],'offsets':[],'timezone':'UTC'},
+   'users/alice/notificationSubscriptions/device':{'uid':'alice','transport':'fcm','token':'synthetic-device','platform':'android','enabled':True},
+   'gameSources/source':{**source_row(source,self.GAME),'enabled':True}})
+  if arm:self.assertEqual(plan_announcement_user(store,'alice',[],NOW),0)
+  return store,source
+ def publish(self,store,source,clock=None,text=None,key='new-article',updated=None):
+  clock=clock or NOW+timedelta(minutes=1)
+  body=text or '■Targeted Procurement Event | Fresh\nNew Elite Doll [Fresh] debuts in the Targeted Procurement!'
+  raw={'title':'Official new release','contents':body,'date':clock.isoformat(),'updated':updated.isoformat() if updated else None}
+  from collector import digest
+  notice={**document(region=source['server_region'],sha=digest(raw)),'external_key':key,'original_title':raw['title'],'original_description':body,
+   'raw_json':raw,'published_at':clock.isoformat(),'source_updated_at':updated.isoformat() if updated else None,'pickups':[]}
+  upsert_notice(store,source,notice,updated or clock)
+  return [row for _,row in store.list('gameEvents') if row.get('calendarRole') in ['main-character','main-event']]
+ def job(self,store,rows,now=None):
+  now=now or NOW+timedelta(minutes=2);self.assertEqual(plan_announcement_user(store,'alice',rows,now),1)
+  jobs=store.list('users/alice/notificationJobs');self.assertEqual(len(jobs),1);return jobs[0][0]
+ def test_source_specific_new_highest_character_gets_bound_role_without_dates(self):
+  s,source=self.fixture();rows=self.publish(s,source);self.assertEqual(len(rows),1);e=rows[0]
+  self.assertEqual(e['calendarRole'],'main-character');self.assertEqual(e['calendarRoleEvidence']['sourceSha256'],e['rawSha256'])
+  self.assertEqual(e['verificationStatus'],'pending');self.assertIsNone(e['startsAt']);self.assertIsNone(e['endsAt'])
+  self.assertTrue(eligible(s,'alice',e,ANNOUNCEMENT_KIND,NOW+timedelta(minutes=2)));self.assertFalse(eligible(s,'alice',e,'event:start',NOW))
+ def test_new_named_story_event_uses_exact_heading_and_own_game_modes(self):
+  s,source=self.fixture();rows=self.publish(s,source,text='■[Actual Story]\nDuring the Time-Limited Event [Actual Story], Commanders can receive rewards by participating in event Game Modes.')
+  self.assertEqual(len(rows),1);self.assertEqual(rows[0]['calendarRole'],'main-event');self.job(s,rows)
+ def test_side_rewards_login_shop_and_unnamed_events_never_get_main_role(self):
+  for text in ['■[Supply Rewards]\nDuring the event, log in to claim rewards.','■[Shop]\nDuring the Time-Limited Event [Other], earn rewards by participating in event Game Modes.',
+   '■[Actual Story]\nDuring the event, clear stages.','During the Time-Limited Event [Actual Story], earn rewards by participating in event Game Modes.']:
+   s,source=self.fixture();self.assertEqual(self.publish(s,source,text=text),[])
+ def test_rerun_weapon_standard_and_ambiguous_targets_never_notify(self):
+  for line in ['Returning Elite Doll [Fresh] joins the Targeted Procurement!','New Elite Weapon [Fresh] debuts in the Targeted Procurement!',
+   'New Standard Doll [Fresh] debuts in the Targeted Procurement!','New and returning Elite Doll [Fresh] appears!','New Elite Doll [Fresh] and [Other] debut!']:
+   s,source=self.fixture();self.assertEqual(self.publish(s,source,text='■Targeted Procurement Event | Fresh\n'+line),[])
+ def test_existing_procurement_heading_does_not_infer_new_character(self):
+  s,source=self.fixture();self.assertEqual(self.publish(s,source,text='■Targeted Procurement Event | Fresh\nThe drop rate for the Elite Doll [Fresh] is increased!'),[])
+ def test_unknown_highest_tier_never_enables_automatic_main_character(self):
+  s,source=self.fixture();source.pop('highest_character_rarity');self.assertEqual(self.publish(s,source),[])
+ def test_automatic_main_event_format_is_not_reused_for_other_games(self):
+  s,source=self.fixture();source['game_id']='other-game';source['calendar_role_policy']['automaticRules']['gameId']='other-game'
+  rows=self.publish(s,source,text='■[Actual Story]\nDuring the Time-Limited Event [Actual Story], earn rewards by participating in event Game Modes.');self.assertEqual(rows,[])
+ def test_policy_requires_explicit_source_game_parser_and_review(self):
+  for field,value in [('gameId','other'),('parser','other'),('checkedAt','yesterday'),('mode','guess'),('evidenceUrl','http://localhost/')]:
+   s,source=self.fixture();source['calendar_role_policy']['automaticRules'][field]=value;self.assertEqual(self.publish(s,source),[])
+ def test_first_connection_never_replays_recent_72_hour_backfill(self):
+  s,source=self.fixture(arm=False);rows=self.publish(s,source,clock=NOW-timedelta(hours=1));self.assertEqual(plan_announcement_user(s,'alice',rows,NOW),0)
+  self.assertEqual(s.list('users/alice/notificationJobs'),[]);self.assertEqual(s.get('users/alice/announcementNotificationState/'+self.GAME)['baselineAt'],NOW)
+ def test_regional_publication_notifies_even_without_schedule_stages(self):
+  s,source=self.fixture();rows=self.publish(s,source);key=self.job(s,rows);job=s.get('users/alice/notificationJobs/'+key)
+  self.assertEqual(job['kind'],ANNOUNCEMENT_KIND);self.assertNotIn('eventRevision',job);self.assertEqual(job['scope'],'regional_official_notice')
+ def test_unknown_server_requires_separate_explicit_global_notice_opt_in(self):
+  s,source=self.fixture(region='UNSPECIFIED');rows=self.publish(s,source);self.assertEqual(plan_announcement_user(s,'alice',rows,NOW+timedelta(minutes=2)),0)
+  s.records['users/alice/notificationSettings/global']['globalAnnouncementsEnabled']=True;self.job(s,rows)
+  self.assertEqual(rows[0]['serverRegion'],'UNSPECIFIED');self.assertIsNone(rows[0]['startsAt'])
+ def test_unknown_scope_is_announced_as_unconfirmed_and_routed_to_real_event(self):
+  s,source=self.fixture(region='UNSPECIFIED',global_opt_in=True);rows=self.publish(s,source);key=self.job(s,rows)
+  payload=fixed_payload(s,'alice',{**s.get('users/alice/notificationJobs/'+key),'id':key},rows[0],NOW+timedelta(minutes=2))
+  self.assertEqual(payload['scope'],'unscoped_official_notice');self.assertIn('서버 지역이 확인되지 않은',payload['body']);self.assertEqual(payload['url'],'/events/'+rows[0]['id'])
+  self.assertEqual(payload['announcementRole'],'main-character');self.assertNotIn('Fresh',payload['title'])
+ def test_known_other_server_is_not_a_global_unscoped_notice(self):
+  s,source=self.fixture(region='JP',global_opt_in=True);rows=self.publish(s,source);self.assertEqual(plan_announcement_user(s,'alice',rows,NOW+timedelta(minutes=2)),0)
+ def test_explicit_global_region_requires_global_region_interest(self):
+  s,source=self.fixture(region='GLOBAL',global_opt_in=True);rows=self.publish(s,source);self.assertEqual(plan_announcement_user(s,'alice',rows,NOW+timedelta(minutes=2)),0)
+  s.records['users/alice']['regions']=['GLOBAL'];s.records['users/alice/notificationSettings/global']['regions']=['GLOBAL'];self.job(s,rows)
+ def test_global_game_and_event_type_opt_outs_block_announcement_jobs(self):
+  for collection,field,value in [('users/alice','notificationsEnabled',False),('users/alice/notificationSettings/global','enabled',False),
+   ('users/alice/notificationSettings/global','announcementEnabled',False),('users/alice/notificationSettings/global','eventEnabled',False),
+   ('users/alice/notificationSettings/global','types',['reservation']),('users/alice/userGames/'+self.GAME,'enabled',False)]:
+   s,source=self.fixture();rows=self.publish(s,source);s.records[collection][field]=value;self.assertEqual(plan_announcement_user(s,'alice',rows,NOW+timedelta(minutes=2)),0)
+ def test_game_specific_opt_out_category_and_region_filters_are_rechecked(self):
+  for prefs in [{'enabled':False},{'announcementEnabled':False},{'eventEnabled':False},{'types':['reservation']},{'eventCategories':['update']},{'regions':['JP']}]:
+   s,source=self.fixture();rows=self.publish(s,source);s.put('users/alice/notificationSettings/'+self.GAME,{'uid':'alice',**prefs})
+   self.assertEqual(plan_announcement_user(s,'alice',rows,NOW+timedelta(minutes=2)),0)
+ def test_profile_region_change_overrides_stale_notification_regions(self):
+  s,source=self.fixture();rows=self.publish(s,source);s.records['users/alice']['regions']=['JP'];self.assertEqual(plan_announcement_user(s,'alice',rows,NOW+timedelta(minutes=2)),0)
+ def test_global_category_filter_cannot_be_overridden_by_game_all(self):
+  s,source=self.fixture();rows=self.publish(s,source);s.records['users/alice/notificationSettings/global']['eventCategories']=['update'];s.put('users/alice/notificationSettings/'+self.GAME,{'eventCategories':['all']})
+  self.assertEqual(plan_announcement_user(s,'alice',rows,NOW+timedelta(minutes=2)),0)
+ def test_quiet_hours_block_publish_jobs_but_do_not_move_baseline(self):
+  s,source=self.fixture();rows=self.publish(s,source);s.records['users/alice/notificationSettings/global'].update(quietStart='09:00',quietEnd='11:00')
+  self.assertEqual(plan_announcement_user(s,'alice',rows,NOW+timedelta(minutes=2)),0);self.assertEqual(s.get('users/alice/announcementNotificationState/'+self.GAME)['baselineAt'],NOW)
+  s.records['users/alice/notificationSettings/global'].update(quietStart=None,quietEnd=None);self.job(s,rows)
+ def test_reenable_baseline_discards_off_period_notices(self):
+  s,source=self.fixture();s.records['users/alice/notificationSettings/global']['announcementEnabled']=False;plan_announcement_user(s,'alice',[],NOW+timedelta(minutes=1))
+  rows=self.publish(s,source,clock=NOW+timedelta(minutes=2));s.records['users/alice/notificationSettings/global']['announcementEnabled']=True
+  self.assertEqual(plan_announcement_user(s,'alice',rows,NOW+timedelta(minutes=3)),0)
+ def test_fresh_subscription_timestamp_invalidates_old_armed_state(self):
+  s,source=self.fixture();rows=self.publish(s,source);s.records['users/alice/notificationSettings/global']['announcementSubscribedAt']=NOW+timedelta(minutes=2)
+  self.assertEqual(plan_announcement_user(s,'alice',rows,NOW+timedelta(minutes=3)),0)
+ def test_deleted_and_reregistered_game_never_replays_old_publications(self):
+  s,source=self.fixture();rows=self.publish(s,source);s.records['users/alice/userGames/'+self.GAME]['createdAt']=NOW+timedelta(minutes=2)
+  self.assertEqual(plan_announcement_user(s,'alice',rows,NOW+timedelta(minutes=3)),0)
+ def test_wrong_owner_or_game_registration_and_deleted_account_fail_closed(self):
+  for path,field,value in [('users/alice/userGames/'+self.GAME,'uid','bob'),('users/alice/userGames/'+self.GAME,'gameId','other'),
+   ('users/alice/notificationSettings/global','uid','bob'),('users/alice','deletionRequestedAt',NOW)]:
+   s,source=self.fixture();rows=self.publish(s,source);s.records[path][field]=value;self.assertEqual(plan_announcement_user(s,'alice',rows,NOW+timedelta(minutes=2)),0)
+ def test_repeated_worker_run_and_parallel_plan_create_one_job(self):
+  s,source=self.fixture();rows=self.publish(s,source);self.job(s,rows);self.assertEqual(plan_announcement_user(s,'alice',rows,NOW+timedelta(minutes=3)),0);self.assertEqual(len(s.list('users/alice/notificationJobs')),1)
+ def test_schedule_revision_or_translation_change_does_not_realert_publication(self):
+  s,source=self.fixture();rows=self.publish(s,source);key=self.job(s,rows);changed={**rows[0],'revision':77,'translations':{}};s.put('gameEvents/'+changed['id'],changed)
+  self.assertEqual(plan_announcement_user(s,'alice',[changed],NOW+timedelta(minutes=3)),0)
+  self.assertEqual(dispatch(s,'alice',key,lambda *_:'mock/provider',NOW+timedelta(minutes=3)),'provider_accepted')
+ def test_changed_source_raw_without_explicit_update_timestamp_is_not_recent(self):
+  s,source=self.fixture();self.publish(s,source,clock=NOW-timedelta(hours=2));rows=self.publish(s,source,clock=NOW-timedelta(hours=2),text='■Targeted Procurement Event | Fresh\nNew Elite Doll [Fresh] debuts in the Targeted Procurement! Revised details.')
+  self.assertEqual(plan_announcement_user(s,'alice',rows,NOW+timedelta(minutes=2)),0)
+ def test_explicit_source_update_creates_one_new_content_revision_job(self):
+  s,source=self.fixture();rows=self.publish(s,source);self.job(s,rows)
+  rows=self.publish(s,source,text='■Targeted Procurement Event | Fresh\nNew Elite Doll [Fresh] debuts in the Targeted Procurement! Revised details.',updated=NOW+timedelta(minutes=3))
+  self.assertEqual(rows[0]['announcementRevision'],2);self.assertEqual(plan_announcement_user(s,'alice',rows,NOW+timedelta(minutes=4)),1)
+  self.assertEqual(plan_announcement_user(s,'alice',rows,NOW+timedelta(minutes=5)),0);self.assertEqual(len(s.list('users/alice/notificationJobs')),2)
+ def test_publication_needs_exact_live_source_role_raw_and_content_evidence(self):
+  for field,value in [('calendarRole','other'),('rawSha256','b'*64),('announcementRevision',True),('announcementContentSha256','wrong'),('officialUrl','https://other.example/post'),('sourceId','missing')]:
+   s,source=self.fixture();rows=self.publish(s,source);self.assertIsNone(announcement_identity(s,{**rows[0],field:value},NOW+timedelta(minutes=2)))
+ def test_source_permission_revocation_and_disabled_source_block_current_jobs(self):
+  for field,value in [('enabled',False),('accessStatus','pending'),('approvedForStaging',False),('termsCheckedAt','not-a-time'),('allowedNoticeHosts',['other.example'])]:
+   s,source=self.fixture();rows=self.publish(s,source);key=self.job(s,rows);s.records['gameSources/source'][field]=value;sent=[]
+   self.assertEqual(dispatch(s,'alice',key,lambda *_:sent.append(True),NOW+timedelta(minutes=3)),'cancelled');self.assertEqual(sent,[])
+ def test_missing_raw_collection_document_never_claims_official_publication(self):
+  s,source=self.fixture();rows=self.publish(s,source)
+  for key,_ in s.list('collectionDocuments'):s.delete('collectionDocuments/'+key)
+  self.assertEqual(plan_announcement_user(s,'alice',rows,NOW+timedelta(minutes=2)),0)
+ def test_changed_role_policy_cancels_before_provider_request(self):
+  s,source=self.fixture();rows=self.publish(s,source);key=self.job(s,rows);s.records['gameSources/source']['calendarRolePolicy']['automaticRules']['newHighestCharacter']=False;sent=[]
+  self.assertEqual(dispatch(s,'alice',key,lambda *_:sent.append(True),NOW+timedelta(minutes=3)),'cancelled');self.assertEqual(sent,[])
+ def test_game_removal_after_planning_cancels_before_provider_request(self):
+  s,source=self.fixture();rows=self.publish(s,source);key=self.job(s,rows);s.delete('users/alice/userGames/'+self.GAME);sent=[]
+  self.assertEqual(dispatch(s,'alice',key,lambda *_:sent.append(True),NOW+timedelta(minutes=3)),'cancelled');self.assertEqual(sent,[])
+ def test_updated_source_content_cancels_old_revision_job(self):
+  s,source=self.fixture();rows=self.publish(s,source);key=self.job(s,rows);self.publish(s,source,text='■Targeted Procurement Event | Fresh\nNew Elite Doll [Fresh] debuts in the Targeted Procurement! Revised details.',updated=NOW+timedelta(minutes=3));sent=[]
+  self.assertEqual(dispatch(s,'alice',key,lambda *_:sent.append(True),NOW+timedelta(minutes=4)),'cancelled');self.assertEqual(sent,[])
+ def test_in_app_only_and_provider_acceptance_do_not_assert_human_receipt(self):
+  s,source=self.fixture();rows=self.publish(s,source);key=self.job(s,rows);s.delete('users/alice/notificationSubscriptions/device')
+  self.assertEqual(dispatch(s,'alice',key,lambda *_:self.fail('no provider request'),NOW+timedelta(minutes=3)),'in_app_only')
+  self.assertIsNone(s.get('users/alice/notificationJobs/'+key)['humanConfirmedAt']);self.assertEqual(s.get('users/alice/notifications/'+key)['status'],'in_app_only')
+ def test_provider_failure_is_quarantined_without_retry_or_tokens_in_logs(self):
+  s,source=self.fixture();rows=self.publish(s,source);key=self.job(s,rows)
+  def failed(*_):raise RuntimeError('must not log synthetic token')
+  self.assertEqual(dispatch(s,'alice',key,failed,NOW+timedelta(minutes=3)),'delivery_unconfirmed');self.assertEqual(dispatch(s,'alice',key,failed,NOW+timedelta(minutes=4)),'skipped')
+  self.assertNotIn('synthetic-device',json.dumps(s.list('notificationLogs'),default=str))
+ def test_second_device_is_withheld_if_game_unsubscribed_after_first_send(self):
+  s,source=self.fixture();rows=self.publish(s,source);key=self.job(s,rows);s.put('users/alice/notificationSubscriptions/second',{**s.get('users/alice/notificationSubscriptions/device'),'token':'second-device'});sent=[]
+  def sender(token,payload):sent.append(token);s.delete('users/alice/userGames/'+self.GAME);return 'mock/provider'
+  self.assertEqual(dispatch(s,'alice',key,sender,NOW+timedelta(minutes=3)),'partially_accepted');self.assertEqual(sent,['synthetic-device']);self.assertEqual(s.get('users/alice/notificationJobs/'+key)['withheldDeviceCount'],1)
+ def test_source_bound_multi_game_notice_never_invents_other_game_mapping(self):
+  s,source=self.fixture();rows=self.publish(s,source);event={**rows[0],'gameIds':[self.GAME,'other']};s.delete('users/alice/userGames/'+self.GAME);s.put('users/alice/userGames/other',{'uid':'alice','gameId':'other','enabled':True})
+  self.assertFalse(eligible(s,'alice',event,ANNOUNCEMENT_KIND,NOW+timedelta(minutes=2)))
+ def test_future_missing_or_stale_publication_timestamp_never_creates_jobs(self):
+  s,source=self.fixture();rows=self.publish(s,source)
+  for changes in [{'publishedAt':None},{'announcementPublishedAt':NOW+timedelta(days=1)},{'announcementPublishedAt':NOW-timedelta(days=5)},{'sourceUpdatedAt':'no-zone'}]:
+   self.assertIsNone(announcement_identity(s,{**rows[0],**changes},NOW+timedelta(minutes=2)))
+ def test_recent_query_is_bounded_sorted_and_skips_missing_clock(self):
+  store=MemoryStore({'gameEvents/old':{'announcementPublishedAt':NOW-timedelta(days=4)},'gameEvents/new':{'announcementPublishedAt':NOW},'gameEvents/missing':{},'gameEvents/later':{'announcementPublishedAt':NOW+timedelta(minutes=1)}})
+  self.assertEqual([key for key,_ in store.list_since('gameEvents','announcementPublishedAt',NOW-timedelta(days=1))],['later','new'])
+  for args in [('users','announcementPublishedAt',NOW,10),('gameEvents','other',NOW,10),('gameEvents','announcementPublishedAt',NOW,201)]:
+   with self.assertRaises(SafetyError):store.list_since(*args)
+ def test_worker_collects_recent_publications_separately_from_schedule_jobs(self):
+  s,source=self.fixture();self.publish(s,source);sent=[];result=notification_run(s,lambda *_:sent.append(True) or 'mock/provider',NOW+timedelta(minutes=2))
+  self.assertEqual(result['announcementPlanned'],1);self.assertEqual(result['planned'],0);self.assertEqual(result['providerAcceptedJobs'],1);self.assertEqual(len(sent),1)
+ def test_admin_requires_source_specific_bounded_auto_role_review(self):
+  source=self.source();row=source_row(source,self.GAME);row['enabled']=True;self.assertEqual(validate_change('gameSources','source',row)['calendarRolePolicy']['automaticRules']['gameId'],self.GAME)
+  for changed in [{'gameId':'other'},{'arbitraryRegex':'.*'},{'checkedAt':'missing'},{'mainEventFormat':'guess'}]:
+   candidate=json.loads(json.dumps(row,default=lambda value:value.isoformat()));candidate['calendarRolePolicy']['automaticRules'].update(changed)
+   with self.assertRaises(SafetyError):validate_change('gameSources','source',candidate)
+ def test_account_erasure_removes_server_only_announcement_baselines(self):
+  s,_=self.fixture();s.records['users/alice']['deletionRequestedAt']=NOW;result=cleanup_accounts(s,delete_auth=lambda _:None)
+  self.assertEqual(result['accountsDeleted'],1);self.assertEqual(s.list('users/alice/announcementNotificationState'),[])
+ def test_fcm_data_preserves_publication_role_and_unscoped_notice_scope(self):
+  class Messaging:
+   Message=staticmethod(lambda **kw:kw)
+   AndroidConfig=staticmethod(lambda **kw:kw)
+  s,source=self.fixture(region='UNSPECIFIED',global_opt_in=True);rows=self.publish(s,source);key=self.job(s,rows)
+  payload=fixed_payload(s,'alice',{**s.get('users/alice/notificationJobs/'+key),'id':key},rows[0],NOW+timedelta(minutes=2));data=fcm_message(Messaging,'synthetic-device',payload)['data']
+  self.assertEqual(data['kind'],ANNOUNCEMENT_KIND);self.assertEqual(data['scope'],'unscoped_official_notice');self.assertEqual(data['announcementRole'],'main-character');self.assertEqual(data['recipientUid'],'alice')
+ def test_raw_official_source_url_timestamp_and_subject_evidence_are_required(self):
+  for field,value in [('officialUrl','https://other.example/post'),('sourceId','other'),('publishedAt',NOW-timedelta(hours=3)),('rawSha256','different')]:
+   s,source=self.fixture();rows=self.publish(s,source)
+   for key,_ in s.list('collectionDocuments'):s.records['collectionDocuments/'+key][field]=value
+   self.assertIsNone(announcement_identity(s,rows[0],NOW+timedelta(minutes=2)))
+ def test_cancelled_event_and_unknown_global_opt_out_cancel_pending_notice(self):
+  for cancel in ('cancelled','global-opt-out','quiet'):
+   s,source=self.fixture(region='UNSPECIFIED',global_opt_in=True);rows=self.publish(s,source);key=self.job(s,rows)
+   if cancel=='cancelled':s.records['gameEvents/'+rows[0]['id']]['status']='cancelled'
+   elif cancel=='global-opt-out':s.records['users/alice/notificationSettings/global']['globalAnnouncementsEnabled']=False
+   else:s.records['users/alice']['dndStart']='00:00';s.records['users/alice']['dndEnd']='00:00'
+   self.assertEqual(dispatch(s,'alice',key,lambda *_:self.fail('blocked provider request'),NOW+timedelta(minutes=3)),'cancelled')
+ def test_source_region_cannot_be_reinterpreted_as_user_region(self):
+  s,source=self.fixture(region='UNSPECIFIED',global_opt_in=True);rows=self.publish(s,source)
+  self.assertIsNone(announcement_identity(s,{**rows[0],'serverRegion':'KR'},NOW+timedelta(minutes=2)))
+ def test_role_policy_reextraction_does_not_increase_publication_revision(self):
+  s,source=self.fixture();rows=self.publish(s,source);self.job(s,rows);source['calendar_role_policy']['automaticRules']['checkedAt']=(NOW+timedelta(seconds=30)).isoformat()
+  s.put('gameSources/source',{**source_row(source,self.GAME),'enabled':True});rows=self.publish(s,source)
+  self.assertEqual(rows[0]['announcementRevision'],1);self.assertEqual(plan_announcement_user(s,'alice',rows,NOW+timedelta(minutes=3)),0)
+ def test_auto_debut_role_needs_valid_highest_rarity_review_clock_and_https(self):
+  for changes in ({'checkedAt':'not-verified'},{'evidenceUrl':'http://official.example/tiers'}):
+   s,source=self.fixture();source['highest_character_rarity'].update(changes);self.assertEqual(self.publish(s,source),[])
 
 if __name__=='__main__':unittest.main()
