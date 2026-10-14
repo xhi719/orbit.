@@ -2196,10 +2196,13 @@ def collect_one(store, source, start, end, mode="backfill", fetch=fetch_source, 
                 parsed={"items_seen":len(entries),"items_accepted":len(documents),"items_skipped":len(entries)-len(documents),"skip_reasons":[],
                     "publication_cutoff_reached":bool(dates_for_index and dates_for_index[-1]<CONTENT_CUTOFF.astimezone(timezone(timedelta(hours=9))).strftime("%Y.%m.%d"))}
             else:
-                documents,parsed=(parse_youtube_api_documents(raw,source,observed.isoformat()) if source["parser"]=="youtube_data_api" else parse_youtube_documents(raw,source,observed.isoformat()) if source["parser"]=="youtube_atom" else parse_official_rss_documents(raw,source,observed.isoformat()) if source["parser"]=="official_rss" else parse_steam_documents(raw,source,observed.isoformat()))
+                documents,parsed=(parse_youtube_api_documents(raw,source,observed.isoformat()) if source["parser"]=="youtube_data_api" else parse_youtube_documents(raw,source,observed.isoformat()) if source["parser"]=="youtube_atom" else parse_official_rss_documents(raw,source,observed.isoformat(),published_start=CONTENT_CUTOFF,published_end=CONTENT_MONTH_END) if source["parser"]=="official_rss" else parse_steam_documents(raw,source,observed.isoformat()))
             if source["parser"]=="youtube_atom":
                 metrics.update(windowCoverageVerified=False,coverageReason=parsed["coverage_reason"])
-            if source["parser"]=="official_rss":metrics.update(windowCoverageVerified=False,coverageReason=parsed["coverage_reason"])
+            if source["parser"]=="official_rss":
+                metrics.update(windowCoverageVerified=False,coverageReason=parsed["coverage_reason"])
+                metrics["beforeContentCutoffSkipped"]+=parsed.get("before_window_skipped",0)
+                metrics["afterContentMonthSkipped"]+=parsed.get("after_window_skipped",0)
             metrics["itemsSeen"]+=parsed["items_seen"]
             if source["parser"]=="youtube_data_api":
                 metrics["apiUnitsEstimated"]=metrics.get("apiUnitsEstimated",0)+1  # playlistItems.list costs 1 API quota unit/page.
