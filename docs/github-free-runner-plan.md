@@ -198,3 +198,11 @@ X 게시물 수집은 이번 worker에 구현·활성화하지 않았습니다. 
 공식 YouTube 방송의 `liveStreamingDetails.scheduledStartTime` 또는 `actualStartTime`은 동일 채널·영상·제목과 대조한 RFC3339 값만 사용합니다. 방송 기간을 추측하지 않으며 저장된 동일 시작/종료 값은 `scheduleKind=point`인 한 시점입니다. 원본 게임 서버 지역은 계속 미확인으로 두고 `calendarAudience=GLOBAL_ANNOUNCEMENT`인 방송만 허용합니다. API 한 번의 추가 quota 1단위를 실행 지표에 포함합니다. 영상 게시일을 행사 시작일로 쓰지 않습니다.
 
 공식 원문에 확인된 메인 픽업·메인 이벤트 기간이 있고 서버만 미확인인 이전 검토 자료는 정확한 원문 역할·시간대·기간 증거가 일치할 때만 `sourceClockOnly`인 참고 막대로 표시합니다. 검증된 서버 일정 알림으로 승격하지 않습니다. 복각·무기와 중복 부모 공지는 달력에서 제외합니다. 달력에는 실제 시작일에서만 이름을 한 번 표시하고 다음 주·다음 달로 이어지는 막대에는 반복하지 않습니다. 통합 이벤트 캘린더는 등록 게임 중 선택된 게임들의 같은 달력 자료를 사용합니다.
+# 2026-10-14 October catalogue expansion
+
+This update keeps the approved 19-file public worker scope. New source reviews cover 56 additional exact YouTube channel/upload identities and three publisher website/RSS adapters. Subscription settings never determine which public game data the collector stores. Shared publisher channels require a reviewed literal game-title filter. October publication bounds are 2026-10-01 00:00 KST through 2026-11-01 00:00 KST exclusive; old posts are not imported merely because an event continues into October. YouTube descriptions are discarded and the visible card contains the exact thumbnail, title and watch link.
+
+The Blue Archive October 13 publisher article is enriched by the exact official Ticketlink notice for four membership/ticket opening stages and the festival poster. The September ticket notice is supplementary evidence and is never inserted as October news. The Japanese Girls' Frontline 2 orchestra release is an October announcement of a January 15, 2027 date; it does not establish a Korean concert or an unpublished hour.
+
+The scheduler still wakes at 7, 22, 37 and 52 minutes. With more than 100 sources, checking every source every 15 minutes exceeds the worker's free daily write budget. The worker allocates source attempts from remaining reads/writes, rotates least-recently-checked sources, persists incomplete monthly backfill cursors, and records deferred quota work. Estimated rotation is not a delivery guarantee. Firebase client traffic is not included in the worker accounting; Spark provider limits can suspend the service. Billing remains disconnected, no paid resources are created, and ambiguous billing verification fails closed.
+
