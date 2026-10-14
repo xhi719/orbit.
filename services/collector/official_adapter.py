@@ -4,7 +4,7 @@ Labels extracted from keywords are review candidates, not verified classificatio
 Steam's documented public feed does not specify server regions or event boundaries.
 """
 from __future__ import annotations
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
 import json
 import re
@@ -373,8 +373,45 @@ def official_rss_request(source):
     return {**source,"url":url,"official_host":parsed.hostname,"enabled":True,"method":"official_feed"}
 
 
-def parse_official_rss_documents(raw,source,observed_at):
+def _rss_publication_window_bound(value):
+    if value is None:return None
+    if isinstance(value,datetime):
+        if value.tzinfo is None or value.utcoffset() is None:raise ValidationError("rss_publication_window_timezone_required")
+        return value.astimezone(UTC)
+    return aware_timestamp(value)
+
+
+def _rss_publication_clock(value,rdf):
+    try:clock=aware_timestamp(value)if rdf else parsedate_to_datetime(value)
+    except (ValueError,TypeError,OverflowError)as error:raise ValidationError("official_rss_publication_required")from error
+    if clock.tzinfo is None or clock.utcoffset() is None:raise ValidationError("official_rss_publication_timezone_required")
+    return clock.astimezone(UTC)
+
+
+def _rss_publication_window(value,rdf,start,end):
+    # Some publisher RDF archives expose a date alone. Such a date never
+    # establishes a posting time or server timezone. Only omit it when its
+    # entire possible day, conservatively allowing every UTC offset <24h,
+    # is outside the requested window. Overlapping/invalid dates still fail.
+    if rdf and isinstance(value,str)and re.fullmatch(r"\d{4}-\d{2}-\d{2}",value):
+        try:
+            day=datetime.fromisoformat(value).replace(tzinfo=UTC)
+            earliest=day-timedelta(days=1);latest=day+timedelta(days=2)
+        except (ValueError,TypeError,OverflowError)as error:raise ValidationError("official_rss_publication_required")from error
+        if start is not None and latest<=start:return "before",None
+        if end is not None and earliest>=end:return "after",None
+        raise ValidationError("official_rss_publication_timezone_required")
+    clock=_rss_publication_clock(value,rdf)
+    if start is not None and clock<start:return "before",clock
+    if end is not None and clock>=end:return "after",clock
+    return None,clock
+
+
+def parse_official_rss_documents(raw,source,observed_at,*,published_start=None,published_end=None):
     official_rss_request(source)
+    start=_rss_publication_window_bound(published_start);end=_rss_publication_window_bound(published_end)
+    if start is not None and end is not None and start>=end:raise ValidationError("ordered_rss_publication_window_required")
+    has_window=start is not None or end is not None
     if not isinstance(raw,(bytes,str))or len(raw)>2097152:raise ValidationError("official_rss_body_limit")
     encoded=raw.encode()if isinstance(raw,str)else raw
     if b"\x00"in encoded or re.search(br"<!\s*(?:DOCTYPE|ENTITY)\b",encoded,re.I):raise ValidationError("official_rss_xml_unsafe")
@@ -385,14 +422,20 @@ def parse_official_rss_documents(raw,source,observed_at):
     if root.tag!="rss"and not rdf:raise ValidationError("official_rss_format_required")
     items=root.findall(rss_ns+"item")if rdf else root.findall("channel/item")
     if len(items)>(250 if rdf else 100):raise ValidationError("bounded_official_rss_items_required")
-    content_ns="{http://purl.org/rss/1.0/modules/content/}";documents=[];seen=set()
+    content_ns="{http://purl.org/rss/1.0/modules/content/}";documents=[];seen=set();before=after=0
     for item in items:
         prefix=rss_ns if rdf else ""
-        title=item.findtext(prefix+"title")or"";url=normalize_url(item.findtext(prefix+"link")or"");date=item.findtext(dc_ns+"date")if rdf else item.findtext("pubDate");content=item.findtext(content_ns+"encoded")or item.findtext(prefix+"description")or""
+        title=item.findtext(prefix+"title")or"";raw_url=item.findtext(prefix+"link")or"";date=item.findtext(dc_ns+"date")if rdf else item.findtext("pubDate");content=item.findtext(content_ns+"encoded")or item.findtext(prefix+"description")or"";clock=None
+        if has_window:
+            omitted,clock=_rss_publication_window(date,rdf,start,end)
+            if omitted=="before":before+=1;continue
+            if omitted=="after":after+=1;continue
+        # Do not upgrade legacy HTTP articles. A proven out-of-window article
+        # is omitted; every accepted article still needs the reviewed HTTPS
+        # origin, timestamp and original RDF identity checks below.
+        url=normalize_url(raw_url)
         if not 1<=len(title)<=500 or len(content)>200000 or urlsplit(url).hostname not in source.get("allowed_notice_hosts",[]):raise ValidationError("official_rss_article_identity_required")
-        try:clock=aware_timestamp(date)if rdf else parsedate_to_datetime(date)
-        except (ValueError,TypeError)as error:raise ValidationError("official_rss_publication_required")from error
-        if clock.tzinfo is None:raise ValidationError("official_rss_publication_timezone_required")
+        if clock is None:clock=_rss_publication_clock(date,rdf)
         if url in seen:raise ValidationError("official_rss_duplicate_article")
         seen.add(url);images=[]
         for value in re.findall(r"<img\b[^>]*\bsrc\s*=\s*['\"]([^'\"]+)['\"]",content,re.I):
@@ -409,7 +452,10 @@ def parse_official_rss_documents(raw,source,observed_at):
             "server_region":source.get("server_region")or"UNSPECIFIED","server_label":source.get("server_label"),"event_type_candidates":hints,"pickups":[],
             "source_provider":"official-site","source_image_urls":images[:20],"official_article_image_urls":images[:20],
             "linked_article_required":source["article_format"].get("linkedArticleFormat")=="prtimes_release_v1"})
-    return documents,{"items_seen":len(items),"items_accepted":len(documents),"items_skipped":0,"skip_reasons":[],"window_coverage_verified":False,"coverage_reason":"RECENT_PUBLISHER_RSS_WITHOUT_HISTORY_PAGINATION"}
+    return documents,{"items_seen":len(items),"items_accepted":len(documents),"items_skipped":before+after,
+        "skip_reasons":(["before_publication_window"]if before else[])+(["after_publication_window"]if after else[]),
+        "publication_window_skipped":before+after,"before_window_skipped":before,"after_window_skipped":after,
+        "window_coverage_verified":False,"coverage_reason":"RECENT_PUBLISHER_RSS_WITHOUT_HISTORY_PAGINATION"}
 
 
 def official_rss_article_request(source,document):
