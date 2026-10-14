@@ -302,9 +302,25 @@ def fetch_source(source: dict) -> tuple[int, bytes, dict]:
     youtube_api = source.get("parser") == "youtube_data_api"
     if youtube_api:
         endpoint = urlsplit(normalize_url(url))
-        parameters = dict(parse_qsl(endpoint.query, keep_blank_values=True))
-        if endpoint.hostname != "www.googleapis.com" or source.get("official_host") != "www.googleapis.com" or endpoint.path != "/youtube/v3/playlistItems" \
-            or set(parameters) - {"part", "playlistId", "maxResults", "pageToken"}:
+        pairs = parse_qsl(endpoint.query, keep_blank_values=True)
+        parameters = dict(pairs)
+        parts = parameters.get("part", "").split(",")
+        playlist_request = (endpoint.path == "/youtube/v3/playlistItems"
+            and not set(parameters) - {"part", "playlistId", "maxResults", "pageToken"}
+            and len(parts) == 2 and set(parts) == {"snippet", "contentDetails"}
+            and re.fullmatch(r"UU[A-Za-z0-9_-]{22}", parameters.get("playlistId", ""))
+            and ("maxResults" not in parameters or re.fullmatch(r"(?:[1-9]|[1-4][0-9]|50)", parameters["maxResults"]))
+            and ("pageToken" not in parameters or re.fullmatch(r"[A-Za-z0-9_+=./:-]{1,512}", parameters["pageToken"])))
+        video_ids = parameters.get("id", "").split(",")
+        # Only public metadata of explicitly identified videos is allowed. No
+        # account operations, search, owner-only parts or credential URL query.
+        video_request = (endpoint.path == "/youtube/v3/videos"
+            and set(parameters) == {"part", "id"}
+            and len(parts) == 2 and set(parts) == {"snippet", "liveStreamingDetails"}
+            and 1 <= len(video_ids) <= 50 and len(set(video_ids)) == len(video_ids)
+            and all(re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id) for video_id in video_ids))
+        if endpoint.hostname != "www.googleapis.com" or source.get("official_host") != "www.googleapis.com" \
+            or len(pairs) != len(parameters) or not (playlist_request or video_request):
             raise ValidationError("youtube_api_endpoint_not_approved")
         key = os.environ.get("YOUTUBE_API_KEY", "")
         if not re.fullmatch(r"AIza[A-Za-z0-9_-]{35}", key):

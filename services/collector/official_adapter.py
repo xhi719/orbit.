@@ -46,6 +46,7 @@ def steam_request(source, enddate, count=50):
 
 
 YOUTUBE_API_ENDPOINT = "https://www.googleapis.com/youtube/v3/playlistItems"
+YOUTUBE_VIDEO_DETAILS_ENDPOINT = "https://www.googleapis.com/youtube/v3/videos"
 YOUTUBE_API_DOCUMENTATION = "https://developers.google.com/youtube/v3/docs/playlistItems/list"
 _YOUTUBE_CHANNEL_ID = re.compile(r"UC[A-Za-z0-9_-]{22}")
 _YOUTUBE_UPLOADS_ID = re.compile(r"UU[A-Za-z0-9_-]{22}")
@@ -87,6 +88,67 @@ def youtube_api_request(source, page_token=None, count=50):
     parameters = {"part":"snippet,contentDetails", "playlistId":playlist, "maxResults":count}
     if page_token is not None: parameters["pageToken"] = page_token
     return {**source, "url":YOUTUBE_API_ENDPOINT+"?"+urlencode(parameters), "method":"official_api", "official_host":"www.googleapis.com", "enabled":True}
+
+
+def youtube_video_details_request(source, video_ids):
+    """One bounded official metadata request, never search/scrape inference."""
+    youtube_api_request(source)
+    if (not isinstance(video_ids, list) or not 1 <= len(video_ids) <= 50
+        or any(not isinstance(video, str) or not _YOUTUBE_VIDEO_ID.fullmatch(video) for video in video_ids) or len(set(video_ids)) != len(video_ids)):
+        raise ValidationError("youtube_video_details_ids_invalid")
+    return {**source, "url": YOUTUBE_VIDEO_DETAILS_ENDPOINT + "?" + urlencode({"part": "snippet,liveStreamingDetails", "id": ",".join(video_ids)}),
+        "method": "official_api", "official_host": "www.googleapis.com", "enabled": True}
+
+
+def attach_youtube_video_details(raw, source, documents):
+    """Bind exact live start facts to their same-channel upload's raw hash.
+
+    An official live point has no invented duration/end. Non-live or disappeared
+    videos stay without a point. Playlist publication never supplies this time.
+    """
+    video_ids = [document["external_key"] for document in documents]
+    youtube_video_details_request(source, video_ids)
+    if not isinstance(raw, (bytes, str)) or len(raw) > 2097152:
+        raise ValidationError("youtube_video_details_response_too_large")
+    try:
+        payload = json.loads(raw)
+    except (ValueError, UnicodeError) as error:
+        raise ValidationError("youtube_video_details_json_invalid") from error
+    if not isinstance(payload, dict) or "error" in payload or payload.get("kind") != "youtube#videoListResponse":
+        raise ValidationError("youtube_video_details_response_invalid")
+    items = payload.get("items")
+    if not isinstance(items, list) or len(items) > len(video_ids):
+        raise ValidationError("youtube_video_details_items_invalid")
+    by_id = {}
+    for item in items:
+        if not isinstance(item, dict) or item.get("kind") != "youtube#video" or item.get("id") not in video_ids or item["id"] in by_id:
+            raise ValidationError("youtube_video_details_identity_mismatch")
+        snippet = item.get("snippet")
+        if not isinstance(snippet, dict) or snippet.get("channelId") != source["youtube_channel_id"]:
+            raise ValidationError("youtube_video_details_channel_mismatch")
+        document = next(document for document in documents if document["external_key"] == item["id"])
+        if snippet.get("title") != document["original_title"]:
+            raise ValidationError("youtube_video_details_title_changed")
+        details = item.get("liveStreamingDetails") or {}
+        if not isinstance(details, dict):
+            raise ValidationError("youtube_video_details_live_fields_invalid")
+        kept = {}
+        for field in ("scheduledStartTime", "actualStartTime", "actualEndTime"):
+            if field in details:
+                aware_timestamp(details[field])
+                kept[field] = details[field]
+        if "actualStartTime" in kept and "actualEndTime" in kept and aware_timestamp(kept["actualEndTime"]) < aware_timestamp(kept["actualStartTime"]):
+            raise ValidationError("youtube_video_details_end_before_start")
+        by_id[item["id"]] = kept
+    result = []
+    for document in documents:
+        copy = {**document}
+        if document["external_key"] in by_id:
+            raw_item = {**document["raw_json"], "liveStreamingDetails": by_id[document["external_key"]]}
+            copy.update(raw_json=raw_item, raw_sha256=hashlib.sha256(json.dumps(raw_item, sort_keys=True, ensure_ascii=False).encode()).hexdigest(),
+                source_live_details=by_id[document["external_key"]])
+        result.append(copy)
+    return result
 
 
 def parse_youtube_api_documents(raw, source, observed_at):
