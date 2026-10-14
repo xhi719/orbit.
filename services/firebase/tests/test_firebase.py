@@ -1837,6 +1837,25 @@ class SelectiveOfficialSocialContentTests(unittest.TestCase):
    with self.subTest(title=title):self.assertEqual(self.classify(title)['kind'],'other')
  def test_description_boilerplate_does_not_classify_an_unrelated_video(self):
   self.assertEqual(self.classify('Funny game moment',originalDescription='특별 방송 예고\n이벤트 PV\n신규 픽업 안내')['kind'],'other')
+ def test_official_korean_targeted_procurement_titles_are_pickup_notices(self):
+  for title in ['지정 발주 「샤이엔」 예고','지정 발주 「류시」 예고','지정발주 「샤이엔」 예고']:
+   with self.subTest(title=title):
+    proof=self.classify(title);self.assertEqual(proof['kind'],'pickup-preview');self.assertEqual(proof['status'],'verified')
+    self.assertEqual(proof['method'],'explicit_notice_title_v1');self.assertEqual(proof['sourceTitle'],title);self.assertEqual(proof['sourceSha256'],'a'*64)
+ def test_korean_procurement_in_body_or_excluded_guide_does_not_become_news(self):
+  self.assertEqual(self.classify('오늘의 사진',originalDescription='지정 발주 「샤이엔」 예고')['kind'],'other')
+  self.assertEqual(self.classify('지정 발주 공략 가이드')['status'],'excluded')
+  self.assertEqual(self.classify('지정 발주 「샤이엔」 예고',rawSha256=None)['status'],'unconfirmed')
+ def test_korean_reviewed_rerun_needs_own_art_and_stays_out_of_calendar(self):
+  from collector import apply_notice_content_policy
+  title='지정 발주 「샤이엔」 예고';url='https://official.example/notices/68002'
+  image={'url':'https://official.example/media/cheyanne-procurement.jpg','sourceUrl':url,'kind':'PICKUP_ART','rightsStatus':'APPROVED','rightsEvidenceUrl':'https://official.example/image-permission',
+   'subjectEvidence':{'status':'MATCHED','eventId':'rerun','officialUrl':url,'sourceSha256':'a'*64,'sourceTitle':title,'kind':'pickup','method':'reviewed_image','characterNames':['샤이엔'],'announcementKind':'rerun'}}
+  row={'id':'rerun','sourceProvider':'official-site','officialUrl':url,'originalTitle':title,'rawSha256':'a'*64,'publishedAt':NOW-timedelta(days=1),
+   'announcementKind':'rerun','rarityLabel':'Elite','characterNames':['샤이엔'],'categoryCandidate':'recruitment','verificationStatus':'verified','scheduleStatus':'DATE_VERIFIED','serverRegion':'KR','startsAt':NOW-timedelta(hours=1),'endsAt':NOW+timedelta(days=1),'image':image}
+  result=apply_notice_content_policy(row,NOW);self.assertEqual(result['contentKind'],'pickup-preview');self.assertTrue(result['newsEligible']);self.assertFalse(result['calendarEligible'])
+  self.assertFalse(apply_notice_content_policy({**row,'image':None},NOW)['newsEligible'])
+  self.assertFalse(apply_notice_content_policy({**row,'rawSha256':'b'*64},NOW)['newsEligible'])
  def test_ambiguous_pv_and_missing_raw_hash_do_not_qualify(self):
   self.assertEqual(self.classify('캐릭터 PV / 이벤트 PV')['kind'],'other');self.assertEqual(self.classify('이벤트 PV',rawSha256=None)['kind'],'other')
  def test_named_reviewed_main_role_is_bound_to_hash_and_exact_title(self):
