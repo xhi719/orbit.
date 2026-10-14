@@ -39,7 +39,7 @@
 | `services/firebase/tests/test_firebase.py` | 외부 호출 없는 정책·실패·격리·재검증 복구 회귀 84개 |
 | `services/firebase/import_pending_pickups.py` | 사전 조회 원문으로 명시 검토된 older notice/pending outfit만 별도 보완; cron에서 실행하지 않음 |
 | `services/collector/engine.py` | HTTPS 승인 출처 fetch/검증 공통 함수 |
-| `services/collector/official_adapter.py` | Steam publisher feed, appid/host/region 원문 검증 |
+| `services/collector/official_adapter.py` | Steam publisher feed 및 공식 YouTube Data API, 게시자·영상·업로드 재생목록·동일 영상 이미지 검증 |
 | `services/collector/backfill.py` | 현재 Firebase collector가 import하는 retry_after_seconds 및 transitive helper |
 | `services/collector/staging_store.py` | backfill의 transitive import; package workflow는 SQLite staging을 실행하지 않음 |
 | `data/game-candidates.json` | 공식 출처 근거가 있는 공개 게임 메타데이터 137개; 이미지 URL은 메타데이터만 |
@@ -134,6 +134,18 @@ python services/firebase/notifications.py --apply
 무료 예약 작업의 한 번 실행은 최근 게시·수정 72시간의 최신 공지 최대 200건, 사용자 최대 50명, 사용자 등록 게임·기존 작업 각 최대 100건, 작업의 기기 구독 최대 20개 범위입니다. 공지 조회가 200건에 도달하면 `announcementScanLimitReached`를 기록합니다. 한도 도달·예약 지연·할당량 중단으로 모든 알림 전달을 보장하지 않습니다. 기존 Spark/Billing guard·읽기 2,500·쓰기 500의 실행 제한과 무료 사용량 제한을 유지하며 유료 API·리소스를 추가하지 않습니다.
 
 추가된 `newCharacterFormat=gf2_new_doll_block_v1`은 `- New Doll -` 또는 `- New Dolls -` 제목 바로 다음의 정확한 `Elite Doll [이름]` 항목과, 같은 기사에서 그 이름의 지정 발주 확률 상승 문장을 모두 요구합니다. 별도 출처 형식 승인이 없으면 실행하지 않습니다. 복각·무기·표준 등급·여러 역할이 섞인 문장·MOD로만 얻는 인형은 새 픽업으로 추정하지 않습니다. 이 근거는 신규 픽업 사실이며 모집 기간을 증명하지 않으므로 부모 기사의 행사 날짜를 캐릭터 이벤트나 pickupSchedules에 복사하지 않습니다. 같은 줄의 신규 캐릭터도 독립 모집 제목·섹션의 기간이 확인되지 않으면 부모 이야기 행사 날짜를 물려받지 않습니다. 취소 상태는 유지합니다. 현재 로컬에 검토한 Sunborn Steam 3347400 기사에는 New Doll 형식이 있지만 운영 등록·승인된 출처는 아니므로 활성화하지 않았습니다. 운영 HAOPLAY Steam 3308670 현재 기사의 이름 나열만으로 신규를 판단하지 않습니다.
+
+## 2026-10-14 10월 공식 YouTube 소식 수집 정책
+
+기존 공개 payload 19개와 manifest 범위를 유지하면서 공식 YouTube Data API 어댑터를 추가합니다. 블루 아카이브·원신·소녀전선2·니케·명조의 한국어 공식 채널은 배포사 링크와 실제 채널 ID를 대조했고, 업로드 재생목록은 실제 `channels.list` 응답으로 확인했습니다. 검토 source seed는 계속 disabled이며 원격 활성화·적재·예약 실행은 별도 실행 기록으로 검증합니다. 다섯 채널의 지원을 전체 등록 게임·전 세계 전체 소식 수집 완료로 표현하지 않습니다. Atom 실패·빈 WebSub topic을 정상 공지 0건으로 오인하지 않습니다.
+
+`contentPublishedNotBefore=2026-10-01T00:00:00+09:00`을 원문 게시 시각에만 적용합니다. YouTube는 `contentDetails.videoPublishedAt`이며 재생목록 추가·수정·행사 시각으로 대체하지 않습니다. 10월 최초 적재는 별도 `content-backfill`이고 이후 증분은 최근 72시간과 고정 하한을 함께 적용합니다. 페이지 제한·실패·게시 시각 불명은 각각 기록합니다. 10월 이전 자료 정리는 공용 이벤트·정확히 연결된 픽업·원문 문서만 SHA 검토 계획과 변경 전 fingerprint 재검사로 처리하며, 사용자 계정·게임 등록·실행 기록·출석 집계·기기·설정은 포함하지 않습니다. 컬렉션당 검사 500·실행당 삭제 400 제한 뒤 재조회가 필요합니다.
+
+서버는 GitHub Secret `YOUTUBE_API_KEY`를 승인된 `www.googleapis.com/youtube/v3/playlistItems`에만 헤더로 전송합니다. 키는 YouTube API로 제한하며 공개 파일·클라이언트·URL query·로그·보고서에 저장하지 않습니다. 결제 미연결 guard와 기존 무료 Firestore 한도를 유지합니다. [공식 playlistItems 문서](https://developers.google.com/youtube/v3/docs/playlistItems/list)의 요청당 1 quota 단위·최대 50개와 [현재 quota 문서](https://developers.google.com/youtube/v3/guides/quota_and_compliance_audits)의 일반 endpoint 기본 10,000단위/일을 기준으로 합니다. 출처당 10페이지·수집 전체 480초·job 15분 제한에서 다섯 채널의 증분 최댓값 계산은 `5 × 10 × 96 = 4,800단위/일`이며 실측이나 강제 전체 일별 cap은 아닙니다. 수동·재검증·실패 호출 및 다른 사용량은 추가로 대조합니다. 한도 초과는 보류·백오프이며 유료 연결로 전환하지 않습니다.
+
+같은 영상 ID의 공식 썸네일 URL과 출처 증거만 Firestore에 저장합니다. 이미지 blob·base64·Cloud Storage는 사용하지 않습니다. 썸네일은 영상 소식 이미지이며 픽업 배너나 행사 포스터의 근거로 재사용하지 않습니다. 서버 지역·확정 기간·캐릭터 신규/복각은 별도 검증이 필요합니다. `metadataCheckedAt`/`metadataExpiresAt`을 기록하고 30일 안에 재조회하거나 만료 메타데이터를 제한된 일별 작업으로 삭제합니다. 한도·참조 때문에 남는 문서는 PARTIAL과 관리 조치 필요 상태를 기록하며 전체 정리 완료로 표시하지 않습니다. [공식 메타데이터 보관·표시 정책](https://developers.google.com/youtube/terms/developer-policies), [API 이용약관](https://developers.google.com/youtube/terms/api-services-terms-of-service).
+
+[현재 X API 가격](https://docs.x.com/x-api/getting-started/pricing)의 게시물 읽기는 유료이므로 0원 정책에서 자동 탐색은 비활성 상태입니다. 알려진 공식 URL의 oEmbed 읽기만으로 새 소식이나 사진을 자동 수집했다고 판정하지 않습니다. 시험 응답에는 사진 URL이 없었습니다. 비공식 proxy·로그인 제한 우회·유료 API를 사용하지 않습니다. 이번 정책의 실제 운영 적재·삭제 건수·예약 수집 로그는 각 실행 보고서로 따로 제출합니다.
 
 로컬 검증: `python -m unittest discover -s services/firebase/tests -p test_firebase.py -q` **348/348 통과**(기존 283 + 신규 공식 공지 65). 별도 검토 콘텐츠 시험 4개·표시 시험 11개도 통과했습니다. 모든 신규 발송 검증은 MemoryStore와 모의 제공자이며 실제 FCM·운영 사용자 데이터 접근 0입니다. 인자 없이 `notifications.py`는 계속 `DISABLED`, 발송 0, 원격 쓰기 0입니다. 배포·정책 반영·실제 예약 실행·실기기 수신은 운영 실행 자료로 별도 확인해야 합니다.
 
