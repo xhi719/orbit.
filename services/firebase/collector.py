@@ -23,7 +23,7 @@ import xml.etree.ElementTree as ET
 from urllib.parse import urlsplit, parse_qsl, urlencode, urljoin
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "collector"))
-from engine import fetch_source, ValidationError, normalize_url
+from engine import fetch_source, ValidationError, normalize_url, image_dimensions
 from official_adapter import steam_request, parse_steam_documents, aware_timestamp, TYPES
 from backfill import retry_after_seconds
 from store import MemoryStore, FirestoreStore, SafetyError, timestamp, document_fingerprint, cleanup_path, CONTENT_CLEANUP_COLLECTIONS
@@ -39,6 +39,7 @@ YOUTUBE_FEED_PATHS = ("/feeds/videos.xml", "/xml/feeds/videos.xml")
 YOUTUBE_FEED_DOCUMENTATION = "https://developers.google.com/youtube/v3/guides/push_notifications"
 YOUTUBE_API_TERMS = "https://developers.google.com/youtube/terms/api-services-terms-of-service"
 YOUTUBE_PARSERS = frozenset({"youtube_atom","youtube_data_api"})
+YOUTUBE_NOTICE_IMAGE_POLICY_VERSION = 3
 
 
 def content_publication_status(value, observed=None):
@@ -51,10 +52,11 @@ def content_publication_status(value, observed=None):
     return "INCLUDED"
 
 
-def automatic_youtube_notice_image(document, source, event_id, observed):
+def automatic_youtube_notice_image(document, source, event_id, observed, *, image_fetch=None, deadline=None, probe_status=None):
     """Keep the exact official video's supplied thumbnail as notice evidence.
 
-    No video-page fetch, byte download, reuse-rights grant or pickup inference.
+    A bounded in-memory image header/body check confirms supplied dimensions.
+    No byte storage, reuse-rights grant or pickup inference.
     Derived characters/sections never inherit an article-level thumbnail.
     """
     if source.get("parser") not in YOUTUBE_PARSERS or not reviewed(source) or document.get("_section_key") or document.get("_parent_event_id"): return None
@@ -68,18 +70,58 @@ def automatic_youtube_notice_image(document, source, event_id, observed):
         or digest(raw) != document.get("raw_sha256")): return None
     supplied = raw.get("thumbnailUrls")
     if not isinstance(supplied, list) or not 1 <= len(supplied) <= 8: return None
+    probe_status=probe_status if probe_status is not None else {}
+    probe_status.update(status="unconfirmed",requests=0,reasonCodes=[],policyVersion=YOUTUBE_NOTICE_IMAGE_POLICY_VERSION,checkedAt=timestamp(observed).isoformat())
     candidates = []
-    quality = {"default": 0, "mqdefault": 1, "hqdefault": 2, "sddefault": 3, "maxresdefault": 4, "fhddefault":5,"qhddefault":6,"uhddefault":7}
+    quality = {"maxresdefault":0,"sddefault":1,"hqdefault":2,"mqdefault":3,"default":4,"fhddefault":5,"qhddefault":6,"uhddefault":7}
+    metadata=document.get("source_image_metadata")
+    if not isinstance(metadata,dict)or raw.get("thumbnailMetadata")!=metadata:
+        probe_status["reasonCodes"].append("SOURCE_DIMENSIONS_UNCONFIRMED");return None
     for value in supplied:
         url = safe_public_url(value)
         if not url or url not in document.get("source_image_urls", []): continue
         parsed = urlsplit(url)
-        match = re.fullmatch(r"/vi(?:_webp)?/" + re.escape(video) + r"/(default|mqdefault|hqdefault|sddefault|maxresdefault|fhddefault|qhddefault|uhddefault)\.(?:jpg|webp)", parsed.path)
+        match = re.fullmatch(r"/vi(?:_webp)?/" + re.escape(video) + r"/(default|mqdefault|hqdefault|sddefault|maxresdefault|fhddefault|qhddefault|uhddefault)(?:_live)?\.(?:jpg|webp)", parsed.path)
         if parsed.scheme != "https" or parsed.hostname not in ("i.ytimg.com", "i1.ytimg.com", "i2.ytimg.com", "i3.ytimg.com", "i4.ytimg.com") or parsed.query or not match: continue
-        candidates.append((quality[match.group(1)], url))
-    if not candidates: return None
-    url = max(candidates)[1]
+        expected=metadata.get(url)
+        if (not isinstance(expected,dict)or not isinstance(expected.get("width"),int)or isinstance(expected["width"],bool)
+            or not isinstance(expected.get("height"),int)or isinstance(expected["height"],bool)
+            or not 320<=expected["width"]<=16384 or not 180<=expected["height"]<=16384):continue
+        if any(candidate[1]==url for candidate in candidates):continue
+        candidates.append((quality[match.group(1)], url,expected))
+    if not candidates:
+        probe_status["reasonCodes"].append("NO_ELIGIBLE_SOURCE_THUMBNAIL");return None
+    if image_fetch is None:
+        probe_status.update(status="deferred",reasonCodes=["IMAGE_PROBE_UNAVAILABLE"]);return None
+    selected=None
+    for _,url,expected in sorted(candidates)[:3]:
+        if deadline is not None and time.monotonic()>=deadline:
+            probe_status["reasonCodes"].append("IMAGE_PROBE_DEADLINE_EXHAUSTED");break
+        probe_status["requests"]+=1
+        request={"url":url,"official_host":urlsplit(url).hostname,"parser":"official_image_probe","enabled":True,"access_status":"approved",
+            "terms_url":YOUTUBE_API_TERMS,"terms_checked_at":source["terms_checked_at"],"request_timeout_seconds":10,
+            "max_response_bytes":2097152}
+        if deadline is not None:request["request_timeout_seconds"]=max(1,min(10,int(deadline-time.monotonic())))
+        try:http_status,pixels,headers=image_fetch(request)
+        except Exception:
+            probe_status["reasonCodes"].append("IMAGE_PROBE_FETCH_FAILED");continue
+        content_type=str(headers.get("content-type","")).split(";",1)[0].strip().lower()
+        if http_status!=200 or content_type not in ("image/jpeg","image/png")or not isinstance(pixels,bytes)or len(pixels)>2097152:
+            probe_status["reasonCodes"].append("IMAGE_PROBE_HTTP_OR_CONTENT_TYPE_INVALID");continue
+        actual=image_dimensions(pixels)
+        if actual!=(expected["width"],expected["height"])or actual[0]<320 or actual[1]<180:
+            probe_status["reasonCodes"].append("IMAGE_PROBE_DIMENSIONS_MISMATCH");continue
+        verification={"status":"verified","method":"SOURCE_DIMENSIONS_MATCH","width":actual[0],"height":actual[1],
+            "expectedWidth":expected["width"],"expectedHeight":expected["height"],"contentType":content_type,
+            "contentSha256":hashlib.sha256(pixels).hexdigest(),"checkedAt":timestamp(observed).isoformat()}
+        selected=(url,verification);break
+    probe_status["reasonCodes"]=list(dict.fromkeys(probe_status["reasonCodes"]))
+    if selected is None:
+        if "IMAGE_PROBE_DEADLINE_EXHAUSTED"in probe_status["reasonCodes"]:probe_status["status"]="deferred"
+        return None
+    url,verification=selected;probe_status.update(status="verified",selectedUrl=url)
     return {"url": url, "sourceUrl": official, "kind": "NOTICE_ART", "rightsStatus": "UNCONFIRMED", "subjectStatus": "MATCHED",
+        "imageVerification":verification,
         "sourceReference": {"mode": "OFFICIAL_NOTICE_IMAGE", "sourceUrl": official, "checkedAt": timestamp(observed).isoformat(), "allowedImageUrl": url,
             "expiresAt": (timestamp(observed)+timedelta(days=30)).isoformat()},
         "subjectEvidence": {"status": "MATCHED", "eventId": event_id, "officialUrl": official, "kind": "notice", "method": "source_post",
@@ -161,18 +203,22 @@ def parse_youtube_documents(raw, source, observed_at):
             raise ValidationError("youtube_video_url_mismatch")
         url = "https://www.youtube.com/watch?"+urlencode({"v": video})
         thumbnails = []
+        thumbnail_metadata={}
         for node in item.findall(media+"group/"+media+"thumbnail")[:5]:
             image = safe_public_url(node.get("url"))
             if image and urlsplit(image).hostname in ("i.ytimg.com", "i1.ytimg.com", "i2.ytimg.com", "i3.ytimg.com", "i4.ytimg.com"):
                 thumbnails.append(image)
+                try:width=int(node.get("width",""));height=int(node.get("height",""))
+                except (ValueError,TypeError):continue
+                if 0<width<=16384 and 0<height<=16384:thumbnail_metadata[image]={"width":width,"height":height,"quality":"feed"}
         raw_item = {"channelId":channel, "videoId":video, "title":title, "description":content,
-                    "published":published, "updated":updated, "officialUrl":url, "originalVideoUrl":links[0], "thumbnailUrls":thumbnails}
+                    "published":published, "updated":updated, "officialUrl":url, "originalVideoUrl":links[0], "thumbnailUrls":thumbnails,"thumbnailMetadata":thumbnail_metadata}
         hints = [kind for kind, patterns in TYPES.items() if any(re.search(pattern, title+"\n"+content, re.I) for pattern in patterns)]
         documents.append({"external_key":video, "raw_sha256":digest(raw_item), "raw_json":raw_item,
             "raw_publication_timestamp":published, "published_at":published_time.isoformat(), "source_updated_at":updated,
             "observed_at":observed_at, "official_url":url, "original_title":title, "original_description":content,
             "original_language":source.get("content_language") or "unknown", "server_region":source.get("server_region") or "UNSPECIFIED",
-            "server_label":source.get("server_label"), "event_type_candidates":hints, "pickups":[], "source_image_urls":thumbnails})
+            "server_label":source.get("server_label"), "event_type_candidates":hints, "pickups":[], "source_image_urls":thumbnails,"source_image_metadata":thumbnail_metadata})
     return documents, {"items_seen":len(items), "items_accepted":len(documents), "items_skipped":0,
         "skip_reasons":[], "window_coverage_verified":False, "coverage_reason":"RECENT_FEED_WITHOUT_HISTORY_PAGINATION"}
 
@@ -185,6 +231,7 @@ def source_policy(source):
         "section_schedule_format", "paired_recruitment_period_approved", "content_localization", "original_image_reference",
         "reviewed_notice_references", "calendar_role_policy", "localization_roster")}
     if source.get("parser") in YOUTUBE_PARSERS:
+        policy["youtubeNoticeImagePolicyVersion"]=YOUTUBE_NOTICE_IMAGE_POLICY_VERSION
         policy.update({key:source.get(key) for key in ("youtube_channel_id", "publisher_identity_evidence_url", "publisher_identity_checked_at")})
         if source.get("parser")=="youtube_data_api":policy.update({key:source.get(key)for key in ("youtube_uploads_playlist_id","youtube_uploads_playlist_verified_at")})
     policy["contentPublishedNotBefore"] = CONTENT_PUBLISHED_NOT_BEFORE
@@ -1328,13 +1375,27 @@ def retire_derived_event(store,event_id,row,observed,depth=0):
             retire_derived_event(store,child_id,child,observed,depth+1)
 
 
-def upsert_notice(store, source, document, observed):
+def upsert_notice(store, source, document, observed, *, image_fetch=None, deadline=None):
     gate = content_publication_status(document.get("published_at"), observed)
     if gate != "INCLUDED": return "beforeContentCutoffSkipped" if gate == "PUBLISHED_BEFORE_CONTENT_CUTOFF" else "publicationUnconfirmedSkipped"
     document=enrich_document(document,source)
     event_id=event_identity(document,source)
     proof_id=digest([source["id"],document["external_key"],document["raw_sha256"]])
-    notice_image=automatic_youtube_notice_image(document,source,event_id,observed)
+    notice_image=None;notice_image_verification=None;image_probe_due=False
+    if source.get("parser")in YOUTUBE_PARSERS and not document.get("_section_key"):
+        previous=store.get("gameEvents/"+event_id)
+        same=bool(previous and previous.get("rawSha256")==document["raw_sha256"]and previous.get("extractionVersion")==EXTRACTION_VERSION
+            and previous.get("extractionPolicySha256")==document["extraction_policy_sha256"])
+        try:image_probe_due=not same or not previous.get("metadataCheckedAt")or timestamp(previous["metadataCheckedAt"])<=observed-timedelta(hours=24)
+        except (ValueError,TypeError):image_probe_due=True
+        if image_probe_due:
+            notice_image_verification={}
+            notice_image=automatic_youtube_notice_image(document,source,event_id,observed,image_fetch=image_fetch,deadline=deadline,probe_status=notice_image_verification)
+            if notice_image_verification.get("status")!="verified":
+                error_key=digest([source["id"],document["external_key"],document["raw_sha256"],YOUTUBE_NOTICE_IMAGE_POLICY_VERSION,observed.date().isoformat()])
+                store.mutate("collectionErrors/"+error_key,lambda old:(None,False)if old else({"sourceId":source["id"],"gameId":source["game_id"],"kind":"OFFICIAL_NOTICE_IMAGE",
+                    "reasonCode":"NOTICE_IMAGE_VERIFICATION_FAILED","details":notice_image_verification,"createdAt":observed},True))
+        else:notice_image=previous.get("noticeImage");notice_image_verification=previous.get("noticeImageVerification")
     video_metadata=youtube_document_metadata(document,source,observed)
     if len(json.dumps(document["raw_json"],ensure_ascii=False).encode())>700000:
         raise SafetyError("raw_document_exceeds_safe_firestore_size")
@@ -1362,7 +1423,7 @@ def upsert_notice(store, source, document, observed):
                 except (ValueError,TypeError): refresh=True
                 if refresh:
                     return {**old,"noticeImage":notice_image,"image":notice_image if old.get("categoryCandidate")!="recruitment" and not old.get("derivedCharacterAnnouncements") else old.get("image"),
-                        **video_metadata,"lastCheckedAt":observed},"updated"
+                        "noticeImageVerification":notice_image_verification,**video_metadata,"lastCheckedAt":observed},"updated"
             return None,"unchanged"
         retained_image=retained_source_reference(old,document,event_id)
         original_language,language_evidence=notice_language(old,document,source)
@@ -1387,6 +1448,7 @@ def upsert_notice(store, source, document, observed):
              "candidateEndsAt":document["schedule"]["endsAt"] if region_pending_period(document) else None,
              "candidateTimezone":document["schedule"]["originalTimezone"] if region_pending_period(document) else None,
              "noticeImage":notice_image,
+             "noticeImageVerification":notice_image_verification,
              **video_metadata,
              "imageCandidates":document["image_candidates"],"image":document["approved_image"] or document["referenced_image"] or reviewed_notice_image(document,source,event_id) or retained_image or (notice_image if document["category_candidate"]!="recruitment" and not document["highest_rarity_targets"] else None),
              "sourceImageOverride":old.get("sourceImageOverride") if retained_image and not (document["approved_image"] or document["referenced_image"]) else None,
@@ -1452,7 +1514,7 @@ def upsert_notice(store, source, document, observed):
         parent=store.get("gameEvents/"+event_id)
         active_children={event_identity(section,source) for section in document["section_documents"]}
         for section in document["section_documents"]:
-            upsert_notice(store,source,section,observed)
+            upsert_notice(store,source,section,observed,image_fetch=image_fetch,deadline=deadline)
         for target in document["highest_rarity_targets"]:
             # A structured recruitment section will create its own independent
             # character child. Do not create a second equivalent child from the
@@ -1466,6 +1528,7 @@ def upsert_notice(store, source, document, observed):
                 retained_image=retained_source_reference(old,document,child_id,title=target["name"],characters=[target["name"]],announcement_kind=target["announcementKind"])
                 row={**parent,"id":child_id,"parentEventId":event_id,"announcementKind":target["announcementKind"],
                     "noticeImage":None,
+                    "noticeImageVerification":None,
                     "sourceProvider":None,"sourceVideoId":None,"sourceChannelId":None,"metadataCheckedAt":None,"metadataExpiresAt":None,
                     "rarityLabel":target["rarityLabel"],"characters":[target["name"]],"characterEvidenceText":target["evidenceText"],
                     "characterEvidenceMethod":target.get("evidenceMethod","literal_same_line_v1"),
@@ -1635,8 +1698,14 @@ def collect_one(store, source, start, end, mode="backfill", fetch=fetch_source, 
                 changed=aware_timestamp(document["source_updated_at"]) if document.get("source_updated_at") else None
                 if start<=date<end or changed and start<=changed<end or ongoing_old or mode=="reverify" and event_identity(document,source) in known_event_ids:
                     if ongoing_old:metrics["ongoingOlderIncluded"]+=1
-                    metrics[upsert_notice(store,source,document,observed)]+=1
+                    outcome=upsert_notice(store,source,document,observed,image_fetch=fetch,deadline=deadline)
+                    metrics[outcome]+=1
                     stored=store.get("gameEvents/"+event_identity(document,source))
+                    if stored and source["parser"]in YOUTUBE_PARSERS and outcome!="unchanged":
+                        image_check=stored.get("noticeImageVerification")or{}
+                        metrics["thumbnailProbeRequests"]=metrics.get("thumbnailProbeRequests",0)+image_check.get("requests",0)
+                        metrics["verifiedNoticeImages"]=metrics.get("verifiedNoticeImages",0)+int(image_check.get("status")=="verified")
+                        metrics["unverifiedNoticeImages"]=metrics.get("unverifiedNoticeImages",0)+int(image_check.get("status")!="verified")
                     if stored and stored.get("verificationStatus")=="verified" and stored.get("startsAt") and stored.get("endsAt"):
                         metrics["verifiedSchedules"]+=1
                     if stored and stored.get("candidateStartsAt") and stored.get("candidateEndsAt") and stored.get("status")!="cancelled":

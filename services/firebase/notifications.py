@@ -367,7 +367,12 @@ def eligible(store,uid,event,kind,now):
     if profile.get("notificationsEnabled") is False:return False
     if quiet({"quietStart":profile.get("dndStart"),"quietEnd":profile.get("dndEnd"),"timezone":profile.get("timezone","UTC")},now):return False
     if kind not in {anchor+":"+stage for anchor in ["event","reservation"] for stage in OFFSETS}:return False
-    if not event or event.get("verificationStatus")!="verified" or event.get("status") in ["cancelled","canceled","postponed","ended"]:return False
+    if not event or content_publication_status(event.get("publishedAt"),now)!="INCLUDED" or event.get("verificationStatus")!="verified" or event.get("status") in ["cancelled","canceled","postponed","ended"]:return False
+    if event.get("sourceProvider")=="youtube" or event.get("sourceChannelId") or event.get("sourceVideoId"):
+        try:
+            checked,expires=timestamp(event.get("metadataCheckedAt")),timestamp(event.get("metadataExpiresAt"))
+            if checked>now or not checked<expires<=checked+timedelta(days=30) or expires<=now:return False
+        except (ValueError,TypeError):return False
     region=event.get("serverRegion")
     if not region or region=="UNSPECIFIED":return False
     global_settings=store.get(f"users/{uid}/notificationSettings/global") or {"enabled":True,"regions":profile.get("regions",[]),"timezone":profile.get("timezone","UTC")}
