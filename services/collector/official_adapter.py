@@ -354,6 +354,174 @@ def parse_official_html_article(raw,source,url,observed_at):
         "source_provider":"official-site","source_image_urls":parser.images[:20],"official_article_image_urls":parser.images[:20]}
 
 
+KURO_CMS_BASE = "https://hw-media-cdn-mingchao.kurogame.com/akiwebsite/website2.0/json/G152/"
+KURO_CMS_ARTICLE_ORIGIN = "https://wutheringwaves.kurogames.com"
+KURO_CMS_LOCALES = {"kr": "ko", "en": "en", "jp": "ja"}
+
+
+def _kuro_cms_policy(source):
+    """Only the static public CMS explicitly loaded by the official website.
+
+    Reservation/login APIs, preview postMessage data and client credentials are
+    deliberately outside this adapter. The website displays publication dates,
+    not its timezone-less CMS time; an explicitly reviewed date zone is required
+    solely to represent that day. It never supplies an event's schedule zone.
+    """
+    policy = source.get("article_format") or {}
+    if any(str(key).lower() in {"key", "api_key", "apikey", "headers", "authorization", "access_token", "accesstoken", "client_secret"} for key in source):
+        raise ValidationError("kuro_public_cms_credentials_forbidden")
+    fields = {"mode", "version", "locale", "timezone", "reviewedAt", "evidenceUrl", "allowedImageHosts"}
+    if (source.get("parser") != "kuro_cms" or source.get("game_id") != "wuthering-waves"
+        or not isinstance(policy, dict) or set(policy) - fields
+        or policy.get("mode") != "kuro_cms_v1" or type(policy.get("version")) is not int or policy.get("version") != 1
+        or policy.get("locale") not in KURO_CMS_LOCALES
+        or source.get("content_language") != KURO_CMS_LOCALES[policy["locale"]]):
+        raise ValidationError("reviewed_kuro_cms_identity_required")
+    aware_timestamp(policy.get("reviewedAt"))
+    evidence = urlsplit(normalize_url(policy.get("evidenceUrl")))
+    if (evidence.hostname != "wutheringwaves.kurogames.com" or evidence.query or evidence.fragment
+        or not re.fullmatch(r"/static4\.0/assets/index-[a-f0-9]+\.js", evidence.path)):
+        raise ValidationError("kuro_cms_declared_script_evidence_required")
+    if policy.get("timezone") not in {"Asia/Seoul", "Asia/Tokyo", "UTC"}:
+        raise ValidationError("reviewed_kuro_publication_date_zone_required")
+    if policy.get("allowedImageHosts") != ["hw-media-cdn-mingchao.kurogame.com"]:
+        raise ValidationError("exact_kuro_article_image_hosts_required")
+    expected = KURO_CMS_BASE + policy["locale"] + "/ArticleMenu.json"
+    if source.get("url") != expected or source.get("allowed_notice_hosts") != ["wutheringwaves.kurogames.com"]:
+        raise ValidationError("exact_kuro_public_cms_endpoint_required")
+    return policy
+
+
+def kuro_cms_request(source, article_id=None):
+    policy = _kuro_cms_policy(source)
+    url = source["url"]
+    if article_id is not None:
+        if type(article_id) is not int or not 1 <= article_id <= 999999999:
+            raise ValidationError("bounded_kuro_article_id_required")
+        url = KURO_CMS_BASE + policy["locale"] + "/article/" + str(article_id) + ".json"
+    return {**source, "url": url, "official_host": "hw-media-cdn-mingchao.kurogame.com",
+        "method": "public_page", "enabled": True}
+
+
+def _kuro_cms_json(raw):
+    if not isinstance(raw, (bytes, str)) or (len(raw.encode("utf-8")) if isinstance(raw, str) else len(raw)) > 2097152:
+        raise ValidationError("bounded_kuro_cms_response_required")
+    try:
+        return json.loads(raw.decode("utf-8-sig") if isinstance(raw, bytes) else raw)
+    except (ValueError, UnicodeError) as error:
+        raise ValidationError("kuro_cms_json_invalid") from error
+
+
+def _kuro_publication_fields(value, policy):
+    if not isinstance(value, str) or not re.fullmatch(r"20\d{2}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}", value):
+        raise ValidationError("kuro_cms_publication_date_required")
+    try:
+        parsed = datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+    except ValueError as error:
+        raise ValidationError("kuro_cms_publication_date_required") from error
+    day = parsed.date().isoformat()
+    # The official news page renders startTime.split(' ')[0]. Preserve its CMS
+    # string separately and expose day precision, never the unzoned clock.
+    published = datetime.strptime(day, "%Y-%m-%d").replace(tzinfo=ZoneInfo(policy["timezone"])).astimezone(UTC)
+    return day, published.isoformat()
+
+
+def parse_kuro_cms_index(raw, source):
+    policy = _kuro_cms_policy(source)
+    rows = _kuro_cms_json(raw)
+    if not isinstance(rows, list) or len(rows) > 1000:
+        raise ValidationError("bounded_kuro_article_list_required")
+    result, seen = [], set()
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ValidationError("kuro_article_list_row_invalid")
+        article_id, title = row.get("articleId"), row.get("articleTitle")
+        if type(article_id) is not int or not 1 <= article_id <= 999999999:
+            raise ValidationError("bounded_kuro_article_id_required")
+        kuro_cms_request(source, article_id)
+        if article_id in seen or not isinstance(title, str) or not 1 <= len(title.strip()) <= 500:
+            raise ValidationError("kuro_article_list_identity_required")
+        day, _ = _kuro_publication_fields(row.get("startTime"), policy)
+        seen.add(article_id)
+        result.append({"id": article_id, "url": KURO_CMS_ARTICLE_ORIGIN + "/" + policy["locale"] + "/main/news/detail/" + str(article_id),
+            "title": title.strip(), "publishedDate": day.replace("-", "."), "rawPublicationTimestamp": row["startTime"]})
+    return sorted(result, key=lambda row: (row["publishedDate"], row["id"]), reverse=True)
+
+
+class _KuroArticleBody(HTMLParser):
+    def __init__(self, source):
+        super().__init__(convert_charrefs=True)
+        self.source, self.stack, self.text, self.images = source, [], [], []
+
+    def handle_starttag(self, tag, attrs):
+        ignored = any(node in ("script", "style", "iframe", "object") for node in self.stack)
+        if tag == "img" and not ignored:
+            value = dict(attrs).get("src", "")
+            try:
+                url = normalize_url(value)
+                if urlsplit(url).hostname in self.source["article_format"]["allowedImageHosts"] and url not in self.images:
+                    self.images.append(url)
+            except (ValidationError, ValueError, TypeError):
+                pass
+        if not ignored and tag in ("p", "br", "div", "li", "h1", "h2", "h3", "h4"):
+            self.text.append("\n")
+        if tag not in ("img", "br", "hr", "meta", "link", "input", "source", "area", "base", "embed", "param", "wbr"):
+            self.stack.append(tag)
+
+    def handle_startendtag(self, tag, attrs):
+        self.handle_starttag(tag, attrs)
+        if tag not in ("img", "br", "hr", "meta", "link", "input", "source", "area", "base", "embed", "param", "wbr"):
+            self.handle_endtag(tag)
+
+    def handle_endtag(self, tag):
+        indices = [i for i, node in enumerate(self.stack) if node == tag]
+        if indices:
+            self.stack = self.stack[:indices[-1]]
+
+    def handle_data(self, value):
+        if not any(node in ("script", "style", "iframe", "object") for node in self.stack):
+            self.text.append(value)
+
+
+def parse_kuro_cms_article(raw, source, url, observed_at):
+    policy = _kuro_cms_policy(source)
+    aware_timestamp(observed_at)
+    article = _kuro_cms_json(raw)
+    if not isinstance(article, dict):
+        raise ValidationError("kuro_article_document_required")
+    article_id = article.get("articleId")
+    if type(article_id) is not int or not 1 <= article_id <= 999999999:
+        raise ValidationError("bounded_kuro_article_id_required")
+    kuro_cms_request(source, article_id)
+    expected = KURO_CMS_ARTICLE_ORIGIN + "/" + policy["locale"] + "/main/news/detail/" + str(article_id)
+    if url != expected or article.get("gameId") != "G152-" + policy["locale"]:
+        raise ValidationError("kuro_article_game_locale_identity_mismatch")
+    title, content = article.get("articleTitle"), article.get("articleContent")
+    if (not isinstance(title, str) or not 1 <= len(title.strip()) <= 500
+        or not isinstance(content, str) or not 1 <= len(content) <= 200000):
+        raise ValidationError("kuro_article_title_body_required")
+    day, published = _kuro_publication_fields(article.get("startTime"), policy)
+    body_parser = _KuroArticleBody(source)
+    try:
+        body_parser.feed(content)
+    except (ValueError, UnicodeError) as error:
+        raise ValidationError("kuro_article_body_invalid") from error
+    body = re.sub(r"\n{3,}", "\n\n", "".join(body_parser.text)).strip()
+    if not body:
+        raise ValidationError("kuro_article_title_body_required")
+    images = body_parser.images[:20]
+    snapshot = {"articleId": article_id, "title": title.strip(), "body": body,
+        "rawPublicationTimestamp": article["startTime"], "publicationDate": day, "publicationPrecision": "day",
+        "publicationTimezone": policy["timezone"], "gameId": article["gameId"], "officialUrl": expected, "imageUrls": images}
+    hints = [kind for kind, patterns in TYPES.items() if any(re.search(pattern, title + "\n" + body, re.I) for pattern in patterns)]
+    return {"external_key": str(article_id), "raw_sha256": hashlib.sha256(json.dumps(snapshot, ensure_ascii=False, sort_keys=True).encode()).hexdigest(),
+        "raw_json": snapshot, "raw_publication_timestamp": article["startTime"], "publication_precision": "day", "publication_local_date": day,
+        "published_at": published, "source_updated_at": None, "observed_at": observed_at,
+        "official_url": expected, "original_title": title.strip(), "original_description": body, "original_language": source["content_language"],
+        "server_region": source.get("server_region") or "UNSPECIFIED", "server_label": source.get("server_label"), "event_type_candidates": hints,
+        "pickups": [], "source_provider": "official-site", "source_image_urls": images, "official_article_image_urls": images}
+
+
 def official_rss_request(source):
     policy=source.get("article_format")or{}
     if (source.get("parser")!="official_rss" or policy.get("mode")!="official_rss_v1" or policy.get("version")!=1
@@ -615,3 +783,142 @@ def notice_event(document, source, categories):
         "game_ids": [source["game_id"]], "regions": [document["server_region"]],
         "category_id": categories["unclassified"], "source_published_at": document["published_at"],
         "source_updated_at": document["source_updated_at"], "pickups": document["pickups"]}
+GENSHIN_CMS_BASE="https://sg-public-api-static.hoyoverse.com/content_v2_user/app/a1b1f9d3315447cc/"
+GENSHIN_CMS_LOCALES={"ko-kr":("ko","ko","Asia/Seoul"),"en-us":("en","en","UTC"),"ja-jp":("ja","ja","Asia/Tokyo")}
+GENSHIN_CMS_INDEX_CHANNEL=395
+GENSHIN_CMS_NEWS_CHANNELS={"395","396","397","398"}
+GENSHIN_CMS_PAGE_SIZE=50
+
+def _genshin_cms_policy(source):
+ if not isinstance(source,dict):raise ValidationError("reviewed_genshin_cms_identity_required")
+ policy=source.get("article_format") or {}
+ if not isinstance(policy,dict):raise ValidationError("reviewed_genshin_cms_identity_required")
+ fields={"mode","version","locale","timezone","reviewedAt","evidenceUrl","allowedImageHosts"}
+ locale=policy.get("locale")
+ if(source.get("parser")!="genshin_cms" or source.get("game_id")!="genshin-impact"
+    or set(policy)-fields or policy.get("mode")!="genshin_cms_v1" or type(policy.get("version")) is not int or policy.get("version")!=1
+    or locale not in GENSHIN_CMS_LOCALES or source.get("content_language")!=GENSHIN_CMS_LOCALES[locale][0]):
+  raise ValidationError("reviewed_genshin_cms_identity_required")
+ if any(str(key).lower() in {"headers","authorization","cookie","api_key","apikey","access_token","token"} for key in source):
+  raise ValidationError("genshin_cms_credentials_forbidden")
+ aware_timestamp(policy.get("reviewedAt"))
+ evidence=urlsplit(normalize_url(policy.get("evidenceUrl")))
+ if(evidence.hostname!="genshin.hoyoverse.com" or evidence.query or evidence.fragment
+    or not re.fullmatch(r"/_nuxt/[a-f0-9]+\.js",evidence.path)):
+  raise ValidationError("genshin_cms_declared_script_evidence_required")
+ # The timezone is an explicitly reviewed DAY BUCKET only. It is never an
+ # offset for dtStartTime, a publisher clock, or a game server schedule.
+ if policy.get("timezone")!=GENSHIN_CMS_LOCALES[locale][2]:
+  raise ValidationError("reviewed_genshin_publication_day_bucket_required")
+ if(policy.get("allowedImageHosts")!=["fastcdn.hoyoverse.com"]
+    or source.get("allowed_notice_hosts")!=["genshin.hoyoverse.com"]
+    or source.get("url")!=GENSHIN_CMS_BASE+"getContentList"):
+  raise ValidationError("exact_genshin_cms_endpoint_and_hosts_required")
+ return policy
+
+def genshin_cms_request(source,page=1,article_id=None):
+ policy=_genshin_cms_policy(source)
+ if type(page) is not int or not 1<=page<=20:
+  raise ValidationError("bounded_genshin_page_required")
+ params={"iAppId":"32","sLangKey":policy["locale"]}
+ if article_id is None:
+  params.update(iChanId=str(GENSHIN_CMS_INDEX_CHANNEL),iPageSize=str(GENSHIN_CMS_PAGE_SIZE),iPage=str(page))
+  endpoint="getContentList"
+ else:
+  if type(article_id) is not int or not 1<=article_id<=999999999:
+   raise ValidationError("bounded_genshin_article_id_required")
+  params.update(iInfoId=str(article_id),iAround="0");endpoint="getContent"
+ return {**source,"url":GENSHIN_CMS_BASE+endpoint+"?"+urlencode(params),
+   "official_host":"sg-public-api-static.hoyoverse.com","method":"public_page","enabled":True}
+
+def _genshin_cms_json(raw):
+ if not isinstance(raw,(bytes,str)) or len(raw)>2097152:raise ValidationError("bounded_genshin_response_required")
+ try:
+  value=json.loads(raw.decode("utf-8-sig") if isinstance(raw,bytes) else raw)
+ except(ValueError,UnicodeError)as error:raise ValidationError("genshin_cms_json_invalid")from error
+ if not isinstance(value,dict) or type(value.get("retcode")) is not int or value["retcode"]!=0 or not isinstance(value.get("data"),dict):
+  raise ValidationError("genshin_cms_success_document_required")
+ return value["data"]
+
+def _genshin_publication_day(value,policy):
+ if not isinstance(value,str) or not re.fullmatch(r"20\d{2}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}",value):
+  raise ValidationError("genshin_publication_date_required")
+ try:naive=datetime.strptime(value,"%Y-%m-%d %H:%M:%S")
+ except ValueError as error:raise ValidationError("genshin_publication_date_required")from error
+ day=naive.date().isoformat()
+ bucket=datetime.strptime(day,"%Y-%m-%d").replace(tzinfo=ZoneInfo(policy["timezone"])).astimezone(timezone.utc)
+ return day,bucket.isoformat()
+
+def _genshin_article_identity(article,source):
+ article_id=article.get("iInfoId");genshin_cms_request(source,article_id=article_id)
+ title=article.get("sTitle");channels=article.get("sChanId")
+ if not isinstance(title,str) or not 1<=len(title.strip())<=500:
+  raise ValidationError("genshin_article_title_required")
+ if not isinstance(channels,list) or not channels or any(not isinstance(c,str) for c in channels) or not set(channels)&GENSHIN_CMS_NEWS_CHANNELS:
+  raise ValidationError("genshin_news_channel_required")
+ locale=_genshin_cms_policy(source)["locale"]
+ url="https://genshin.hoyoverse.com/"+GENSHIN_CMS_LOCALES[locale][1]+"/news/detail/"+str(article_id)
+ return article_id,title.strip(),url
+
+def parse_genshin_cms_index(raw,source,page=1):
+ policy=_genshin_cms_policy(source);genshin_cms_request(source,page=page)
+ data=_genshin_cms_json(raw);rows=data.get("list");total=data.get("iTotal")
+ if(not isinstance(rows,list) or len(rows)>GENSHIN_CMS_PAGE_SIZE or type(total) is not int or total<len(rows)):
+  raise ValidationError("bounded_genshin_index_required")
+ result=[];seen=set()
+ for row in rows:
+  if not isinstance(row,dict):raise ValidationError("genshin_index_row_required")
+  identity,title,url=_genshin_article_identity(row,source)
+  if identity in seen:raise ValidationError("genshin_index_duplicate_id")
+  day,_=_genshin_publication_day(row.get("dtStartTime"),policy);seen.add(identity)
+  result.append({"id":identity,"url":url,"title":title,"publishedDate":day.replace("-","."),
+    "rawPublicationTimestamp":row["dtStartTime"]})
+ return sorted(result,key=lambda r:(r["publishedDate"],r["id"]),reverse=True)
+
+class _GenshinArticleBody(HTMLParser):
+ def __init__(self,article_id):
+  super().__init__(convert_charrefs=True);self.article_id=article_id;self.stack=[];self.text=[];self.images=[]
+ def handle_starttag(self,tag,attrs):
+  ignored=any(node in("script","style","iframe","object")for node in self.stack)
+  if tag=="img" and not ignored:
+   try:
+    url=normalize_url(dict(attrs).get("src",""));parsed=urlsplit(url)
+    if(parsed.hostname=="fastcdn.hoyoverse.com" and parsed.path.startswith("/content-v2/hk4e/"+str(self.article_id)+"/")
+       and not parsed.query and not parsed.fragment and re.search(r"\.(?:jpe?g|png|webp)$",parsed.path,re.I)and url not in self.images):self.images.append(url)
+   except(ValidationError,ValueError,TypeError):pass
+  if not ignored and tag in("p","br","div","li","h1","h2","h3","h4"):self.text.append("\n")
+  if tag not in("img","br","hr","meta","link","input","source","area","base","embed","param","wbr"):self.stack.append(tag)
+ def handle_startendtag(self,tag,attrs):
+  self.handle_starttag(tag,attrs)
+  if tag not in("img","br","hr","meta","link","input","source","area","base","embed","param","wbr"):self.handle_endtag(tag)
+ def handle_endtag(self,tag):
+  indices=[i for i,node in enumerate(self.stack)if node==tag]
+  if indices:self.stack=self.stack[:indices[-1]]
+ def handle_data(self,value):
+  if not any(node in("script","style","iframe","object")for node in self.stack):self.text.append(value)
+
+def parse_genshin_cms_article(raw,source,url,observed_at):
+ policy=_genshin_cms_policy(source);aware_timestamp(observed_at)
+ article=_genshin_cms_json(raw);identity,title,expected=_genshin_article_identity(article,source)
+ if url!=expected:raise ValidationError("genshin_article_identity_url_mismatch")
+ content=article.get("sContent")
+ if not isinstance(content,str)or not 1<=len(content)<=200000:raise ValidationError("genshin_article_body_required")
+ day,published=_genshin_publication_day(article.get("dtStartTime"),policy)
+ parser=_GenshinArticleBody(identity)
+ try:parser.feed(content)
+ except(ValueError,UnicodeError)as error:raise ValidationError("genshin_article_body_invalid")from error
+ body=re.sub(r"\n{3,}","\n\n","".join(parser.text)).strip()
+ if not body:raise ValidationError("genshin_article_body_required")
+ images=parser.images[:20]
+ snapshot={"articleId":identity,"title":title,"body":body,"rawPublicationTimestamp":article["dtStartTime"],
+  "publicationDate":day,"publicationPrecision":"day","publicationTimezone":policy["timezone"],
+  "publicationClockVerified":False,"officialUrl":expected,"imageUrls":images}
+ hints=[kind for kind,patterns in TYPES.items()if any(re.search(pattern,title+"\n"+body,re.I)for pattern in patterns)]
+ return {"external_key":str(identity),"raw_sha256":hashlib.sha256(json.dumps(snapshot,ensure_ascii=False,sort_keys=True).encode()).hexdigest(),
+  "raw_json":snapshot,"raw_publication_timestamp":article["dtStartTime"],"publication_precision":"day","publication_local_date":day,
+  "published_at":published,"source_updated_at":None,"observed_at":observed_at,"official_url":expected,"original_title":title,
+  "original_description":body,"original_language":source["content_language"],"server_region":source.get("server_region")or"UNSPECIFIED",
+  "server_label":source.get("server_label"),"event_type_candidates":hints,"pickups":[],"source_provider":"official-site",
+  "source_image_urls":images,"official_article_image_urls":images}
+
+
