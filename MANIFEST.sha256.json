@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "recordedAt": "2026-10-14T12:21:28.241888+00:00",
+  "recordedAt": "2026-10-14T12:41:17.968913+00:00",
   "scope": "APPROVED_PUBLIC_WORKER_EXPECTED_BYTES",
-  "sourceBaseCommit": "857a7ac239356f4ab8c218088c05447033755b86",
+  "sourceBaseCommit": "23badb6efda351077efca16770407bacaa9dea56",
   "files": [
     {
       "path": ".github/workflows/firebase-free-collector.yml",
@@ -26,8 +26,8 @@
     },
     {
       "path": "docs/github-free-runner-plan.md",
-      "bytes": 45145,
-      "sha256": "f2ca89df595a9519227c8bcdfecde460108d5ba59dcfec90582f7818e1fd0e0d"
+      "bytes": 45934,
+      "sha256": "7f9f5ed2c6856cd8c8797f07606c8d235bdd7322640412620a6bd2c73da2e60e"
     },
     {
       "path": "README.md",
@@ -46,8 +46,8 @@
     },
     {
       "path": "services/collector/official_adapter.py",
-      "bytes": 43084,
-      "sha256": "5b7df741157ee87e06236b87f29df70daeb3bd139723aad5cfa2840a43b0ec6a"
+      "bytes": 45709,
+      "sha256": "3781fae79322000124fd84014d54ccf4441330293bbdccf57657861ab2de58e9"
     },
     {
       "path": "services/collector/staging_store.py",
@@ -61,8 +61,8 @@
     },
     {
       "path": "services/firebase/collector.py",
-      "bytes": 197604,
-      "sha256": "0e43225dc8fc8a2b8f62e2bff576f6aae27a8cac2854fddcc7d1c9c6b445f0a2"
+      "bytes": 197870,
+      "sha256": "16eaf47380e9f01d34d428b4018ed588f459d212ae286b417f9df125b67eb9fe"
     },
     {
       "path": "services/firebase/iam/orbit-free-fcm-sender-role.json",
@@ -96,11 +96,11 @@
     },
     {
       "path": "services/firebase/tests/test_firebase.py",
-      "bytes": 289269,
-      "sha256": "d3e87118bc441b731f06eb907fd933a70f9259fe2b646e3909fbfcbc5a5be3a6"
+      "bytes": 296978,
+      "sha256": "7f23ef19a48062d0f2020ec66cee2b4e472c0620571daca887f2f447f6cc6a4e"
     }
   ],
-  "payloadBytes": 1740666,
+  "payloadBytes": 1752055,
   "excluded": [
     "images",
     "native apps",
