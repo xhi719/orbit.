@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "recordedAt": "2026-10-14T06:32:29.235Z",
+  "recordedAt": "2026-10-14T09:25:14.622682+00:00",
   "scope": "APPROVED_PUBLIC_WORKER_EXPECTED_BYTES",
-  "sourceBaseCommit": "81fb6982bf485707bc6c82381bcbb239853fa964",
+  "sourceBaseCommit": "c4da7e1c5e346e8e3c880766583cb5db0423318e",
   "files": [
     {
       "path": ".github/workflows/firebase-free-collector.yml",
@@ -21,13 +21,13 @@
     },
     {
       "path": "data/official-sources.json",
-      "bytes": 218613,
-      "sha256": "d126f09046b9dadf0293cc5e44223dc2b1995a4ad96d451234029a063a9a730a"
+      "bytes": 385504,
+      "sha256": "b98267ebc606bfc0b48c12523127dddc708f355e3171461e3f9d752bf505286b"
     },
     {
       "path": "docs/github-free-runner-plan.md",
-      "bytes": 41624,
-      "sha256": "f3ac4ad9667efb3dba68199f7fa1017935185f172c0eb7c5bdcc28474bb5a9a0"
+      "bytes": 43331,
+      "sha256": "03b29b9f92472c822374b9673aedc6ba05aa49f19594e00730f47bafffaccc16"
     },
     {
       "path": "README.md",
@@ -46,8 +46,8 @@
     },
     {
       "path": "services/collector/official_adapter.py",
-      "bytes": 20344,
-      "sha256": "8b6a3be0312260dfe55fd3a33239b790471c451527494dcbce57a46c2e6ca1ac"
+      "bytes": 43084,
+      "sha256": "5b7df741157ee87e06236b87f29df70daeb3bd139723aad5cfa2840a43b0ec6a"
     },
     {
       "path": "services/collector/staging_store.py",
@@ -56,13 +56,13 @@
     },
     {
       "path": "services/firebase/admin.py",
-      "bytes": 25491,
-      "sha256": "468a68697eb38f9d38dc5c5640408b1ad555ce988d9d49e4197168334fcef8a3"
+      "bytes": 26554,
+      "sha256": "373ded0ff0f62ba19bd4e92994032874495464c33b8a751db7950bda6cfb8200"
     },
     {
       "path": "services/firebase/collector.py",
-      "bytes": 159425,
-      "sha256": "860de4a03c6f369c11cfe50edfbe131afb2fd55e6bbc68a3b2e3362a2c42a9cf"
+      "bytes": 193920,
+      "sha256": "25f47d0884c720b66aaf11b43f13fd829fbc5632672dd379ee7709d37ec2b2a5"
     },
     {
       "path": "services/firebase/iam/orbit-free-fcm-sender-role.json",
@@ -81,8 +81,8 @@
     },
     {
       "path": "services/firebase/notifications.py",
-      "bytes": 42833,
-      "sha256": "7e18bdb0f22dcd0458617d915d30c7c30a1dce4a53e00c082681903a8b430552"
+      "bytes": 47563,
+      "sha256": "11d8222abed84b8ddc684408cabac59852d19fa872dca490066d5ae8155470a1"
     },
     {
       "path": "services/firebase/requirements.txt",
@@ -91,16 +91,16 @@
     },
     {
       "path": "services/firebase/store.py",
-      "bytes": 16064,
-      "sha256": "d4e674c56bafdfaff80f69270fd7476b38aaddb000d202660fff284d307a3d7f"
+      "bytes": 17672,
+      "sha256": "bcc22a39e861549f167099c27b7deadac7614b7d7b04c1f33b9d018d3dcdeb30"
     },
     {
       "path": "services/firebase/tests/test_firebase.py",
-      "bytes": 241447,
-      "sha256": "669f024f420db4e7d5f96730a8b82c68df53ba9adff90d63c248155fa280838c"
+      "bytes": 276319,
+      "sha256": "4365d6b6d3ea055ea97a8dbc104494917485c71d2aab982ca7ac00b8a25f001e"
     }
   ],
-  "payloadBytes": 1219849,
+  "payloadBytes": 1487955,
   "excluded": [
     "images",
     "native apps",
