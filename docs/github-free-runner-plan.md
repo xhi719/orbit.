@@ -120,11 +120,12 @@ python services/firebase/notifications.py --apply
 ```
 
 `MANIFEST.sha256.json`은 payload 파일별 SHA256/bytes를 기록하며 자기 파일의 hash는 포함하지 않습니다. 별도 ZIP 검증 보고서는 ZIP 전체 SHA/bytes, archive 허용 목록, secret scan, 추출본 모의 테스트 결과를 기록합니다. 이 검사가 숨은 비밀값이 절대 없다는 수학적 보장이나 실제 GitHub/IAM 실행 검증은 아닙니다.
-# 2026-10-14 공식 신규 공지 알림 추가
+
+## 2026-10-14 공식 신규 공지 알림 추가
 
 `announcement:published`는 행사·예약의 날짜 기반 `event:start` 등과 다른 작업입니다. 승인된 공식 출처의 실제 원문 수집 증거와 원문 SHA·제목에 연결된 `main-character` 또는 `main-event` 검증이 있어야 생성합니다. 미확정 날짜를 확정하지 않고 원본 공지 상세로 이동합니다. 원문 변경 시에만 `announcementRevision`을 증가시키고 추출 정책·번역·진행 상태 변경은 같은 공지를 다시 발송하지 않습니다. 명시된 게시·수정 시각이 없으면 관찰 시각을 대신 사용하지 않습니다.
 
-승인된 `calendarRolePolicy.automaticRules`의 `explicit_main_role_extraction_v1`은 게임·수집 어댑터·공식 형식 검토 URL·검토 시각을 묶습니다. 신규 최고 등급 캐릭터는 공식 최고 등급 규칙과 같은 문장의 신규·등급·캐릭터·단일 이름 근거가 있어야 독립 공지로 분류합니다. 복각·무기·혼합 문장은 제외합니다. GF2 메인이벤트는 별도 승인된 `gf2_story_event_v1`의 이름이 일치하는 명시 Game Modes 행사 문장만 지원합니다. 보상·출석·상점 등 일반 제목만으로 메인이벤트를 판단하지 않습니다. 현재 GF2의 최고 등급 출처 규칙은 미검증이므로 미래 신규 캐릭터 자동 분류는 활성화됐다고 보고하지 않습니다. 다른 출처도 개별 형식 승인이 필요합니다.
+승인된 `calendarRolePolicy.automaticRules`의 `explicit_main_role_extraction_v1`은 게임·수집 어댑터·공식 형식 검토 URL·검토 시각을 묶습니다. 신규 최고 등급 캐릭터는 공식 희귀도 규칙과 같은 문장의 신규·등급·캐릭터·단일 이름 근거 및 픽업 문맥이 있어야 독립 공지로 분류합니다. 복각·무기·혼합 문장은 제외합니다. GF2 메인이벤트는 별도 승인된 `gf2_story_event_v1`의 이름이 일치하는 명시 Game Modes 행사 문장만 지원합니다. 보상·출석·상점 등 일반 제목만으로 메인이벤트를 판단하지 않습니다. 2026-10-14 HAOPLAY 공식 확률 공시의 두 인형 범주에 근거해 `Elite`/`정예` 희귀도 규칙을 별도 검토했습니다. 최고 희귀도 해석과 영어 별칭 대응에는 추론이 포함되며 SSR·5성 별칭을 추가하지 않습니다. 현재 HAOPLAY 공지에 신규 사실을 추정해서 붙이지 않습니다. 다른 출처도 개별 형식 승인이 필요합니다.
 
 사용자의 등록 게임, 전체·게임 알림, `event` 유형, `eventEnabled`, `announcementEnabled`, 카테고리, 관심 지역, 방해 금지 시간을 확인합니다. 지역 `UNSPECIFIED`를 한국이나 전 세계 서버로 변경하지 않으며 `globalAnnouncementsEnabled=true`로 명시 동의한 경우에만 별도 지역 미확정 소식 알림을 보냅니다. `announcementSubscribedAt`은 서버 시각으로 저장합니다. 서버 전용 `users/{uid}/announcementNotificationState/{gameId}`의 최초 실행·재활성화 기준 시각 이전 공지를 제외해 최근 72시간 최초 적재의 알림 폭탄을 막습니다. 첫 작업 실행 이전의 공지를 소급 발송하지 않습니다. 계정 삭제 작업은 이 상태 컬렉션도 지웁니다.
 
@@ -132,5 +133,7 @@ python services/firebase/notifications.py --apply
 
 무료 예약 작업의 한 번 실행은 최근 게시·수정 72시간의 최신 공지 최대 200건, 사용자 최대 50명, 사용자 등록 게임·기존 작업 각 최대 100건, 작업의 기기 구독 최대 20개 범위입니다. 공지 조회가 200건에 도달하면 `announcementScanLimitReached`를 기록합니다. 한도 도달·예약 지연·할당량 중단으로 모든 알림 전달을 보장하지 않습니다. 기존 Spark/Billing guard·읽기 2,500·쓰기 500의 실행 제한과 무료 사용량 제한을 유지하며 유료 API·리소스를 추가하지 않습니다.
 
-로컬 검증: `python -m unittest discover -s services/firebase/tests -p test_firebase.py -q` **331/331 통과**(기존 283 + 신규 공식 공지 48). 별도 검토 콘텐츠 시험 4개·표시 시험 11개도 통과했습니다. 모든 신규 발송 검증은 MemoryStore와 모의 제공자이며 실제 FCM·운영 사용자 데이터 접근 0입니다. 인자 없이 `notifications.py`는 계속 `DISABLED`, 발송 0, 원격 쓰기 0입니다. 배포·정책 반영·실제 예약 실행·실기기 수신은 운영 실행 자료로 별도 확인해야 합니다.
+추가된 `newCharacterFormat=gf2_new_doll_block_v1`은 `- New Doll -` 또는 `- New Dolls -` 제목 바로 다음의 정확한 `Elite Doll [이름]` 항목과, 같은 기사에서 그 이름의 지정 발주 확률 상승 문장을 모두 요구합니다. 별도 출처 형식 승인이 없으면 실행하지 않습니다. 복각·무기·표준 등급·여러 역할이 섞인 문장·MOD로만 얻는 인형은 새 픽업으로 추정하지 않습니다. 이 근거는 신규 픽업 사실이며 모집 기간을 증명하지 않으므로 부모 기사의 행사 날짜를 캐릭터 이벤트나 pickupSchedules에 복사하지 않습니다. 같은 줄의 신규 캐릭터도 독립 모집 제목·섹션의 기간이 확인되지 않으면 부모 이야기 행사 날짜를 물려받지 않습니다. 취소 상태는 유지합니다. 현재 로컬에 검토한 Sunborn Steam 3347400 기사에는 New Doll 형식이 있지만 운영 등록·승인된 출처는 아니므로 활성화하지 않았습니다. 운영 HAOPLAY Steam 3308670 현재 기사의 이름 나열만으로 신규를 판단하지 않습니다.
+
+로컬 검증: `python -m unittest discover -s services/firebase/tests -p test_firebase.py -q` **348/348 통과**(기존 283 + 신규 공식 공지 65). 별도 검토 콘텐츠 시험 4개·표시 시험 11개도 통과했습니다. 모든 신규 발송 검증은 MemoryStore와 모의 제공자이며 실제 FCM·운영 사용자 데이터 접근 0입니다. 인자 없이 `notifications.py`는 계속 `DISABLED`, 발송 0, 원격 쓰기 0입니다. 배포·정책 반영·실제 예약 실행·실기기 수신은 운영 실행 자료로 별도 확인해야 합니다.
 
