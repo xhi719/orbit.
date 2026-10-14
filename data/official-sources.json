@@ -186,7 +186,20 @@
             "checkedAt": "2026-10-14T08:56:03.141324+00:00",
             "evidenceUrl": "https://www.nexongames.co.kr/bbs/board.php?bo_table=media_event&wr_id=518"
           },
-          "access_review_notes": "Unauthenticated corporate press board and public robots read; source art stays an attributed original link with unconfirmed reuse status."
+          "access_review_notes": "Unauthenticated corporate press board and public robots read; source art stays an attributed original link with unconfirmed reuse status.",
+          "paired_ticket_notice": {
+            "mode": "exact_ticketlink_notice_v1",
+            "version": 1,
+            "reviewedAt": "2026-10-14T09:25:14.562929+00:00",
+            "evidenceUrl": "https://www.ticketlink.co.kr/help/notice/66055",
+            "parentArticleUrl": "https://www.nexongames.co.kr/bbs/board.php?bo_table=media_event&wr_id=518",
+            "parentTitle": "넥슨, ‘블루 아카이브’ ‘람과천청’ 업데이트 및 5주년 페스티벌 예매 진행!",
+            "parentSourceSha256": "a2db1d7d48d6793dd31f3091938442c901ff6399946c379285be3e6925900fc5",
+            "noticeUrl": "https://www.ticketlink.co.kr/help/notice/66055",
+            "allowedImageHosts": [
+              "image.toast.com"
+            ]
+          }
         }
       ],
       "serviceStatus": "UNKNOWN",
