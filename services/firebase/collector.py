@@ -451,6 +451,7 @@ def source_policy(source):
         "content_language", "server_region", "server_label", "highest_character_rarity", "image_reuse",
         "section_schedule_format", "paired_recruitment_period_approved", "content_localization", "original_image_reference",
         "reviewed_notice_references", "calendar_role_policy", "localization_roster", "game_title_filter", "article_format", "paired_ticket_notice")}
+    if source.get("news_scope") is not None:policy["news_scope"]=source["news_scope"]
     if source.get("parser") in YOUTUBE_PARSERS:
         policy["youtubeNoticeImagePolicyVersion"]=YOUTUBE_NOTICE_IMAGE_POLICY_VERSION
         policy.update({key:source.get(key) for key in ("youtube_channel_id", "publisher_identity_evidence_url", "publisher_identity_checked_at")})
@@ -1486,10 +1487,12 @@ def expire_youtube_metadata(store,now=None):
 def reviewed_title_filter(source):
     policy=source.get("game_title_filter")
     if policy is None:return True
-    if (not isinstance(policy,dict) or set(policy)-{"version","aliases","checkedAt","evidenceUrl","required"}
+    if (not isinstance(policy,dict) or set(policy)-{"version","aliases","excludedAliases","checkedAt","evidenceUrl","required"}
         or policy.get("version")!=1 or policy.get("required") is not True or not safe_public_url(policy.get("evidenceUrl"))):return False
     values=policy.get("aliases")
     if not isinstance(values,list) or not 1<=len(values)<=20 or any(not isinstance(value,str) or not 2<=len(value.strip())<=150 or re.search(r"[<>\r\n]",value) for value in values):return False
+    excluded=policy.get("excludedAliases",[])
+    if not isinstance(excluded,list) or len(excluded)>20 or any(not isinstance(value,str) or not 2<=len(value.strip())<=150 or re.search(r"[<>\r\n]",value) for value in excluded):return False
     try:policy_timestamp(policy.get("checkedAt"))
     except (ValueError,TypeError):return False
     return True
@@ -1518,15 +1521,17 @@ def source_document_allowed(source,title):
     if policy is None:return True
     def normalized(value):return re.sub(r"\s+"," ",unicodedata.normalize("NFKC",value).casefold()).strip()
     value=normalized(title) if isinstance(title,str) else ""
-    for alias in policy["aliases"]:
+    def matches(alias):
         needle=normalized(alias)
         if re.fullmatch(r"[a-z0-9 ._:-]+",needle):
-            if re.search(r"(?<![a-z0-9])"+re.escape(needle)+r"(?![a-z0-9])",value):return True
-        elif needle in value:return True
-    return False
+            return bool(re.search(r"(?<![a-z0-9])"+re.escape(needle)+r"(?![a-z0-9])",value))
+        return needle in value
+    if any(matches(alias) for alias in policy.get("excludedAliases",[])):return False
+    return any(matches(alias) for alias in policy["aliases"])
 
 
 def reviewed(source):
+    if source.get("news_scope") not in (None,"relevant_game_news_v1"):return False
     common = (source.get("approved_for_staging") is True and source.get("access_status") == "approved"
             and source.get("terms_checked_at")
             and source.get("notice_hosts_verified_at") and source.get("terms_url", "").startswith("https://")
@@ -1590,6 +1595,7 @@ def source_row(source, game_id):
             **({"localizationRoster":source["localization_roster"]} if source.get("localization_roster") is not None else {}),
             **({"gameTitleFilter":source["game_title_filter"]} if source.get("game_title_filter") is not None else {}),
             **({"articleFormat":source["article_format"]} if source.get("article_format") is not None else {}),
+            **({"newsScope":source["news_scope"]} if source.get("news_scope") is not None else {}),
             **({"pairedTicketNotice":source["paired_ticket_notice"]} if source.get("paired_ticket_notice") is not None else {})}
 
 
@@ -1615,6 +1621,7 @@ def operating_source(row):
             "reviewed_notice_references":row.get("reviewedNoticeReferences"),"calendar_role_policy":row.get("calendarRolePolicy"),
             "localization_roster":row.get("localizationRoster"),
             "game_title_filter":row.get("gameTitleFilter"),"article_format":row.get("articleFormat"),
+            "news_scope":row.get("newsScope"),
             "paired_ticket_notice":row.get("pairedTicketNotice"),
             "next_run_at":row.get("nextRunAt"),"last_checked_at":row.get("lastCheckedAt"),
             "paired_recruitment_period_approved":row.get("pairedRecruitmentPeriodApproved",False)}
@@ -1640,7 +1647,7 @@ def seed_catalogue(store, games, registry):
                 if old:
                     row.update({k:old[k] for k in ["enabled","health","lastCheckedAt","lastSuccessAt","lastErrorAt","lastReverifiedAt","nextRunAt",
                         "scheduleExtractionApproved","scheduleExtractionReviewedAt","scheduleExtractionEvidenceUrl","contentLanguage","highestCharacterRarity","imageReuse","sectionScheduleFormat","pairedRecruitmentPeriodApproved",
-                        "youtubeChannelId","youtubeUploadsPlaylistId","youtubeUploadsPlaylistVerifiedAt","publisherIdentityEvidenceUrl","publisherIdentityCheckedAt","contentLocalization","originalImageReference","reviewedNoticeReferences","calendarRolePolicy","localizationRoster","gameTitleFilter","articleFormat","pairedTicketNotice"] if k in old})
+                        "youtubeChannelId","youtubeUploadsPlaylistId","youtubeUploadsPlaylistVerifiedAt","publisherIdentityEvidenceUrl","publisherIdentityCheckedAt","contentLocalization","originalImageReference","reviewedNoticeReferences","calendarRolePolicy","localizationRoster","gameTitleFilter","articleFormat","pairedTicketNotice","newsScope"] if k in old})
                 return (None,False) if old == row else (row,True)
             changed=store.mutate("gameSources/"+source["id"],upsert_source)
             result["sources" if changed else "unchanged"]+=1
@@ -1766,6 +1773,9 @@ def upsert_notice(store, source, document, observed, *, image_fetch=None, deadli
     gate = content_publication_status(document.get("published_at"), observed)
     if gate != "INCLUDED": return "beforeContentCutoffSkipped" if gate == "PUBLISHED_BEFORE_CONTENT_CUTOFF" else "publicationUnconfirmedSkipped"
     if not source_document_allowed(source,document.get("original_title")):return "contentExcluded"
+    if source.get("news_scope")=="relevant_game_news_v1" and source.get("parser")in OFFICIAL_SITE_PARSERS and not document.get("_section_key"):
+        scoped=classify_notice_content({"rawSha256":document.get("raw_sha256"),"originalTitle":document.get("original_title")})
+        if scoped["status"]!="verified"or scoped["kind"]not in YOUTUBE_ADMITTED_NEWS_KINDS:return "contentExcluded"
     if source.get("parser")in YOUTUBE_PARSERS:
         admission=classify_notice_content({"rawSha256":document.get("raw_sha256"),"originalTitle":document.get("original_title")})
         if admission["status"]!="verified"or admission["kind"]not in YOUTUBE_ADMITTED_NEWS_KINDS:
