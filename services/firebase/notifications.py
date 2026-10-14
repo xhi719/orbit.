@@ -13,7 +13,7 @@ from pathlib import Path
 import uuid
 import unicodedata
 from zoneinfo import ZoneInfo
-from collector import digest, operating_source, reviewed, reviewed_calendar_role, safe_public_url
+from collector import digest, operating_source, reviewed, reviewed_calendar_role, safe_public_url, content_publication_status
 from urllib.parse import urlsplit
 from store import FirestoreStore, MemoryStore, SafetyError, timestamp
 
@@ -25,7 +25,7 @@ ANNOUNCEMENT_LOOKBACK=timedelta(hours=72)
 
 def announcement_identity(store,event,now,source_cache=None):
     """Current official source and source-bound main role, never date approval."""
-    if not event or event.get("calendarRole") not in ("main-character","main-event") or event.get("status") in ("cancelled","canceled","postponed","ended"):return None
+    if not event or content_publication_status(event.get("publishedAt"),now)!="INCLUDED" or event.get("calendarRole") not in ("main-character","main-event") or event.get("status") in ("cancelled","canceled","postponed","ended"):return None
     source_id=event.get("sourceId");cache=source_cache if source_cache is not None else {}
     if not isinstance(source_id,str) or not source_id or "/" in source_id:return None
     if source_id not in cache:cache[source_id]=store.get("gameSources/"+source_id)

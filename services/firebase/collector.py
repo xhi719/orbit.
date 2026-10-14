@@ -13,6 +13,7 @@ import html
 from html.parser import HTMLParser
 import ipaddress
 import json
+import os
 from pathlib import Path
 import re
 import sys
@@ -25,14 +26,75 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "collector"))
 from engine import fetch_source, ValidationError, normalize_url
 from official_adapter import steam_request, parse_steam_documents, aware_timestamp, TYPES
 from backfill import retry_after_seconds
-from store import MemoryStore, FirestoreStore, SafetyError, timestamp
+from store import MemoryStore, FirestoreStore, SafetyError, timestamp, document_fingerprint, cleanup_path, CONTENT_CLEANUP_COLLECTIONS
 
 UTC = timezone.utc
-EXTRACTION_VERSION = 7
+DATETIME_TYPE = datetime
+EXTRACTION_VERSION = 8
+CONTENT_PUBLISHED_NOT_BEFORE = "2026-10-01T00:00:00+09:00"
+CONTENT_CUTOFF = timestamp(CONTENT_PUBLISHED_NOT_BEFORE)
 YOUTUBE_CHANNEL_ID = re.compile(r"UC[A-Za-z0-9_-]{22}")
 YOUTUBE_VIDEO_ID = re.compile(r"[A-Za-z0-9_-]{11}")
 YOUTUBE_FEED_PATHS = ("/feeds/videos.xml", "/xml/feeds/videos.xml")
 YOUTUBE_FEED_DOCUMENTATION = "https://developers.google.com/youtube/v3/guides/push_notifications"
+YOUTUBE_API_TERMS = "https://developers.google.com/youtube/terms/api-services-terms-of-service"
+YOUTUBE_PARSERS = frozenset({"youtube_atom","youtube_data_api"})
+
+
+def content_publication_status(value, observed=None):
+    """The publication date, never a recent edit/schedule, defines retained news."""
+    if isinstance(value, DATETIME_TYPE) and value.tzinfo is None: return "PUBLICATION_DATE_UNCONFIRMED"
+    try: published = timestamp(value)
+    except (ValueError, TypeError): return "PUBLICATION_DATE_UNCONFIRMED"
+    if published < CONTENT_CUTOFF: return "PUBLISHED_BEFORE_CONTENT_CUTOFF"
+    if observed is not None and published > timestamp(observed): return "PUBLICATION_DATE_IN_FUTURE"
+    return "INCLUDED"
+
+
+def automatic_youtube_notice_image(document, source, event_id, observed):
+    """Keep the exact official video's supplied thumbnail as notice evidence.
+
+    No video-page fetch, byte download, reuse-rights grant or pickup inference.
+    Derived characters/sections never inherit an article-level thumbnail.
+    """
+    if source.get("parser") not in YOUTUBE_PARSERS or not reviewed(source) or document.get("_section_key") or document.get("_parent_event_id"): return None
+    raw = document.get("raw_json") or {}
+    video = document.get("external_key")
+    channel = source.get("youtube_channel_id")
+    official = "https://www.youtube.com/watch?" + urlencode({"v": video}) if isinstance(video, str) else None
+    if (not isinstance(raw, dict) or not isinstance(video, str) or not YOUTUBE_VIDEO_ID.fullmatch(video)
+        or raw.get("videoId") != video or raw.get("channelId") != channel or raw.get("title") != document.get("original_title")
+        or raw.get("officialUrl") != official or document.get("official_url") != official
+        or digest(raw) != document.get("raw_sha256")): return None
+    supplied = raw.get("thumbnailUrls")
+    if not isinstance(supplied, list) or not 1 <= len(supplied) <= 8: return None
+    candidates = []
+    quality = {"default": 0, "mqdefault": 1, "hqdefault": 2, "sddefault": 3, "maxresdefault": 4, "fhddefault":5,"qhddefault":6,"uhddefault":7}
+    for value in supplied:
+        url = safe_public_url(value)
+        if not url or url not in document.get("source_image_urls", []): continue
+        parsed = urlsplit(url)
+        match = re.fullmatch(r"/vi(?:_webp)?/" + re.escape(video) + r"/(default|mqdefault|hqdefault|sddefault|maxresdefault|fhddefault|qhddefault|uhddefault)\.(?:jpg|webp)", parsed.path)
+        if parsed.scheme != "https" or parsed.hostname not in ("i.ytimg.com", "i1.ytimg.com", "i2.ytimg.com", "i3.ytimg.com", "i4.ytimg.com") or parsed.query or not match: continue
+        candidates.append((quality[match.group(1)], url))
+    if not candidates: return None
+    url = max(candidates)[1]
+    return {"url": url, "sourceUrl": official, "kind": "NOTICE_ART", "rightsStatus": "UNCONFIRMED", "subjectStatus": "MATCHED",
+        "sourceReference": {"mode": "OFFICIAL_NOTICE_IMAGE", "sourceUrl": official, "checkedAt": timestamp(observed).isoformat(), "allowedImageUrl": url,
+            "expiresAt": (timestamp(observed)+timedelta(days=30)).isoformat()},
+        "subjectEvidence": {"status": "MATCHED", "eventId": event_id, "officialUrl": official, "kind": "notice", "method": "source_post",
+            "evidenceText": document["original_title"], "characterNames": [], "provider": "youtube", "channelId": channel,
+            "videoId": video, "rawSha256": document["raw_sha256"], "sourceTitle": document["original_title"]}}
+
+
+def youtube_document_metadata(document,source,observed):
+    fields={"sourceProvider":None,"sourceChannelId":None,"sourceVideoId":None,"metadataCheckedAt":None,"metadataExpiresAt":None}
+    if source.get("parser")not in YOUTUBE_PARSERS or not reviewed(source) or document.get("_section_key") or document.get("_parent_event_id"):return fields
+    raw=document.get("raw_json") or {};video=document.get("external_key");channel=source.get("youtube_channel_id")
+    if (not isinstance(raw,dict) or not isinstance(video,str) or not YOUTUBE_VIDEO_ID.fullmatch(video) or raw.get("videoId")!=video
+        or raw.get("channelId")!=channel or raw.get("title")!=document.get("original_title") or digest(raw)!=document.get("raw_sha256")
+        or raw.get("officialUrl")!=document.get("official_url") or document.get("official_url")!="https://www.youtube.com/watch?"+urlencode({"v":video})):return fields
+    return {"sourceProvider":"youtube","sourceChannelId":channel,"sourceVideoId":video,"metadataCheckedAt":observed,"metadataExpiresAt":observed+timedelta(days=30)}
 
 
 def youtube_request(source):
@@ -122,8 +184,10 @@ def source_policy(source):
         "content_language", "server_region", "server_label", "highest_character_rarity", "image_reuse",
         "section_schedule_format", "paired_recruitment_period_approved", "content_localization", "original_image_reference",
         "reviewed_notice_references", "calendar_role_policy", "localization_roster")}
-    if source.get("parser") == "youtube_atom":
+    if source.get("parser") in YOUTUBE_PARSERS:
         policy.update({key:source.get(key) for key in ("youtube_channel_id", "publisher_identity_evidence_url", "publisher_identity_checked_at")})
+        if source.get("parser")=="youtube_data_api":policy.update({key:source.get(key)for key in ("youtube_uploads_playlist_id","youtube_uploads_playlist_verified_at")})
+    policy["contentPublishedNotBefore"] = CONTENT_PUBLISHED_NOT_BEFORE
     return policy
 
 
@@ -477,7 +541,7 @@ def notice_language(old, document, source):
 
 
 def policy_timestamp(value):
-    if isinstance(value,datetime):value=value.isoformat()
+    if isinstance(value,DATETIME_TYPE):value=value.isoformat()
     return aware_timestamp(value)
 
 
@@ -918,6 +982,205 @@ def digest(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False, default=lambda v:v.isoformat()).encode()).hexdigest()
 
 
+def youtube_metadata_expired(row, now):
+    """Only positively identified, previously fetched exact YouTube metadata."""
+    channel, video = row.get("sourceChannelId"), row.get("sourceVideoId")
+    if row.get("sourceProvider")!="youtube" or not isinstance(channel,str) or not YOUTUBE_CHANNEL_ID.fullmatch(channel) or not isinstance(video,str) or not YOUTUBE_VIDEO_ID.fullmatch(video):return False
+    if row.get("officialUrl")!="https://www.youtube.com/watch?"+urlencode({"v":video}):return False
+    if row.get("externalKey")!=video or not isinstance(row.get("rawSha256"),str)or not re.fullmatch(r"[a-f0-9]{64}",row["rawSha256"]):return False
+    raw=row.get("rawJson")
+    if raw is not None and (not isinstance(raw,dict) or raw.get("channelId")!=channel or raw.get("videoId")!=video or raw.get("officialUrl")!=row["officialUrl"]):return False
+    try:checked=policy_timestamp(row.get("metadataCheckedAt"));expires=policy_timestamp(row.get("metadataExpiresAt"))
+    except (ValidationError,ValueError,TypeError):return False
+    return checked+timedelta(days=30)==expires and expires<=timestamp(now)
+
+
+def content_cleanup_reason(row, now):
+    gate=content_publication_status(row.get("publishedAt"))
+    if gate=="PUBLISHED_BEFORE_CONTENT_CUTOFF":return gate
+    if youtube_metadata_expired(row,now):return "YOUTUBE_METADATA_EXPIRED"
+    return None
+
+
+def content_cleanup_plan(store, *, max_scan=500, max_delete=400, cursors=None, now=None):
+    """Review only old public news; shared sources and all user data are excluded.
+
+    Unknown publication dates remain untouched. A pickup without its own posted
+    date needs an exact old parent event, which is rechecked at deletion time.
+    Scan/deletion limits are per run and do not claim an exhaustive cleanup.
+    """
+    if not 1 <= max_scan <= 500 or not 1 <= max_delete <= 400: raise SafetyError("bounded_content_cleanup_required")
+    cursors = cursors or {}; now=now or datetime.now(UTC)
+    if set(cursors) - CONTENT_CLEANUP_COLLECTIONS: raise SafetyError("public_content_cleanup_path_required")
+    result = {"status": "DRY_RUN", "contentPublishedNotBefore": CONTENT_PUBLISHED_NOT_BEFORE,
+        "recordedAt": now, "scope": "PUBLIC_POSTED_CONTENT_ONLY", "remoteFirestoreWrites": 0, "fcmSends": 0,
+        "maxScanPerCollection": max_scan, "maxDeletesPerRun": max_delete, "scanned": {}, "preserved": {}, "nextCursors": {}, "candidates": []}
+    events = {}; retained_raw = set(); complete = {}; eligible = []; pickup_links = {}; raw_links = {}; raw_keys = {}
+    for collection in ("gameEvents", "pickupSchedules", "collectionDocuments"):
+        after = cursors.get(collection); scanned = 0; ended = False
+        reasons = {}; result["preserved"][collection] = reasons
+        while scanned < max_scan:
+            count = min(50, max_scan-scanned)
+            rows = store.list_cursor(collection, after, count)
+            for doc_id, row in rows:
+                path = cleanup_path(collection + "/" + doc_id)
+                guards = {}; basis = "publishedAt"; published = row.get("publishedAt"); reason=content_cleanup_reason(row,now)
+                if collection=="collectionDocuments":raw_keys[doc_id]=(row.get("sourceId"),row.get("externalKey"),row.get("rawSha256"))
+                if collection == "gameEvents":
+                    events[doc_id] = row
+                    raw_links.setdefault((row.get("sourceId"), row.get("externalKey"), row.get("rawSha256")),set()).add(doc_id)
+                    if reason is None:
+                        retained_raw.add((row.get("sourceId"), row.get("externalKey"), row.get("rawSha256")))
+                if collection == "pickupSchedules":
+                    parent_id = row.get("eventId")
+                    if isinstance(parent_id,str):pickup_links.setdefault(parent_id,set()).add(doc_id)
+                    if not isinstance(parent_id, str) or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,200}", parent_id):
+                        reason = "EXACT_PARENT_EVENT_REQUIRED"
+                        reasons[reason] = reasons.get(reason, 0)+1; continue
+                    parent = events.get(parent_id)
+                    if parent is None: parent = store.get(cleanup_path("gameEvents/"+parent_id))
+                    if not parent or row.get("officialUrl") != parent.get("officialUrl") or row.get("gameId") not in parent.get("gameIds", []):
+                        reason = "EXACT_PARENT_EVENT_REQUIRED"
+                        reasons[reason] = reasons.get(reason, 0)+1; continue
+                    if published is None: published = parent.get("publishedAt"); basis = "linkedEvent.publishedAt"
+                    if content_publication_status(parent.get("publishedAt")) != content_publication_status(published):
+                        reason = "PUBLICATION_PARENT_CONFLICT"
+                        reasons[reason] = reasons.get(reason, 0)+1; continue
+                    guards["gameEvents/"+parent_id] = document_fingerprint(parent)
+                    reason=content_cleanup_reason(parent,now) if basis=="linkedEvent.publishedAt" else reason
+                if reason is None:
+                    reason=content_publication_status(published)
+                    reasons[reason] = reasons.get(reason, 0)+1; continue
+                if collection == "collectionDocuments" and (not complete.get("gameEvents") or (row.get("sourceId"), row.get("externalKey"), row.get("rawSha256")) in retained_raw):
+                    reason = "RETAINED_OR_UNSCANNED_EVENT_MAY_REFERENCE_RAW"
+                    reasons[reason] = reasons.get(reason, 0)+1; continue
+                eligible.append({"collection": collection, "id": doc_id, "publishedAt": timestamp(published) if content_publication_status(published)!="PUBLICATION_DATE_UNCONFIRMED" else None, "basis": basis,"reasonCode":reason,
+                    "fingerprint": document_fingerprint(row), "guards": guards})
+            scanned += len(rows)
+            if rows: after = rows[-1][0]
+            if len(rows) < count: ended = True; break
+        complete[collection] = ended
+        result["scanned"][collection] = scanned
+        result["nextCursors"][collection] = None if ended else after
+    selected_pickups=set();selected_events=set()
+    # Pickups must be selected before deleting the parent supplying their posted
+    # date. A partial scan/cap leaves the parent intact for the next cleanup.
+    for candidate in sorted(eligible,key=lambda row:({"pickupSchedules":0,"gameEvents":1,"collectionDocuments":2}[row["collection"]],row["id"])):
+        collection=candidate["collection"];reasons=result["preserved"][collection];reason=None
+        if len(result["candidates"])>=max_delete:reason="DELETE_LIMIT_REACHED"
+        elif collection=="gameEvents":
+            children=pickup_links.get(candidate["id"],set())
+            if not complete.get("pickupSchedules") or children-selected_pickups or len(children)>50:reason="DEPENDENT_PICKUPS_NOT_FULLY_SELECTED"
+            else:candidate["guards"]={"pickupSchedules/"+pickup_id:document_fingerprint(None)for pickup_id in children}
+        elif collection=="collectionDocuments":
+            references=raw_links.get(raw_keys[candidate["id"]],set())
+            if not complete.get("gameEvents") or references-selected_events:reason="RETAINED_OR_UNSCANNED_EVENT_MAY_REFERENCE_RAW"
+            elif len(references)>50:reason="RAW_REFERENCE_GUARD_LIMIT_REACHED"
+            else:candidate["guards"]={"gameEvents/"+event_id:document_fingerprint(None)for event_id in references}
+        if reason:reasons[reason]=reasons.get(reason,0)+1;continue
+        result["candidates"].append(candidate)
+        if collection=="pickupSchedules":selected_pickups.add(candidate["id"])
+        if collection=="gameEvents":selected_events.add(candidate["id"])
+    result["scanComplete"] = all(complete.values())
+    result["deleteLimitReached"] = any(value.get("DELETE_LIMIT_REACHED") for value in result["preserved"].values())
+    result["fullCleanupVerified"] = result["scanComplete"] and not eligible and not any(value.get("RETAINED_OR_UNSCANNED_EVENT_MAY_REFERENCE_RAW")or value.get("DEPENDENT_PICKUPS_NOT_FULLY_SELECTED") for value in result["preserved"].values())
+    result["candidateCount"] = len(result["candidates"])
+    result["planSha256"] = document_fingerprint(result)
+    return result
+
+
+def apply_content_cleanup(store, review, *, now=None):
+    """Apply a concrete dry-run plan with transactional exact-byte guards."""
+    if (not isinstance(review, dict) or review.get("status") != "DRY_RUN" or review.get("contentPublishedNotBefore") != CONTENT_PUBLISHED_NOT_BEFORE
+        or review.get("scope") != "PUBLIC_POSTED_CONTENT_ONLY" or review.get("planSha256") != document_fingerprint({key:value for key,value in review.items() if key != "planSha256"})
+        or not isinstance(review.get("candidates"), list) or len(review["candidates"]) > 400): raise SafetyError("reviewed_content_cleanup_plan_required")
+    selected = [];now=now or datetime.now(UTC)
+    for row in review["candidates"]:
+        if not isinstance(row, dict) or row.get("collection") not in CONTENT_CLEANUP_COLLECTIONS: raise SafetyError("public_content_cleanup_path_required")
+        path = cleanup_path(row["collection"]+"/"+row.get("id", ""))
+        if row.get("reasonCode") not in ("PUBLISHED_BEFORE_CONTENT_CUTOFF","YOUTUBE_METADATA_EXPIRED"): raise SafetyError("only_old_posted_content_may_be_deleted")
+        if row["reasonCode"]=="PUBLISHED_BEFORE_CONTENT_CUTOFF" and content_publication_status(row.get("publishedAt"))!="PUBLISHED_BEFORE_CONTENT_CUTOFF":raise SafetyError("only_old_posted_content_may_be_deleted")
+        if not re.fullmatch(r"[a-f0-9]{64}", row.get("fingerprint", "")) or not isinstance(row.get("guards"), dict) or len(row["guards"]) > (1 if row["collection"]=="pickupSchedules" else 50): raise SafetyError("reviewed_content_cleanup_plan_required")
+        for guard_path, proof in row["guards"].items():
+            cleanup_path(guard_path)
+            expected_collection="pickupSchedules/" if row["collection"]=="gameEvents" else "gameEvents/"
+            if not guard_path.startswith(expected_collection) or not re.fullmatch(r"[a-f0-9]{64}", proof): raise SafetyError("reviewed_content_cleanup_plan_required")
+            if row["collection"]!="pickupSchedules" and proof!=document_fingerprint(None):raise SafetyError("content_dependency_absence_guard_required")
+        if row["collection"] == "pickupSchedules" and len(row["guards"]) != 1: raise SafetyError("exact_parent_cleanup_guard_required")
+        selected.append((path, row))
+    # Parent events remain present until all linked pickup guards have run.
+    selected.sort(key=lambda value: ({"pickupSchedules":0,"gameEvents":1,"collectionDocuments":2}[value[1]["collection"]],value[0]))
+    result = {"status": "APPLIED", "contentPublishedNotBefore": CONTENT_PUBLISHED_NOT_BEFORE, "reviewPlanSha256": review["planSha256"],
+        "recordedAt": now, "fcmSends": 0, "deleted": {}, "changedSinceReview": 0,
+        "reviewedCandidates": len(selected), "privateRecordsRead": 0, "sharedSourcesChanged": 0}
+    writes = store.writes
+    for path, row in selected:
+        def valid(current,guard_rows):
+            subject=current
+            if row["collection"]=="pickupSchedules":
+                parent=guard_rows.get("gameEvents/"+str(current.get("eventId")))
+                if not parent or current.get("officialUrl")!=parent.get("officialUrl") or current.get("gameId") not in parent.get("gameIds",[]):return False
+                if current.get("publishedAt") is None:subject=parent
+            return content_cleanup_reason(subject,now)==row["reasonCode"]
+        if store.delete_content_if_unchanged(path, row["fingerprint"], row["guards"], valid):
+            key = row["collection"]; result["deleted"][key] = result["deleted"].get(key, 0)+1
+        else: result["changedSinceReview"] += 1
+    result.update(remoteFirestoreWrites=store.writes-writes if store.remote else 0, documentsDeleted=sum(result["deleted"].values()),
+        fullCleanupVerified=False, requiresPostApplyRescan=True)
+    return result
+
+
+def expire_youtube_metadata(store,now=None):
+    """Once-daily, expiry-only deletion; never initial cutoff or user cleanup.
+
+    At most 50 expired public events and 50 raw snapshots are selected. Every
+    deletion rechecks its fingerprint and exact provider/30-day evidence. A
+    dependency or soft-budget limit is recorded and deferred, never bypassed.
+    """
+    now=now or datetime.now(UTC);path="collectorLocks/youtube-metadata-retention";token=uuid.uuid4().hex
+    def claim(old):
+        if old and (old.get("nextRunAt")and timestamp(old["nextRunAt"])>now or old.get("leaseUntil")and timestamp(old["leaseUntil"])>now):return None,False
+        return {**(old or {}),"scope":"publicYoutubeMetadataOnly","leaseUntil":now+timedelta(minutes=12),"token":token},True
+    # Cheap read first avoids a no-op write transaction at every cron tick.
+    prior=store.get(path)
+    if prior and(prior.get("nextRunAt")and timestamp(prior["nextRunAt"])>now or prior.get("leaseUntil")and timestamp(prior["leaseUntil"])>now):return {"status":"DEFERRED","reasonCode":"DAILY_YOUTUBE_RETENTION_NOT_DUE","fcmSends":0}
+    if not store.mutate(path,claim):return {"status":"DEFERRED","reasonCode":"DAILY_YOUTUBE_RETENTION_LEASE_HELD","fcmSends":0}
+    result={"status":"COMPLETED","selected":{},"deleted":{},"ignoredWithoutProof":0,"dependenciesRetained":0,"changedSinceRead":0,
+        "queryLimitReached":False,"fullRetentionVerified":False,"privateRecordsRead":0,"fcmSends":0,"scope":"EXPIRED_YOUTUBE_METADATA_ONLY"}
+    writes=store.writes
+    try:
+        for collection in ("gameEvents","collectionDocuments"):
+            rows=store.list_expired_youtube(collection,now,50);result["selected"][collection]=len(rows)
+            if len(rows)==50:result["queryLimitReached"]=True
+            for doc_id,row in rows:
+                if not youtube_metadata_expired(row,now):result["ignoredWithoutProof"]+=1;continue
+                guards={}
+                if collection=="gameEvents":
+                    # Derived schedule data is not silently orphaned by metadata
+                    # deletion; such a source needs the reviewed cleanup path.
+                    pickups=store.list_equal("pickupSchedules","eventId",doc_id,1)
+                    children=store.list_equal("gameEvents","parentEventId",doc_id,1)
+                    if pickups or children:result["dependenciesRetained"]+=1;continue
+                else:
+                    references=[(key,value)for key,value in store.list_equal("gameEvents","rawSha256",row["rawSha256"],50)
+                        if value.get("sourceId")==row.get("sourceId")and value.get("externalKey")==row.get("externalKey")]
+                    if references:result["dependenciesRetained"]+=1;continue
+                if store.delete_content_if_unchanged(collection+"/"+doc_id,document_fingerprint(row),guards,lambda current,_:youtube_metadata_expired(current,now)):
+                    result["deleted"][collection]=result["deleted"].get(collection,0)+1
+                else:result["changedSinceRead"]+=1
+    except Exception as error:
+        result.update(status="PARTIAL",reasonCode=str(error)if isinstance(error,SafetyError)else type(error).__name__)
+    if result["queryLimitReached"]or result["dependenciesRetained"]or result["changedSinceRead"]or result["ignoredWithoutProof"]:result["status"]="PARTIAL"
+    def finish(old):
+        if not old or old.get("token")!=token:return None,False
+        return {**old,"token":None,"leaseUntil":None,"nextRunAt":now+timedelta(hours=24),"lastCheckedAt":now,"lastResult":result},True
+    try:result["completionRecorded"]=bool(store.mutate(path,finish))
+    except SafetyError:result.update(status="PARTIAL",completionRecorded=False,reasonCode="RETENTION_SOFT_BUDGET_EXHAUSTED")
+    if not result["completionRecorded"]:result["status"]="PARTIAL"
+    result["remoteFirestoreWrites"]=store.writes-writes+1 if store.remote else 0
+    return result
+
+
 def reviewed(source):
     common = (source.get("approved_for_staging") is True and source.get("access_status") == "approved"
             and source.get("terms_checked_at")
@@ -935,6 +1198,15 @@ def reviewed(source):
         return bool(source.get("feed_allowlist") == ["youtube_channel_videos"] and source.get("allowed_notice_hosts") == ["www.youtube.com"]
             and safe_public_url(source.get("publisher_identity_evidence_url")) and source.get("publisher_identity_checked_at")
             and source.get("terms_url") == YOUTUBE_FEED_DOCUMENTATION)
+    if source.get("parser")=="youtube_data_api":
+        try:
+            from official_adapter import youtube_api_request
+            youtube_api_request(source)
+            policy_timestamp(source.get("youtube_uploads_playlist_verified_at"))
+            policy_timestamp(source.get("publisher_identity_checked_at"))
+        except (ImportError,ValidationError,ValueError,TypeError):return False
+        return bool(source.get("feed_allowlist")==["youtube_uploads_playlist"] and source.get("allowed_notice_hosts")==["www.youtube.com"]
+            and safe_public_url(source.get("publisher_identity_evidence_url")) and source.get("terms_url")==YOUTUBE_API_TERMS)
     return False  # X API/social HTML scraping are deliberately unsupported in the 0-won worker.
 
 
@@ -942,6 +1214,7 @@ def source_row(source, game_id):
     """Only non-secret registered public provider metadata is exported."""
     return {"id":source["id"], "gameId":game_id, "url":source["url"], "parser":source["parser"],
             "steamAppid":source.get("steam_appid"), "youtubeChannelId":source.get("youtube_channel_id"),
+            **({"youtubeUploadsPlaylistId":source.get("youtube_uploads_playlist_id"),"youtubeUploadsPlaylistVerifiedAt":source.get("youtube_uploads_playlist_verified_at")}if source.get("parser")=="youtube_data_api" else {}),
             "publisherIdentityEvidenceUrl":source.get("publisher_identity_evidence_url"), "publisherIdentityCheckedAt":source.get("publisher_identity_checked_at"),
             "enabled":False, "accessStatus":source["access_status"],
             "approvedForStaging":bool(source.get("approved_for_staging")), "termsUrl":source["terms_url"],
@@ -968,6 +1241,7 @@ def operating_source(row):
     """Admin-reviewed Firestore source configuration is authoritative in apply mode."""
     return {"id":row["id"],"game_id":row["gameId"],"url":row["url"],"parser":row["parser"],
             "steam_appid":row.get("steamAppid"), "youtube_channel_id":row.get("youtubeChannelId"),
+            "youtube_uploads_playlist_id":row.get("youtubeUploadsPlaylistId"),"youtube_uploads_playlist_verified_at":row.get("youtubeUploadsPlaylistVerifiedAt"),
             "publisher_identity_evidence_url":row.get("publisherIdentityEvidenceUrl"), "publisher_identity_checked_at":row.get("publisherIdentityCheckedAt"), "enabled":row.get("enabled",False),
             "approved_for_staging":row.get("approvedForStaging",False),"access_status":row.get("accessStatus"),
             "terms_url":row.get("termsUrl"),"terms_checked_at":row.get("termsCheckedAt"),
@@ -975,7 +1249,7 @@ def operating_source(row):
             "feed_allowlist":row.get("feedAllowlist",[]),"collection_interval_minutes":max(15,row.get("intervalMinutes",15)),
             "server_region":row.get("serverRegion") or "UNSPECIFIED","server_label":row.get("serverLabel"),
             "method":"official_feed" if row.get("parser")=="youtube_atom" else "official_api",
-            "official_host":"www.youtube.com" if row.get("parser")=="youtube_atom" else "api.steampowered.com","request_timeout_seconds":20,"max_response_bytes":2097152,
+            "official_host":"www.youtube.com" if row.get("parser")=="youtube_atom" else "www.googleapis.com" if row.get("parser")=="youtube_data_api" else "api.steampowered.com","request_timeout_seconds":20,"max_response_bytes":2097152,
             "schedule_extraction_approved":row.get("scheduleExtractionApproved",False),
             "schedule_extraction_reviewed_at":row.get("scheduleExtractionReviewedAt"),
             "schedule_extraction_evidence_url":row.get("scheduleExtractionEvidenceUrl"),
@@ -984,6 +1258,7 @@ def operating_source(row):
             "content_localization":row.get("contentLocalization"),"original_image_reference":row.get("originalImageReference"),
             "reviewed_notice_references":row.get("reviewedNoticeReferences"),"calendar_role_policy":row.get("calendarRolePolicy"),
             "localization_roster":row.get("localizationRoster"),
+            "next_run_at":row.get("nextRunAt"),"last_checked_at":row.get("lastCheckedAt"),
             "paired_recruitment_period_approved":row.get("pairedRecruitmentPeriodApproved",False)}
 
 
@@ -1007,7 +1282,7 @@ def seed_catalogue(store, games, registry):
                 if old:
                     row.update({k:old[k] for k in ["enabled","health","lastCheckedAt","lastSuccessAt","lastErrorAt","lastReverifiedAt","nextRunAt",
                         "scheduleExtractionApproved","scheduleExtractionReviewedAt","scheduleExtractionEvidenceUrl","contentLanguage","highestCharacterRarity","imageReuse","sectionScheduleFormat","pairedRecruitmentPeriodApproved",
-                        "youtubeChannelId","publisherIdentityEvidenceUrl","publisherIdentityCheckedAt","contentLocalization","originalImageReference","reviewedNoticeReferences","calendarRolePolicy","localizationRoster"] if k in old})
+                        "youtubeChannelId","youtubeUploadsPlaylistId","youtubeUploadsPlaylistVerifiedAt","publisherIdentityEvidenceUrl","publisherIdentityCheckedAt","contentLocalization","originalImageReference","reviewedNoticeReferences","calendarRolePolicy","localizationRoster"] if k in old})
                 return (None,False) if old == row else (row,True)
             changed=store.mutate("gameSources/"+source["id"],upsert_source)
             result["sources" if changed else "unchanged"]+=1
@@ -1054,22 +1329,40 @@ def retire_derived_event(store,event_id,row,observed,depth=0):
 
 
 def upsert_notice(store, source, document, observed):
+    gate = content_publication_status(document.get("published_at"), observed)
+    if gate != "INCLUDED": return "beforeContentCutoffSkipped" if gate == "PUBLISHED_BEFORE_CONTENT_CUTOFF" else "publicationUnconfirmedSkipped"
     document=enrich_document(document,source)
     event_id=event_identity(document,source)
     proof_id=digest([source["id"],document["external_key"],document["raw_sha256"]])
+    notice_image=automatic_youtube_notice_image(document,source,event_id,observed)
+    video_metadata=youtube_document_metadata(document,source,observed)
     if len(json.dumps(document["raw_json"],ensure_ascii=False).encode())>700000:
         raise SafetyError("raw_document_exceeds_safe_firestore_size")
-    store.mutate("collectionDocuments/"+proof_id,lambda old:(None,False) if old else
-        ({"sourceId":source["id"],"externalKey":document["external_key"],"rawSha256":document["raw_sha256"],
+    def raw_update(old):
+        if old:
+            if video_metadata["sourceProvider"]=="youtube":
+                try:refresh=not old.get("metadataCheckedAt") or timestamp(old["metadataCheckedAt"])<=observed-timedelta(hours=24)
+                except (ValueError,TypeError):refresh=True
+                if refresh:return {**old,**video_metadata},True
+            return None,False
+        return {"sourceId":source["id"],"externalKey":document["external_key"],"rawSha256":document["raw_sha256"],
           "rawJson":document["raw_json"],"publishedAt":timestamp(document["published_at"]) if document["published_at"] else None,
           "rawPublicationTimestamp":document["raw_publication_timestamp"],"sourceUpdatedAt":timestamp(document["source_updated_at"]) if document.get("source_updated_at") else None,"observedAt":observed,
-          "officialUrl":document["official_url"]},True))
+          "officialUrl":document["official_url"],**video_metadata},True
+    store.mutate("collectionDocuments/"+proof_id,raw_update)
     def update(old):
         if old and old.get("rawSha256") == document["raw_sha256"] and old.get("extractionVersion")==EXTRACTION_VERSION and old.get("extractionPolicySha256")==document["extraction_policy_sha256"] and old.get("categoryCandidate")==document["category_candidate"]:
             if old.get("verificationStatus")=="verified" and old.get("status") not in ("cancelled","postponed") and old.get("startsAt") and old.get("endsAt"):
                 state="ended" if timestamp(old["endsAt"])<=observed else "ongoing" if timestamp(old["startsAt"])<=observed else "upcoming"
                 if state!=old.get("status"):
                     return {**old,"status":state,"lastCheckedAt":observed,"lastChangedAt":observed,"revision":old.get("revision",0)+1},"updated"
+            if source.get("parser")in YOUTUBE_PARSERS:
+                checked=old.get("metadataCheckedAt")
+                try: refresh=checked is None or timestamp(checked)<=observed-timedelta(hours=24)
+                except (ValueError,TypeError): refresh=True
+                if refresh:
+                    return {**old,"noticeImage":notice_image,"image":notice_image if old.get("categoryCandidate")!="recruitment" and not old.get("derivedCharacterAnnouncements") else old.get("image"),
+                        **video_metadata,"lastCheckedAt":observed},"updated"
             return None,"unchanged"
         retained_image=retained_source_reference(old,document,event_id)
         original_language,language_evidence=notice_language(old,document,source)
@@ -1093,7 +1386,9 @@ def upsert_notice(store, source, document, observed):
              "candidateStartsAt":document["schedule"]["startsAt"] if region_pending_period(document) else None,
              "candidateEndsAt":document["schedule"]["endsAt"] if region_pending_period(document) else None,
              "candidateTimezone":document["schedule"]["originalTimezone"] if region_pending_period(document) else None,
-             "imageCandidates":document["image_candidates"],"image":document["approved_image"] or document["referenced_image"] or reviewed_notice_image(document,source,event_id) or retained_image,
+             "noticeImage":notice_image,
+             **video_metadata,
+             "imageCandidates":document["image_candidates"],"image":document["approved_image"] or document["referenced_image"] or reviewed_notice_image(document,source,event_id) or retained_image or (notice_image if document["category_candidate"]!="recruitment" and not document["highest_rarity_targets"] else None),
              "sourceImageOverride":old.get("sourceImageOverride") if retained_image and not (document["approved_image"] or document["referenced_image"]) else None,
              "announcementKind":"aggregate" if document["highest_rarity_targets"] else None,
              "derivedCharacterAnnouncements":len(document["highest_rarity_targets"]),
@@ -1140,7 +1435,7 @@ def upsert_notice(store, source, document, observed):
                  "candidateTimezone":document["schedule"]["originalTimezone"] if region_pending_period(document) else None,
                  "firstCheckedAt":old.get("firstCheckedAt",observed) if old else observed}
             row.update({key:current_event.get(key) for key in ("originalTitle","originalDescription","originalLanguage","rawSha256","revision",
-                "displayTitle","sourceSectionTitle","translations","contentLocalization","calendarRole","calendarRoleEvidence")})
+                "displayTitle","sourceSectionTitle","translations","contentLocalization","calendarRole","calendarRoleEvidence","publishedAt","sourceUpdatedAt")})
             for key,default in {"pickupKind":None,"characters":[],"weapons":[],"startsAt":None,"endsAt":None}.items():
                 row.setdefault(key,default)
             if document.get("_section_key") and pickup.get("pickup_kind") and (pickup.get("characters") or pickup.get("weapons")):
@@ -1170,6 +1465,8 @@ def upsert_notice(store, source, document, observed):
                 title=target["name"]
                 retained_image=retained_source_reference(old,document,child_id,title=target["name"],characters=[target["name"]],announcement_kind=target["announcementKind"])
                 row={**parent,"id":child_id,"parentEventId":event_id,"announcementKind":target["announcementKind"],
+                    "noticeImage":None,
+                    "sourceProvider":None,"sourceVideoId":None,"sourceChannelId":None,"metadataCheckedAt":None,"metadataExpiresAt":None,
                     "rarityLabel":target["rarityLabel"],"characters":[target["name"]],"characterEvidenceText":target["evidenceText"],
                     "characterEvidenceMethod":target.get("evidenceMethod","literal_same_line_v1"),
                     "title":title,"displayTitle":title,"characterNames":[target["name"]],"originalTitle":document["original_title"],"derivedCharacterAnnouncements":0,
@@ -1204,7 +1501,7 @@ def upsert_notice(store, source, document, observed):
                     "firstCheckedAt":old.get("firstCheckedAt",observed) if old else observed,
                     "lastVerifiedAt":current_child.get("lastVerifiedAt"),"scheduleOrigin":current_child.get("scheduleOrigin")}
                 row.update({key:current_child.get(key) for key in ("originalTitle","originalDescription","originalLanguage","rawSha256","revision",
-                    "displayTitle","sourceSectionTitle","translations","contentLocalization","calendarRole","calendarRoleEvidence")})
+                    "displayTitle","sourceSectionTitle","translations","contentLocalization","calendarRole","calendarRoleEvidence","publishedAt","sourceUpdatedAt")})
                 return row,True
             store.mutate("pickupSchedules/"+pickup_id,child_pickup)
         # Changed text removing a target must stop its old automatic calendar/push.
@@ -1255,8 +1552,9 @@ def finish_source(store, source, token, now, success, error, http_status, mode, 
         raise SafetyError("source_lease_lost")
     def health(old):
         if not old:return None,False
-        row={**old,"lastCheckedAt":now,"health":{"status":"success" if success else "FETCH_FAILED",
-             "httpStatus":http_status,"consecutiveFailures":store.get(lock_path)["consecutiveFailures"],"reasonCode":error}}
+        finished_lock=store.get(lock_path)
+        row={**old,"lastCheckedAt":now,"nextRunAt":finished_lock["nextRunAt"],"health":{"status":"success" if success else "FETCH_FAILED",
+             "httpStatus":http_status,"consecutiveFailures":finished_lock["consecutiveFailures"],"reasonCode":error}}
         if success:row["lastSuccessAt"]=now
         else:row["lastErrorAt"]=now
         if success and mode=="reverify":row["lastReverifiedAt"]=now
@@ -1267,7 +1565,12 @@ def finish_source(store, source, token, now, success, error, http_status, mode, 
 def collect_one(store, source, start, end, mode="backfill", fetch=fetch_source, sleep=time.sleep, now=None, deadline=None, max_pages=10):
     observed=now or datetime.now(UTC)
     if not reviewed(source):raise SafetyError("source_review_required")
-    if end<=start or end-start>timedelta(hours=72):raise SafetyError("window_must_be_at_most_72_hours")
+    content_backfill=mode=="content-backfill" and start==CONTENT_CUTOFF and end<=observed and end-start<=timedelta(days=31)
+    if end<=start or end-start>timedelta(hours=72) and not content_backfill:raise SafetyError("window_must_be_at_most_72_hours")
+    start=max(start,CONTENT_CUTOFF)
+    if end<=start:raise SafetyError("content_window_before_publication_cutoff")
+    if source.get("parser")=="youtube_data_api" and not os.environ.get("YOUTUBE_API_KEY"):
+        return {"status":"DEFERRED","sourceId":source["id"],"reasonCode":"YOUTUBE_API_KEY_NOT_CONFIGURED","writes":0,"httpRequests":0}
     if store.remote:
         config=store.get("gameSources/"+source["id"])
         if not config or config.get("enabled") is not True:
@@ -1282,9 +1585,9 @@ def collect_one(store, source, start, end, mode="backfill", fetch=fetch_source, 
     metrics={"pagesFetched":0,"itemsSeen":0,"created":0,"updated":0,"unchanged":0,"verifiedSchedules":0,
              "knownEventsForReverify":0,"knownEventsQueryLimitReached":False,"olderUnseenSkipped":0,"ongoingOlderIncluded":0,
              "verifiedSectionSchedules":0,"derivedChildrenQueryLimitReached":False}
-    metrics.update(candidateSchedules=0,candidateSectionSchedules=0)
+    metrics.update(candidateSchedules=0,candidateSectionSchedules=0,beforeContentCutoffSkipped=0,publicationUnconfirmedSkipped=0)
     success,error,http_status,retry_after=False,None,None,0
-    cursor=int(end.timestamp())+1
+    cursor=int(end.timestamp())+1;page_token=None;seen_page_tokens=set()
     try:
         source,roster_metrics=refresh_localization_roster(store,source,observed,fetch,sleep,deadline)
         metrics['localizationRoster']=roster_metrics
@@ -1298,18 +1601,35 @@ def collect_one(store, source, start, end, mode="backfill", fetch=fetch_source, 
         for _ in range(max_pages):
             if deadline is not None and time.monotonic()>=deadline:raise SafetyError("run_time_limit")
             sleep(1)
-            request=youtube_request(source) if source["parser"]=="youtube_atom" else steam_request({**source,"enabled":True},cursor,50)
+            if source["parser"]=="youtube_data_api":
+                from official_adapter import youtube_api_request,parse_youtube_api_documents
+                request=youtube_api_request(source,page_token=page_token,count=50)
+            else:request=youtube_request(source) if source["parser"]=="youtube_atom" else steam_request({**source,"enabled":True},cursor,50)
             http_status,raw,headers=fetch(request);metrics["pagesFetched"]+=1
             if http_status!=200:
                 retry_after=retry_after_seconds(headers.get("retry-after"))
                 raise SafetyError("source_http_"+str(http_status))
-            documents,parsed=(parse_youtube_documents(raw,source,observed.isoformat()) if source["parser"]=="youtube_atom" else parse_steam_documents(raw,source,observed.isoformat()))
+            documents,parsed=(parse_youtube_api_documents(raw,source,observed.isoformat()) if source["parser"]=="youtube_data_api" else parse_youtube_documents(raw,source,observed.isoformat()) if source["parser"]=="youtube_atom" else parse_steam_documents(raw,source,observed.isoformat()))
             if source["parser"]=="youtube_atom":
                 metrics.update(windowCoverageVerified=False,coverageReason=parsed["coverage_reason"])
             metrics["itemsSeen"]+=parsed["items_seen"]
+            if source["parser"]=="youtube_data_api":
+                metrics["apiUnitsEstimated"]=metrics["pagesFetched"]  # playlistItems.list costs 1 API quota unit/page.
+                metrics["providerSkipped"]=metrics.get("providerSkipped",0)+parsed.get("items_skipped",0)
+                metrics["providerSkipReasons"]=list(dict.fromkeys(metrics.get("providerSkipReasons",[])+parsed.get("skip_reasons",[])))[:20]
+                metrics.update(windowCoverageVerified=False,coverageReason="PUBLIC_UPLOADS_PLAYLIST_BOUNDED_PAGES")
             dates=[]
             for document in documents:
-                if not document["published_at"]:raise SafetyError("publication_timestamp_unconfirmed")
+                gate=content_publication_status(document.get("published_at"),observed)
+                if gate!="INCLUDED":
+                    if gate=="PUBLISHED_BEFORE_CONTENT_CUTOFF":
+                        metrics["beforeContentCutoffSkipped"]+=1
+                        dates.append(int(timestamp(document["published_at"]).timestamp()))
+                    else:
+                        metrics["publicationUnconfirmedSkipped"]+=1
+                        key=digest([source["id"],document.get("external_key"),document.get("raw_sha256"),gate])
+                        store.mutate("collectionErrors/"+key,lambda old:(None,False) if old else ({"sourceId":source["id"],"gameId":source["game_id"],"kind":"PUBLICATION_QUARANTINE","reasonCode":gate,"createdAt":observed},True))
+                    continue
                 date=aware_timestamp(document["published_at"]);dates.append(int(date.timestamp()))
                 ongoing_old=date<start and confirmed_window_overlap(document,source,start,end)
                 changed=aware_timestamp(document["source_updated_at"]) if document.get("source_updated_at") else None
@@ -1333,20 +1653,36 @@ def collect_one(store, source, start, end, mode="backfill", fetch=fetch_source, 
                 elif mode=="reverify":
                     metrics["olderUnseenSkipped"]+=1
             oldest=min(dates) if dates else None
+            if source["parser"]=="youtube_data_api":
+                next_page=parsed.get("next_page_token")
+                # Playlist position/added time is not necessarily video publication
+                # order. An old video alone must not hide later October videos.
+                if not next_page or mode=="reverify":
+                    metrics["providerPaginationComplete"]=not bool(next_page)
+                    metrics["publicationCutoffReached"]=oldest is not None and oldest<int(CONTENT_CUTOFF.timestamp())
+                    success=True;break
+                if not isinstance(next_page,str) or not re.fullmatch(r"[A-Za-z0-9_+=./:-]{1,512}",next_page) or next_page in seen_page_tokens:raise SafetyError("youtube_pagination_token_not_advancing")
+                seen_page_tokens.add(next_page);page_token=next_page;continue
             if parsed["items_seen"]>=50 and oldest is not None and dates.count(oldest)>1 and oldest>=int(start.timestamp()):
                 raise SafetyError("pagination_boundary_ambiguous")
             if source["parser"]=="youtube_atom" or mode=="reverify" or parsed["items_seen"]<50 or oldest is not None and oldest<int(start.timestamp()):
                 success=True;break
             if oldest is None or oldest>=cursor:raise SafetyError("pagination_cursor_not_advancing")
             cursor=oldest
-        if not success:raise SafetyError("page_limit_reached")
+        if not success:
+            if source["parser"]=="youtube_data_api" and page_token is not None:
+                success=True
+                metrics.update(pageLimitReached=True,providerPaginationComplete=False,windowCoverageVerified=False,
+                    coverageReason="PAGE_LIMIT_REACHED_WITH_MORE_UPLOADS")
+            else:raise SafetyError("page_limit_reached")
     except Exception as failure:
         error=str(failure)[:120] if isinstance(failure,(SafetyError,ValidationError)) else type(failure).__name__
         store.put("collectionErrors/"+run_id,{"sourceId":source["id"],"gameId":source["game_id"],"reasonCode":error,
                   "httpStatus":http_status,"createdAt":observed,"retryAfterSeconds":retry_after})
     finished=datetime.now(UTC)
     finish_source(store,source,token,finished,success,error,http_status,mode,retry_after)
-    result={"sourceId":source["id"],"gameId":source["game_id"],"status":"success" if success else "FETCH_FAILED",
+    result={"sourceId":source["id"],"gameId":source["game_id"],"status":"SUCCESS_BOUNDED" if success and metrics.get("pageLimitReached")else "success" if success else "FETCH_FAILED",
+            "contentPublishedNotBefore":CONTENT_PUBLISHED_NOT_BEFORE,
             "windowStart":start,"windowEnd":end,"mode":mode,"requestedMode":requested_mode,"metrics":metrics,"reasonCode":error,
             "httpStatus":http_status,"createdAt":observed,"finishedAt":finished,
             "lastCommittedCursor":cursor,"writes":store.writes-started_writes}
@@ -1356,23 +1692,37 @@ def collect_one(store, source, start, end, mode="backfill", fetch=fetch_source, 
 
 def run(registry,store,start,end,mode="backfill",fetch=fetch_source,sleep=time.sleep,timeout_seconds=480,max_sources=50):
     deadline=time.monotonic()+timeout_seconds
-    results=[];limited_hosts=set()
+    results=[];limited_hosts=set();attempts=0
     from urllib.parse import urlsplit
     operating_registry=registry
+    retention=expire_youtube_metadata(store)if store.remote else {"status":"LOCAL_STAGING_NOT_AUTOMATIC","remoteFirestoreWrites":0,"fcmSends":0}
     if store.remote:
         operating_registry={"games":[{"gameId":row["gameId"],"sources":[operating_source({**row,"id":source_id})]}
                            for source_id,row in store.list("gameSources",200) if row.get("enabled") is True]}
-    for game in operating_registry["games"]:
-        for raw_source in game.get("sources",[]):
-            if len(results)>=max_sources or time.monotonic()>=deadline:break
-            source={**raw_source,"game_id":game["gameId"]}
-            host=urlsplit(source["url"]).hostname
-            if host in limited_hosts:
-                results.append({"sourceId":source["id"],"status":"DEFERRED","reasonCode":"HOST_RATE_LIMITED"});continue
-            result=collect_one(store,source,start,end,mode,fetch,sleep,deadline=deadline)
-            results.append(result)
-            if result.get("httpStatus")==429:limited_hosts.add(host)
+    sources=[{**raw_source,"game_id":game["gameId"]} for game in operating_registry["games"] for raw_source in game.get("sources",[])][:200]
+    def last_checked(source):
+        try:return timestamp(source.get("last_checked_at")) if source.get("last_checked_at") else datetime.min.replace(tzinfo=UTC)
+        except (ValueError,TypeError):return datetime.min.replace(tzinfo=UTC)
+    # Previously unattempted or longest-waiting sources come first; failed
+    # sources use lastChecked, so they cannot monopolize every subsequent run.
+    sources.sort(key=lambda source:(last_checked(source),source["id"]))
+    for source in sources:
+        if attempts>=max_sources or time.monotonic()>=deadline:break
+        host=urlsplit(source["url"]).hostname
+        if host in limited_hosts:
+            results.append({"sourceId":source["id"],"status":"DEFERRED","reasonCode":"HOST_RATE_LIMITED"});continue
+        if source.get("next_run_at"):
+            try:
+                if timestamp(source["next_run_at"])>datetime.now(UTC):
+                    results.append({"sourceId":source["id"],"status":"DEFERRED","reasonCode":"SOURCE_NOT_DUE"});continue
+            except (ValueError,TypeError):pass  # Atomic lease remains authoritative.
+        result=collect_one(store,source,start,end,mode,fetch,sleep,deadline=deadline)
+        results.append(result)
+        if result.get("status") not in ("DEFERRED","DISABLED"):attempts+=1
+        if result.get("httpStatus")==429:limited_hosts.add(host)
     return {"recordedAt":datetime.now(UTC),"backend":"FIREBASE" if store.remote else "LOCAL_STAGING",
+            "youtubeMetadataRetention":retention,
+            "contentPublishedNotBefore":CONTENT_PUBLISHED_NOT_BEFORE,"sourceAttempts":attempts,"registeredSourcesConsidered":len(sources),
             "remoteFirestoreWrites":store.writes if store.remote else 0,"fcmSends":0,"windowHours":(end-start).total_seconds()/3600,
             "results":results,"verifiedEventSchedules":sum(row.get("metrics",{}).get("verifiedSchedules",0) for row in results),"fullSourceCoverageVerified":False,
             "candidateEventSchedules":sum(row.get("metrics",{}).get("candidateSchedules",0) for row in results),
@@ -1382,18 +1732,26 @@ def run(registry,store,start,end,mode="backfill",fetch=fetch_source,sleep=time.s
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--registry",default="data/official-sources.json")
-    parser.add_argument("--mode",choices=["backfill","incremental","reverify"],default="backfill")
+    parser.add_argument("--mode",choices=["backfill","incremental","reverify","content-backfill"],default="backfill")
     parser.add_argument("--hours",type=int,default=72)
     parser.add_argument("--live",action="store_true")
     parser.add_argument("--apply",action="store_true")
     parser.add_argument("--seed",action="store_true")
     parser.add_argument("--activate-reviewed-sources",action="store_true")
+    parser.add_argument("--content-cleanup",action="store_true",help="Review only pre-October notices and expired exact YouTube metadata; --live reads production, --apply requires --cleanup-review")
+    parser.add_argument("--cleanup-review",help="An exact previously inspected dry-run JSON; only used with --content-cleanup --apply")
     parser.add_argument("--report",default="reports/firebase-collector.json")
     args=parser.parse_args()
     if not 1<=args.hours<=72:parser.error("hours must be 1..72")
     registry=json.loads(Path(args.registry).read_text(encoding="utf-8-sig"))
-    store=FirestoreStore() if args.apply else MemoryStore()
-    if args.activate_reviewed_sources:
+    if args.content_cleanup and (args.seed or args.activate_reviewed_sources):parser.error("content cleanup cannot activate or seed sources")
+    store=FirestoreStore() if args.apply or args.content_cleanup and args.live else MemoryStore()
+    if args.content_cleanup:
+        if args.apply:
+            if not args.cleanup_review:parser.error("--apply cleanup requires a reviewed dry-run JSON")
+            result=apply_content_cleanup(store,json.loads(Path(args.cleanup_review).read_text(encoding="utf-8-sig")))
+        else:result=content_cleanup_plan(store)
+    elif args.activate_reviewed_sources:
         if not store.remote:parser.error("activation requires --apply and explicit Spark authorization")
         activated=0
         for game in registry["games"]:
@@ -1414,9 +1772,9 @@ def main():
         result={"status":"PLAN_ONLY","reviewedSources":sum(reviewed(s) for g in registry["games"] for s in g.get("sources",[])),
                 "remoteFirestoreWrites":0,"httpRequests":0,"fcmSends":0,"firebaseConnected":False}
     else:
-        end=datetime.now(UTC);start=end-timedelta(hours=args.hours)
+        end=datetime.now(UTC);start=CONTENT_CUTOFF if args.mode=="content-backfill" else max(CONTENT_CUTOFF,end-timedelta(hours=args.hours))
         result=run(registry,store,start,end,args.mode)
-    if store.remote:
+    if store.remote and not (args.content_cleanup and not args.apply):
         store.finish_usage()
         result.update(usageAccountingWrites=2,totalFirestoreWrites=store.writes+2)
     output=Path(args.report);output.parent.mkdir(parents=True,exist_ok=True)

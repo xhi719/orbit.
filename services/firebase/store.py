@@ -6,6 +6,7 @@ is attached before any Firestore/FCM operation. MemoryStore is test/local eviden
 from __future__ import annotations
 from copy import deepcopy
 from datetime import datetime, timezone
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -15,6 +16,20 @@ from urllib.request import Request, urlopen
 
 class SafetyError(ValueError):
     pass
+
+
+CONTENT_CLEANUP_COLLECTIONS = frozenset({"gameEvents", "pickupSchedules", "collectionDocuments"})
+
+
+def document_fingerprint(value):
+    return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False, default=iso).encode()).hexdigest()
+
+
+def cleanup_path(path):
+    parts = path.split("/") if isinstance(path, str) else []
+    if len(parts) != 2 or parts[0] not in CONTENT_CLEANUP_COLLECTIONS or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,200}", parts[1]):
+        raise SafetyError("public_content_cleanup_path_required")
+    return path
 
 
 def iso(value):
@@ -65,6 +80,18 @@ class MemoryStore:
         self.records.pop(path, None)
         self.writes += 1
 
+    def delete_content_if_unchanged(self, path, expected_fingerprint, guards=None, predicate=None):
+        cleanup_path(path)
+        guards = guards or {}
+        for guard_path in guards: cleanup_path(guard_path)
+        row = self.get(path)
+        if row is None or document_fingerprint(row) != expected_fingerprint: return False
+        guard_rows = {guard_path:self.get(guard_path) for guard_path in guards}
+        if any(document_fingerprint(guard_rows[guard_path]) != expected for guard_path, expected in guards.items()): return False
+        if predicate is not None and not predicate(row, guard_rows): return False
+        self.delete(path)
+        return True
+
     def list_equal(self, collection, field, value, limit=50):
         if not 1<=limit<=50:raise SafetyError("bounded_source_query_limit_required")
         prefix=collection+"/"
@@ -90,6 +117,17 @@ class MemoryStore:
             if clock>=cutoff:rows.append((path[len(prefix):],deepcopy(value)))
         rows=sorted(rows,key=lambda item:(timestamp(item[1][field]),item[0]),reverse=True)[:limit]
         self.reads+=max(1,len(rows));return rows
+
+    def list_expired_youtube(self,collection,before,limit=50):
+        if collection not in ("gameEvents","collectionDocuments") or not 1<=limit<=50:raise SafetyError("bounded_public_youtube_expiry_query_required")
+        cutoff=timestamp(before);rows=[];prefix=collection+"/"
+        for path,row in self.records.items():
+            if not path.startswith(prefix) or "/" in path[len(prefix):] or row.get("metadataExpiresAt") is None:continue
+            try:expires=timestamp(row["metadataExpiresAt"])
+            except (ValueError,TypeError):continue
+            if expires<=cutoff:rows.append((path[len(prefix):],deepcopy(row)))
+        rows.sort(key=lambda value:(timestamp(value[1]["metadataExpiresAt"]),value[0]))
+        rows=rows[:limit];self.reads+=max(1,len(rows));return rows
 
 
 def verify_no_billing(project_id, credentials, opener=urlopen):
@@ -193,6 +231,33 @@ class FirestoreStore:
         self.db.document(path).delete(timeout=20)
         self.writes += 1
 
+    def delete_content_if_unchanged(self, path, expected_fingerprint, guards=None, predicate=None):
+        """A reviewed public cleanup cannot delete data changed since its dry run."""
+        cleanup_path(path)
+        guards = guards or {}
+        for guard_path in guards: cleanup_path(guard_path)
+        self.guard(writing=True)
+        ref = self.db.document(path)
+        @self.firestore.transactional
+        def apply(transaction):
+            self.guard(writing=True)
+            self.reads += 1
+            row = ref.get(transaction=transaction).to_dict()
+            if row is None or document_fingerprint(row) != expected_fingerprint: return False
+            guard_rows = {}
+            for guard_path, expected in guards.items():
+                self.guard()
+                self.reads += 1
+                guard_row = self.db.document(guard_path).get(transaction=transaction).to_dict()
+                if document_fingerprint(guard_row) != expected: return False
+                guard_rows[guard_path] = guard_row
+            if predicate is not None and not predicate(row, guard_rows): return False
+            transaction.delete(ref)
+            return True
+        changed = apply(self.db.transaction(max_attempts=3))
+        self.writes += int(changed)
+        return changed
+
     def list_equal(self, collection, field, value, limit=50):
         self.guard()
         if not 1<=limit<=50:raise SafetyError("bounded_source_query_limit_required")
@@ -220,6 +285,17 @@ class FirestoreStore:
         remaining=min(limit,self.max_reads-self.reads)
         query=self.db.collection(collection).where(filter=FieldFilter(field,">=",timestamp(since))).order_by(field,direction="DESCENDING").limit(remaining)
         rows=[(document.id,document.to_dict()) for document in query.stream(timeout=20)]
+        self.reads+=max(1,len(rows));return rows
+
+    def list_expired_youtube(self,collection,before,limit=50):
+        self.guard()
+        if collection not in ("gameEvents","collectionDocuments") or not 1<=limit<=50:raise SafetyError("bounded_public_youtube_expiry_query_required")
+        from google.cloud.firestore_v1.base_query import FieldFilter
+        remaining=min(limit,self.max_reads-self.reads)
+        # The lower bound excludes null/non-timestamp legacy metadata from
+        # monopolizing the bounded expiry queue. Both bounds use one field index.
+        query=self.db.collection(collection).where(filter=FieldFilter("metadataExpiresAt",">=",datetime(1970,1,1,tzinfo=timezone.utc))).where(filter=FieldFilter("metadataExpiresAt","<=",timestamp(before))).order_by("metadataExpiresAt").limit(remaining)
+        rows=[(document.id,document.to_dict())for document in query.stream(timeout=20)]
         self.reads+=max(1,len(rows));return rows
 
     def finish_usage(self):
