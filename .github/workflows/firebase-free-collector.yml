@@ -1,4 +1,4 @@
-name: Firebase Spark official collector (disabled until configured)
+name: ORBIT official news collector (Firebase Spark)
 on:
   workflow_dispatch:
     inputs:
