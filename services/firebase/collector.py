@@ -627,12 +627,14 @@ def automatic_main_role_policy(source):
     """A source format opt-in is separate from reading permission/date approval."""
     policy=(source.get("calendar_role_policy") or {}).get("automaticRules")
     if not reviewed(source) or not isinstance(policy,dict):return None
-    fields={"mode","gameId","parser","newHighestCharacter","mainEventFormat","evidenceUrl","checkedAt"}
+    fields={"mode","gameId","parser","newHighestCharacter","mainEventFormat","newCharacterFormat","evidenceUrl","checkedAt"}
     if (set(policy)-fields or policy.get("mode")!="explicit_main_role_extraction_v1"
         or policy.get("gameId")!=source.get("game_id") or policy.get("parser")!=source.get("parser")
         or not isinstance(policy.get("newHighestCharacter"),bool) or policy.get("mainEventFormat") not in (None,"gf2_story_event_v1")
+        or policy.get("newCharacterFormat") not in (None,"gf2_new_doll_block_v1")
         or not safe_public_url(policy.get("evidenceUrl")) or not policy["evidenceUrl"].startswith("https://")):return None
     if policy.get("mainEventFormat") and (source.get("game_id")!="girls-frontline-2" or source.get("parser")!="steam_news" or source.get("section_schedule_format")!="heading_period_v1"):return None
+    if policy.get("newCharacterFormat") and (source.get("game_id")!="girls-frontline-2" or source.get("parser")!="steam_news"):return None
     try:policy_timestamp(policy.get("checkedAt"))
     except (ValidationError,TypeError):return None
     return policy
@@ -650,8 +652,10 @@ def automatic_main_role(row,source):
         if not safe_public_url(highest.get("evidenceUrl")) or not highest["evidenceUrl"].startswith("https://"):return None
         # Re-extract the actual original paragraph. Neither a roster position nor
         # a Targeted Procurement heading establishes a character's debut.
-        matched=[target for target in highest_rarity_targets(text,source) if target["announcementKind"]=="new"
+        extracted=highest_rarity_targets(text,source)+new_doll_block_targets(text,source)
+        matched=[target for target in extracted if target["announcementKind"]=="new"
             and row.get("characterNames")==[target["name"]] and row.get("characters")==[target["name"]]]
+        matched=[target for target in matched if target["evidenceText"]==row.get("characterEvidenceText")]
         if len(matched)==1 and selected==matched[0]["name"] and row.get("characterEvidenceText")==matched[0]["evidenceText"]:
             return "main-character",matched[0]["evidenceText"]
     if policy.get("mainEventFormat")=="gf2_story_event_v1" and row.get("sourceSectionKey") and row.get("categoryCandidate")=="limited-event" and not row.get("characterNames"):
@@ -844,6 +848,38 @@ def highest_rarity_targets(text, source):
     return targets[:20]
 
 
+def new_doll_block_targets(text,source):
+    """Only the separately approved GF2 New Doll heading grammar is supported.
+
+    A following Elite Doll item proves debut; an exact named procurement-rate
+    sentence separately proves pickup. The article's story-event dates do not
+    establish this character's recruitment period.
+    """
+    policy=automatic_main_role_policy(source)
+    highest=source.get("highest_character_rarity") or {}
+    if not policy or policy.get("newCharacterFormat")!="gf2_new_doll_block_v1" or policy.get("newHighestCharacter") is not True or "Elite" not in highest.get("labels",[]):return []
+    try:policy_timestamp(highest.get("checkedAt"))
+    except (ValidationError,TypeError):return []
+    if not safe_public_url(highest.get("evidenceUrl")) or not highest["evidenceUrl"].startswith("https://"):return []
+    lines=[line.strip().replace('\\[','[').replace('\\]',']') for line in text.splitlines()]
+    targets=[];heading=None
+    for line in lines:
+        if not line:continue
+        if re.fullmatch(r'-\s*New Dolls?\s*-',line):heading=line;continue
+        if heading is None:continue
+        item=re.fullmatch(r'■\s*Elite Doll\s*\[([^\]\n]{1,100})\]',line)
+        if not item:heading=None;continue
+        name=item.group(1).strip()
+        if not name or any(char in name for char in '["「『'):continue
+        escaped=re.escape(name)
+        rate=[value for value in lines if re.fullmatch(r'(?:・\s*)?During the event, the drop rate for Elite Doll \['+escaped+r'\] and Elite Weapon \[[^\]\n]{1,100}\] will be increased\.',value)
+            or re.fullmatch(r'The drop rate for the Elite Doll \['+escaped+r'\] is increased in the Targeted Procurement!',value)]
+        if len(rate)!=1 or not any('Targeted Procurement' in value for value in lines):continue
+        if not any(row['name']==name for row in targets):targets.append({'name':name,'announcementKind':'new','rarityLabel':'Elite',
+            'evidenceText':heading+'\n'+line+'\n'+rate[0],'evidenceMethod':'gf2_new_doll_block_v1'})
+    return targets[:20]
+
+
 def enrich_document(document, source):
     text = plain_notice(document["original_title"] + "\n" + document["original_description"])
     schedule = extract_schedule(text)
@@ -868,6 +904,8 @@ def enrich_document(document, source):
     verified = not reasons and category != "unclassified"
     images = image_candidates(document, source)
     targets = highest_rarity_targets(text, source) if "pickup" in hints and reviewed(source) else []
+    for target in new_doll_block_targets(text,source):
+        if not any(old['name']==target['name'] for old in targets):targets.append(target)
     cancelled = bool(re.search(r"\b(?:event|banner)\s+(?:is\s+|has\s+been\s+)?cancelled\b|(?:이벤트|픽업)\s*(?:가\s*)?취소|(?:イベント|ピックアップ).*中止", text, re.I))
     return {**document, "schedule": schedule, "schedule_verified": bool(verified), "category_candidate": category,
         "extraction_version": EXTRACTION_VERSION, "extraction_policy_sha256": digest(source_policy(source)),
@@ -1124,7 +1162,7 @@ def upsert_notice(store, source, document, observed):
             # A structured recruitment section will create its own independent
             # character child. Do not create a second equivalent child from the
             # same parent overview and send the same debut announcement twice.
-            if any(section.get("_section_category")=="recruitment" and target["name"] in section.get("_raw_character_names",[]) for section in document["section_documents"]):continue
+            if target.get("evidenceMethod")!="gf2_new_doll_block_v1" and any(section.get("_section_category")=="recruitment" and target["name"] in section.get("_raw_character_names",[]) for section in document["section_documents"]):continue
             child_id=digest({"parent":event_id,"announcementKind":target["announcementKind"],"character":target["name"]})
             child_images,child_artwork=character_image(document["image_candidates"],target,child_id)
             active_children.add(child_id)
@@ -1133,11 +1171,23 @@ def upsert_notice(store, source, document, observed):
                 retained_image=retained_source_reference(old,document,child_id,title=target["name"],characters=[target["name"]],announcement_kind=target["announcementKind"])
                 row={**parent,"id":child_id,"parentEventId":event_id,"announcementKind":target["announcementKind"],
                     "rarityLabel":target["rarityLabel"],"characters":[target["name"]],"characterEvidenceText":target["evidenceText"],
+                    "characterEvidenceMethod":target.get("evidenceMethod","literal_same_line_v1"),
                     "title":title,"displayTitle":title,"characterNames":[target["name"]],"originalTitle":document["original_title"],"derivedCharacterAnnouncements":0,
                     "imageCandidates":child_images,"image":child_artwork or original_subject_image(child_images,source,document.get("observed_at")) or retained_image,
                     "sourceImageOverride":old.get("sourceImageOverride") if retained_image and not original_subject_image(child_images,source,document.get("observed_at")) else None,
                     "firstCheckedAt":old.get("firstCheckedAt",observed) if old else observed,
                     "revision":old.get("revision",0)+1 if old else 1}
+                own_title=parent.get("sourceSectionTitle") or parent.get("displayTitle") or parent.get("originalTitle") or ""
+                shared_recruitment_period=(target.get("evidenceMethod")!="gf2_new_doll_block_v1" and parent.get("categoryCandidate")=="recruitment"
+                    and not parent.get("derivedSectionCount") and bool(PICKUP_IMAGE_WORDS.search(own_title)))
+                if not shared_recruitment_period:
+                    inactive=parent.get("status") if parent.get("status") in ("cancelled","canceled","postponed") else "unconfirmed"
+                    row.update(categoryCandidate="recruitment",category="recruitment",eventTypeCandidates=["pickup"],
+                        startsAt=None,endsAt=None,reservationStartsAt=None,reservationEndsAt=None,ticketSalesAt=None,
+                        originalTimezone=None,candidateStartsAt=None,candidateEndsAt=None,candidateTimezone=None,lastVerifiedAt=None,
+                        verificationStatus="pending",scheduleStatus="CANCELLED" if inactive in ("cancelled","canceled") else "DATE_UNCONFIRMED",status=inactive,scheduleOrigin=None,
+                        scheduleEvidence={"method":"source_new_doll_block" if target.get("evidenceMethod")=="gf2_new_doll_block_v1" else "source_character_without_scoped_period",
+                            "evidenceText":target["evidenceText"],"reasonCodes":["CHARACTER_RECRUITMENT_PERIOD_UNCONFIRMED"]})
                 return announcement_metadata(reviewed_calendar_role(localize_collected_row(row,source,observed),source),old,observed),True
             store.mutate("gameEvents/"+child_id,child_update)
             pickup_id=digest({"event":child_id,"kind":"character"})
@@ -1147,12 +1197,12 @@ def upsert_notice(store, source, document, observed):
                     "sourceId":source["id"],"serverRegion":parent["serverRegion"],"serverLabel":parent["serverLabel"],
                     "officialUrl":parent["officialUrl"],"pickupKind":"character","characters":[target["name"]],"weapons":[],
                     "announcementKind":target["announcementKind"],"rarityLabel":target["rarityLabel"],
-                    "startsAt":parent.get("startsAt"),"endsAt":parent.get("endsAt"),"originalTimezone":parent.get("originalTimezone"),
-                    "candidateStartsAt":parent.get("candidateStartsAt"),"candidateEndsAt":parent.get("candidateEndsAt"),"candidateTimezone":parent.get("candidateTimezone"),
-                    "verificationStatus":parent["verificationStatus"],"status":parent["status"],"image":current_child.get("image"),
+                    "startsAt":current_child.get("startsAt"),"endsAt":current_child.get("endsAt"),"originalTimezone":current_child.get("originalTimezone"),
+                    "candidateStartsAt":current_child.get("candidateStartsAt"),"candidateEndsAt":current_child.get("candidateEndsAt"),"candidateTimezone":current_child.get("candidateTimezone"),
+                    "verificationStatus":current_child["verificationStatus"],"status":current_child["status"],"image":current_child.get("image"),
                     "imageCandidates":child_images,"lastCheckedAt":observed,"lastChangedAt":observed,
                     "firstCheckedAt":old.get("firstCheckedAt",observed) if old else observed,
-                    "lastVerifiedAt":parent.get("lastVerifiedAt"),"scheduleOrigin":"automatic"}
+                    "lastVerifiedAt":current_child.get("lastVerifiedAt"),"scheduleOrigin":current_child.get("scheduleOrigin")}
                 row.update({key:current_child.get(key) for key in ("originalTitle","originalDescription","originalLanguage","rawSha256","revision",
                     "displayTitle","sourceSectionTitle","translations","contentLocalization","calendarRole","calendarRoleEvidence")})
                 return row,True
