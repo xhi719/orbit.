@@ -21,7 +21,8 @@ class SafetyError(ValueError):
 
 class ProviderQuotaUnavailable(SafetyError):
     """The provider rejected work; worker counters cannot prove free headroom."""
-    def __init__(self):
+    def __init__(self,operation="unknown"):
+        self.operation=operation
         super().__init__("firestore_provider_quota_exhausted")
 
 
@@ -187,7 +188,7 @@ def verify_no_billing(project_id, credentials, opener=urlopen):
 class FirestoreStore(BudgetReservation):
     remote = True
 
-    def __init__(self, env=None):
+    def __init__(self, env=None, *, initialize_quota=True):
         env = env or os.environ
         if env.get("ORBIT_FIREBASE_APPLY") != "true" or env.get("ORBIT_FIREBASE_SPARK_CONFIRMED") != "true":
             raise SafetyError("explicit_spark_apply_not_authorized")
@@ -216,16 +217,20 @@ class FirestoreStore(BudgetReservation):
         import firebase_admin
         from firebase_admin import credentials, firestore
         admin_credential = credentials.ApplicationDefault() if local_adc else credentials.Certificate(account)
-        self.app = firebase_admin.initialize_app(admin_credential, {"projectId": self.project_id}, name="orbit-spark-" + self.project_id)
+        app_name="orbit-spark-"+self.project_id
+        try:self.app=firebase_admin.get_app(app_name)
+        except ValueError:self.app=firebase_admin.initialize_app(admin_credential,{"projectId":self.project_id},name=app_name)
         self.db = firestore.client(app=self.app)
         self.firestore = firestore
         self.writes = 0
         self.reads = 0
+        self.public_news_changes={}
         self.max_reads = 2500
         self.max_writes = 500
         from zoneinfo import ZoneInfo
         self.quota_day = datetime.now(timezone.utc).astimezone(ZoneInfo("America/Los_Angeles")).date().isoformat()
-        prior = self._provider_call(lambda:self.db.document("quotaBudgets/" + self.quota_day).get(timeout=20,retry=None).to_dict()) or {}
+        if not initialize_quota:return
+        prior = self._provider_call(lambda:self.db.document("quotaBudgets/" + self.quota_day).get(timeout=20,retry=None).to_dict(),operation="read") or {}
         self.reads += 1
         self.daily_remaining_reads=max(0,35000-prior.get("reads",0))
         self.daily_remaining_writes=max(0,14000-prior.get("writes",0))
@@ -241,27 +246,36 @@ class FirestoreStore(BudgetReservation):
                    - self.writes - getattr(self, "reserved_writes", 0))
 
     def guard(self, writing=False):
-        if getattr(self,"provider_quota_exhausted",False):raise ProviderQuotaUnavailable()
+        if getattr(self,"provider_quota_exhausted",False):raise ProviderQuotaUnavailable(getattr(self,"provider_quota_operation","unknown"))
         if self.read_headroom() == 0 or writing and self.write_headroom() == 0:
             raise SafetyError("worker_run_soft_budget_exhausted")
 
-    def _provider_call(self, operation):
-        if getattr(self,"provider_quota_exhausted",False):raise ProviderQuotaUnavailable()
-        try:return operation()
+    def _provider_call(self, callback, *, operation="unknown"):
+        if getattr(self,"provider_quota_exhausted",False):raise ProviderQuotaUnavailable(getattr(self,"provider_quota_operation","unknown"))
+        try:return callback()
         except Exception as error:
+            if isinstance(error,ProviderQuotaUnavailable):raise
             if not is_provider_quota_error(error):raise
-            self.provider_quota_exhausted=True
-            raise ProviderQuotaUnavailable() from None
+            self.provider_quota_exhausted=True;self.provider_quota_operation=operation
+            raise ProviderQuotaUnavailable(operation) from None
+
+    def _record_public_change(self,path,value):
+        parts=path.split("/")
+        if len(parts)==2 and parts[0]in("gameEvents","pickupSchedules")and re.fullmatch(r"[A-Za-z0-9_.:-]{1,200}",parts[1]):
+            if not hasattr(self,"public_news_changes"):self.public_news_changes={}
+            self.public_news_changes[path]=deepcopy(value)
+            self.public_news_confirmed_at=datetime.now(timezone.utc).isoformat()
 
     def get(self, path):
         self.guard()
         self.reads += 1
-        return self._provider_call(lambda:self.db.document(path).get(timeout=20,retry=None).to_dict())
+        return self._provider_call(lambda:self.db.document(path).get(timeout=20,retry=None).to_dict(),operation="read")
 
     def put(self, path, value):
         self.guard(writing=True)
-        self._provider_call(lambda:self.db.document(path).set(value, timeout=20,retry=None))
+        self._provider_call(lambda:self.db.document(path).set(value, timeout=20,retry=None),operation="write")
         self.writes += 1
+        self._record_public_change(path,value)
 
     def mutate(self, path, callback):
         self.guard(writing=True)
@@ -270,24 +284,27 @@ class FirestoreStore(BudgetReservation):
         def apply(transaction):
             self.guard(writing=True)
             self.reads += 1
-            value, result = callback(ref.get(transaction=transaction,timeout=20,retry=None).to_dict())
+            old=self._provider_call(lambda:ref.get(transaction=transaction,timeout=20,retry=None).to_dict(),operation="read")
+            value, result = callback(old)
             if value is not None:
                 transaction.set(ref, value)
-            return value is not None, result
-        changed, result = self._provider_call(lambda:apply(self.db.transaction(max_attempts=3)))
-        self.writes += int(changed)
+            return value, result
+        value, result = self._provider_call(lambda:apply(self.db.transaction(max_attempts=3)),operation="write")
+        self.writes += int(value is not None)
+        if value is not None:self._record_public_change(path,value)
         return result
 
     def list(self, collection, limit=200):
         self.guard()
-        rows = self._provider_call(lambda:[(document.id, document.to_dict()) for document in self.db.collection(collection).limit(min(limit,self.read_headroom())).stream(timeout=20,retry=None)])
+        rows = self._provider_call(lambda:[(document.id, document.to_dict()) for document in self.db.collection(collection).limit(min(limit,self.read_headroom())).stream(timeout=20,retry=None)],operation="read")
         self.reads += max(1,len(rows))
         return rows
 
     def delete(self, path):
         self.guard(writing=True)
-        self._provider_call(lambda:self.db.document(path).delete(timeout=20,retry=None))
+        self._provider_call(lambda:self.db.document(path).delete(timeout=20,retry=None),operation="write")
         self.writes += 1
+        self._record_public_change(path,None)
 
     def delete_content_if_unchanged(self, path, expected_fingerprint, guards=None, predicate=None):
         """A reviewed public cleanup cannot delete data changed since its dry run."""
@@ -312,8 +329,9 @@ class FirestoreStore(BudgetReservation):
             if predicate is not None and not predicate(row, guard_rows): return False
             transaction.delete(ref)
             return True
-        changed = self._provider_call(lambda:apply(self.db.transaction(max_attempts=3)))
+        changed = self._provider_call(lambda:apply(self.db.transaction(max_attempts=3)),operation="write")
         self.writes += int(changed)
+        if changed:self._record_public_change(path,None)
         return changed
 
     def list_equal(self, collection, field, value, limit=50):
@@ -322,7 +340,7 @@ class FirestoreStore(BudgetReservation):
         from google.cloud.firestore_v1.base_query import FieldFilter
         remaining=min(limit,self.read_headroom())
         query=self.db.collection(collection).where(filter=FieldFilter(field,"==",value)).limit(remaining)
-        rows=self._provider_call(lambda:[(document.id,document.to_dict()) for document in query.stream(timeout=20,retry=None)])
+        rows=self._provider_call(lambda:[(document.id,document.to_dict()) for document in query.stream(timeout=20,retry=None)],operation="read")
         self.reads+=max(1,len(rows))
         return rows
 
@@ -333,7 +351,7 @@ class FirestoreStore(BudgetReservation):
         parent=self.db.collection(collection)
         query=parent.order_by("__name__")
         if after_id is not None:query=query.start_after([parent.document(after_id)])
-        rows=self._provider_call(lambda:[(document.id,document.to_dict()) for document in query.limit(remaining).stream(timeout=20,retry=None)])
+        rows=self._provider_call(lambda:[(document.id,document.to_dict()) for document in query.limit(remaining).stream(timeout=20,retry=None)],operation="read")
         self.reads+=max(1,len(rows));return rows
 
     def list_since(self,collection,field,since,limit=200):
@@ -342,7 +360,7 @@ class FirestoreStore(BudgetReservation):
         from google.cloud.firestore_v1.base_query import FieldFilter
         remaining=min(limit,self.read_headroom())
         query=self.db.collection(collection).where(filter=FieldFilter(field,">=",timestamp(since))).order_by(field,direction="DESCENDING").limit(remaining)
-        rows=self._provider_call(lambda:[(document.id,document.to_dict()) for document in query.stream(timeout=20,retry=None)])
+        rows=self._provider_call(lambda:[(document.id,document.to_dict()) for document in query.stream(timeout=20,retry=None)],operation="read")
         self.reads+=max(1,len(rows));return rows
 
     def list_stage_dates(self,date_keys,limit=50):
@@ -351,7 +369,7 @@ class FirestoreStore(BudgetReservation):
         from google.cloud.firestore_v1.base_query import FieldFilter
         remaining=min(limit,self.read_headroom())
         query=self.db.collection("gameEvents").where(filter=FieldFilter("announcementStageDateKeys","array_contains_any",date_keys)).limit(remaining)
-        rows=self._provider_call(lambda:[(document.id,document.to_dict())for document in query.stream(timeout=20,retry=None)])
+        rows=self._provider_call(lambda:[(document.id,document.to_dict())for document in query.stream(timeout=20,retry=None)],operation="read")
         self.reads+=max(1,len(rows));return rows
 
     def list_expired_youtube(self,collection,before,limit=50):
@@ -362,25 +380,62 @@ class FirestoreStore(BudgetReservation):
         # The lower bound excludes null/non-timestamp legacy metadata from
         # monopolizing the bounded expiry queue. Both bounds use one field index.
         query=self.db.collection(collection).where(filter=FieldFilter("metadataExpiresAt",">=",datetime(1970,1,1,tzinfo=timezone.utc))).where(filter=FieldFilter("metadataExpiresAt","<=",timestamp(before))).order_by("metadataExpiresAt").limit(remaining)
-        rows=self._provider_call(lambda:[(document.id,document.to_dict())for document in query.stream(timeout=20,retry=None)])
+        rows=self._provider_call(lambda:[(document.id,document.to_dict())for document in query.stream(timeout=20,retry=None)],operation="read")
         self.reads+=max(1,len(rows));return rows
 
     def finish_usage(self):
         """Worker-only observations; Firebase client traffic is NOT measured here."""
-        if getattr(self,"provider_quota_exhausted",False):raise ProviderQuotaUnavailable()
+        if getattr(self,"provider_quota_exhausted",False):raise ProviderQuotaUnavailable(getattr(self,"provider_quota_operation","unknown"))
         ref = self.db.document("quotaBudgets/" + self.quota_day)
         @self.firestore.transactional
         def finish(transaction):
-            old = ref.get(transaction=transaction,timeout=20,retry=None).to_dict() or {}
+            old = self._provider_call(lambda:ref.get(transaction=transaction,timeout=20,retry=None).to_dict(),operation="read") or {}
             values = {"reads":old.get("reads",0)+self.reads+1,"writes":old.get("writes",0)+self.writes+2,
                       "scope":"externalWorkersOnly","updatedAt":datetime.now(timezone.utc)}
             transaction.set(ref,values)
             return values
-        values = self._provider_call(lambda:finish(self.db.transaction(max_attempts=3)))
+        values = self._provider_call(lambda:finish(self.db.transaction(max_attempts=3)),operation="write")
         max_percent = max(values["reads"] / 50000,values["writes"] / 20000)*100
         level = "95" if max_percent>=95 else "85" if max_percent>=85 else "70" if max_percent>=70 else "normal"
         self._provider_call(lambda:self.db.document("usageSnapshots/"+self.quota_day).set({**values,"readUsagePercent":round(values["reads"]/50000*100,2),
              "writeUsagePercent":round(values["writes"]/20000*100,2),"warningThreshold":level,
-             "fullProjectUsageVerified":False,"clientUsageIncluded":False,"storageUsageBytes":None,"transferUsageBytes":None},timeout=20,retry=None))
+             "fullProjectUsageVerified":False,"clientUsageIncluded":False,"storageUsageBytes":None,"transferUsageBytes":None},timeout=20,retry=None),operation="write")
         return values
+
+
+class PublicNewsCreateOnlyStore(FirestoreStore):
+    """Bounded recovery writer: no Firestore read or existing-document update."""
+    recovery_only=True
+
+    def __init__(self,env=None,*,allowed_source_ids):
+        if not isinstance(allowed_source_ids,(list,set,tuple))or not allowed_source_ids:raise SafetyError("recovery_approved_sources_required")
+        self.allowed_source_ids=frozenset(allowed_source_ids)
+        super().__init__(env,initialize_quota=False)
+        self.max_writes=25;self.max_reads=0;self.create_attempts=0
+
+    def create_public_news(self,path,value):
+        if getattr(self,"provider_quota_exhausted",False):raise ProviderQuotaUnavailable(getattr(self,"provider_quota_operation","write"))
+        if self.create_attempts>=25 or self.writes>=25:raise SafetyError("recovery_write_budget_exhausted")
+        if not isinstance(value,dict)or path!="gameEvents/"+str(value.get("id"))or not re.fullmatch(r"[a-f0-9]{64}",str(value.get("id",""))):raise SafetyError("recovery_parent_path_required")
+        games=value.get("gameIds")
+        if not isinstance(games,list)or len(games)!=1 or value.get("sourceId")not in self.allowed_source_ids:raise SafetyError("recovery_source_identity_required")
+        identity={"game":games[0],"source":value["sourceId"],"region":value.get("serverRegion"),"server":value.get("serverLabel"),"externalKey":value.get("externalKey"),"pickupKind":None}
+        expected=hashlib.sha256(json.dumps(identity,sort_keys=True,ensure_ascii=False).encode()).hexdigest()
+        if expected!=value["id"]:raise SafetyError("recovery_canonical_event_id_required")
+        if (value.get("newsEligible")is not True or value.get("calendarEligible")is not False or value.get("sourceClockOnly")is not False
+            or value.get("verificationStatus")!="pending"or value.get("scheduleStatus")!="DATE_UNCONFIRMED"or value.get("status")!="unconfirmed"
+            or any(value.get(key)is not None for key in ("parentEventId","sourceSectionKey","startsAt","endsAt","reservationStartsAt","reservationEndsAt","ticketSalesAt","originalTimezone","candidateStartsAt","candidateEndsAt","candidateTimezone","calendarPeriod","calendarRole","calendarRoleEvidence","scheduleOrigin","calendarAudience","announcementKind","pairedTicketNoticeState","venue","dailyOpeningHours","regionBasis","gameServerRegion","scheduleKind"))
+            or value.get("announcementStages",[])!=[] or value.get("announcementStageDateKeys",[])!=[]
+            or value.get("derivedSectionCount",0)!=0 or value.get("derivedCharacterAnnouncements",0)!=0):raise SafetyError("recovery_pending_parent_news_only")
+        if len(json.dumps(value,ensure_ascii=False,default=iso).encode())>900000:raise SafetyError("event_document_exceeds_safe_firestore_size")
+        self.create_attempts+=1
+        try:self._provider_call(lambda:self.db.document(path).create(value,timeout=20,retry=None),operation="write")
+        except Exception as error:
+            if any(base.__module__=="google.api_core.exceptions"and base.__name__ in("AlreadyExists","Conflict")for base in type(error).__mro__):return False
+            raise
+        self.writes+=1;self._record_public_change(path,value)
+        return True
+
+    def _no_recovery_read_or_update(self,*args,**kwargs):raise SafetyError("recovery_create_only_no_control_access")
+    get=put=mutate=list=delete=list_equal=list_cursor=list_since=list_stage_dates=list_expired_youtube=delete_content_if_unchanged=finish_usage=_no_recovery_read_or_update
 

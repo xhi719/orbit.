@@ -29,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "collector"))
 from engine import fetch_source, ValidationError, normalize_url, image_dimensions
 from official_adapter import steam_request, parse_steam_documents, aware_timestamp, TYPES
 from backfill import retry_after_seconds
-from store import MemoryStore, FirestoreStore, SafetyError, ProviderQuotaUnavailable, is_provider_quota_error, timestamp, document_fingerprint, cleanup_path, CONTENT_CLEANUP_COLLECTIONS
+from store import MemoryStore, FirestoreStore, PublicNewsCreateOnlyStore, SafetyError, ProviderQuotaUnavailable, is_provider_quota_error, timestamp, document_fingerprint, cleanup_path, CONTENT_CLEANUP_COLLECTIONS
 
 UTC = timezone.utc
 DATETIME_TYPE = datetime
@@ -1693,6 +1693,206 @@ def operating_source(row):
             "paired_recruitment_period_approved":row.get("pairedRecruitmentPeriodApproved",False)}
 
 
+def recovery_source_policy_hash(source,game_id=None):
+    """Bind cached approval to every reviewed source field and extraction policy."""
+    if not reviewed(source):raise SafetyError("recovery_source_review_required")
+    game_id=game_id or source.get("game_id")
+    if not isinstance(game_id,str) or not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,120}",game_id):raise SafetyError("recovery_game_identity_required")
+    row=source_row(source,game_id)
+    for field in ("enabled","health"):row.pop(field,None)
+    def canonical(value):
+        if isinstance(value,DATETIME_TYPE):return timestamp(value).isoformat()
+        if isinstance(value,dict):return {key:canonical(item)for key,item in value.items()}
+        if isinstance(value,list):return [canonical(item)for item in value]
+        if isinstance(value,str)and re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})",value):return timestamp(value).isoformat()
+        return value
+    normalized=operating_source({**row,"enabled":False})
+    return digest(canonical({"source":row,"extractionPolicy":source_policy(normalized)}))
+
+
+RECOVERY_SCOPE="APPROVED_PUBLIC_PARENT_NEWS_CREATE_ONLY"
+
+
+def recovery_registry_sources(registry):
+    sources={}
+    for game in registry.get("games",[]):
+        for raw in game.get("sources",[]):
+            source={**raw,"game_id":game["gameId"]}
+            if source.get("id")in sources:raise SafetyError("recovery_duplicate_source_identity")
+            if reviewed(source):sources[source["id"]]=source
+    return sources
+
+
+def recovery_known_event(row):
+    if not isinstance(row,dict):return None
+    event_id=row.get("id");games=row.get("gameIds");source=row.get("sourceId");external=row.get("externalKey");url=safe_public_url(row.get("officialUrl"))
+    if (not isinstance(event_id,str)or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,200}",event_id)
+        or not isinstance(games,list)or not 1<=len(games)<=10 or any(not isinstance(game,str)or not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,120}",game)for game in games)
+        or source is not None and(not isinstance(source,str)or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,200}",source))
+        or external is not None and(not isinstance(external,str)or not 1<=len(external)<=512)
+        or not url):return None
+    return {"id":event_id,"sourceId":source,"gameIds":sorted(set(games)),"externalKey":external,"officialUrl":url}
+
+
+def remember_recovery_event(store,row):
+    state=getattr(store,"public_recovery_state",None)
+    known=recovery_known_event(row)
+    if not isinstance(state,dict)or not known:return
+    rows=state.setdefault("knownEvents",[])
+    if not any(item.get("id")==known["id"]for item in rows):
+        if len(rows)>=10000:raise SafetyError("recovery_known_event_limit")
+        rows.append(known)
+
+
+def validate_recovery_state(state,registry,*,project_id,now=None,check_expiry=True):
+    now=now or datetime.now(UTC)
+    allowed_keys={"version","projectId","scope","sourceApprovalObservedAt","sourceApprovalExpiresAt","sources","knownEvents","rotationAfterSourceId"}
+    if (not isinstance(state,dict)or set(state)-allowed_keys or state.get("version")!=1 or state.get("scope")!=RECOVERY_SCOPE
+        or not project_id or state.get("projectId")!=project_id):raise SafetyError("recovery_manifest_invalid")
+    try:observed=timestamp(state.get("sourceApprovalObservedAt"));expires=timestamp(state.get("sourceApprovalExpiresAt"))
+    except (ValueError,TypeError):raise SafetyError("recovery_manifest_timestamp_invalid")from None
+    if expires!=observed+timedelta(hours=24)or observed>now:raise SafetyError("recovery_manifest_timestamp_invalid")
+    if check_expiry and expires<=now:raise SafetyError("recovery_manifest_expired")
+    entries=state.get("sources");known=state.get("knownEvents")
+    if not isinstance(entries,list)or not 1<=len(entries)<=1000 or not isinstance(known,list)or len(known)>10000:raise SafetyError("recovery_manifest_bounds_invalid")
+    if any(not isinstance(row,dict)or set(row)!={"id","sourceId","gameIds","externalKey","officialUrl"}or recovery_known_event(row)!=row for row in known):raise SafetyError("recovery_known_event_invalid")
+    current=recovery_registry_sources(registry);approved=[];seen=set()
+    for entry in entries:
+        if (not isinstance(entry,dict)or set(entry)!={"sourceId","gameId","policySha256"}
+            or not isinstance(entry.get("sourceId"),str)or entry["sourceId"]in seen
+            or not re.fullmatch(r"[a-f0-9]{64}",str(entry.get("policySha256","")))):raise SafetyError("recovery_source_manifest_invalid")
+        seen.add(entry["sourceId"]);source=current.get(entry["sourceId"])
+        if source and source["game_id"]==entry["gameId"]and recovery_source_policy_hash(source)==entry["policySha256"]:approved.append(source)
+    rotation=state.get("rotationAfterSourceId")
+    if rotation is not None and(not isinstance(rotation,str)or rotation not in seen):raise SafetyError("recovery_rotation_invalid")
+    if not approved:raise SafetyError("recovery_source_policy_changed")
+    return approved
+
+
+def refresh_recovery_approval(store,registry,public_sources,*,now=None):
+    now=now or datetime.now(UTC);current=recovery_registry_sources(registry);approved=[]
+    for source_id,row in public_sources:
+        local=current.get(source_id)
+        if not local or row.get("enabled")is not True:continue
+        source=operating_source({**row,"id":source_id})
+        if reviewed(source)and recovery_source_policy_hash(source)==recovery_source_policy_hash(local):
+            approved.append({"sourceId":source_id,"gameId":local["game_id"],"policySha256":recovery_source_policy_hash(local)})
+    old=getattr(store,"public_recovery_state",None)or{};known=[]
+    if old.get("projectId")==store.project_id:
+        known=[row for row in old.get("knownEvents",[])if recovery_known_event(row)==row][:10000]
+    rotation=old.get("rotationAfterSourceId")
+    store.public_recovery_state={"version":1,"projectId":store.project_id,"scope":RECOVERY_SCOPE,
+        "sourceApprovalObservedAt":now.isoformat(),"sourceApprovalExpiresAt":(now+timedelta(hours=24)).isoformat(),
+        "sources":sorted(approved,key=lambda row:row["sourceId"]),"knownEvents":known,
+        "rotationAfterSourceId":rotation if any(row["sourceId"]==rotation for row in approved)else None}
+    return bool(approved)
+
+
+def load_public_recovery_state(path,registry,project_id,*,now=None,check_expiry=True):
+    candidates=[]
+    if path:
+        file=Path(path)
+        if file.exists()and file.stat().st_size<=8388608:
+            try:candidates.append(json.loads(file.read_text(encoding="utf-8-sig")))
+            except (ValueError,UnicodeError):pass
+    if registry.get("quotaRecoveryBootstrap")is not None:candidates.append(deepcopy(registry["quotaRecoveryBootstrap"]))
+    ordered=[];reason="recovery_manifest_missing"
+    for state in candidates:
+        if not isinstance(state,dict)or state.get("projectId")!=project_id or state.get("scope")!=RECOVERY_SCOPE or state.get("version")!=1:
+            reason="recovery_manifest_invalid";continue
+        try:ordered.append((timestamp(state.get("sourceApprovalObservedAt")),state))
+        except (ValueError,TypeError):reason="recovery_manifest_timestamp_invalid"
+    if not ordered:raise SafetyError(reason)
+    selected=max(ordered,key=lambda item:item[0])[1]
+    # A newer authoritative observation may revoke every approval. Never revive
+    # an older bootstrap merely because the newest cache has no eligible source.
+    validate_recovery_state(selected,registry,project_id=project_id,now=now,check_expiry=check_expiry)
+    # Existing confirmed identities remain conservative exclusions when an older
+    # valid bootstrap and cache both exist. This never extends source approval.
+    holder=MemoryStore();holder.public_recovery_state=selected
+    for _,state in ordered:
+        try:validate_recovery_state(state,registry,project_id=project_id,now=now,check_expiry=check_expiry)
+        except SafetyError:continue
+        for row in state["knownEvents"]:remember_recovery_event(holder,row)
+    return selected
+
+
+def save_public_recovery_state(path,state):
+    if not path or not isinstance(state,dict):return
+    payload=json.dumps(state,ensure_ascii=False,sort_keys=True,indent=2,default=lambda value:value.isoformat())+"\n"
+    if len(payload.encode())>8388608:raise SafetyError("recovery_manifest_size_limit")
+    destination=Path(path);destination.parent.mkdir(parents=True,exist_ok=True)
+    temporary=destination.with_name(destination.name+".tmp");temporary.write_text(payload,encoding="utf-8");temporary.replace(destination)
+
+
+def recovery_duplicate(state,row):
+    candidate=recovery_known_event(row)
+    if not candidate:return True
+    for known in state["knownEvents"]:
+        if known["id"]==candidate["id"]:return True
+        if set(known["gameIds"]).intersection(candidate["gameIds"])and(
+            known["officialUrl"]==candidate["officialUrl"]or known["sourceId"]==candidate["sourceId"]and known["externalKey"]is not None and known["externalKey"]==candidate["externalKey"]):return True
+    return False
+
+
+def recovery_parent_news(row,observed):
+    if not isinstance(row,dict)or row.get("parentEventId")or row.get("sourceSectionKey")or row.get("newsEligible")is not True:return None
+    if content_publication_status(row.get("publishedAt"),observed)!="INCLUDED"or not notice_has_representative_image(row,observed):return None
+    result=deepcopy(row)
+    for field in ("startsAt","endsAt","reservationStartsAt","reservationEndsAt","ticketSalesAt","originalTimezone","candidateStartsAt","candidateEndsAt","candidateTimezone","calendarPeriod","calendarRole","calendarRoleEvidence","scheduleOrigin","calendarAudience","lastVerifiedAt","announcementKind","pairedTicketNoticeState","venue","dailyOpeningHours","regionBasis","gameServerRegion","scheduleKind"):
+        result[field]=None
+    result.update(announcementStages=[],announcementStageDateKeys=[])
+    result.update(verificationStatus="pending",scheduleStatus="DATE_UNCONFIRMED",status="unconfirmed",category="unclassified",calendarEligible=False,
+        sourceClockOnly=False,derivedSectionCount=0,derivedCharacterAnnouncements=0,
+        scheduleEvidence={"method":"public_news_recovery_only","reasonCodes":["EXISTING_READS_DEFERRED"]})
+    return result
+
+
+def run_public_news_recovery(registry,state,writer,*,fetch=fetch_source,sleep=time.sleep,now=None,timeout_seconds=480):
+    observed=now or datetime.now(UTC);deadline=time.monotonic()+min(480,max(1,timeout_seconds))
+    sources=sorted(validate_recovery_state(state,registry,project_id=writer.project_id,now=observed),key=lambda source:source["id"])
+    after=state.get("rotationAfterSourceId")
+    if after:sources=[source for source in sources if source["id"]>after]+[source for source in sources if source["id"]<=after]
+    writer.public_recovery_state=state;results=[];created=0;conflicts=0;duplicates=0;attempted=0;write_blocked=False;write_quota_blocked=False
+    for source in sources[:20]:
+        if time.monotonic()>=deadline or getattr(writer,"create_attempts",0)>=25:break
+        attempted+=1;stage=MemoryStore()
+        def bounded_fetch(request):
+            remaining=deadline-time.monotonic()
+            if remaining<=0:raise SafetyError("run_time_limit")
+            return fetch({**request,"request_timeout_seconds":max(1,min(request.get("request_timeout_seconds",20),int(remaining)))})
+        collected=collect_one(stage,source,max(CONTENT_CUTOFF,observed-timedelta(hours=72)),observed,mode="backfill",fetch=bounded_fetch,sleep=sleep,now=observed,deadline=deadline,max_pages=1)
+        state["rotationAfterSourceId"]=source["id"]
+        result={"sourceId":source["id"],"status":collected["status"],"metrics":collected.get("metrics",{}),"created":0}
+        results.append(result)
+        for path,row in list(stage.records.items()):
+            if not path.startswith("gameEvents/")or time.monotonic()>=deadline or getattr(writer,"create_attempts",0)>=25:continue
+            row=recovery_parent_news(row,observed)
+            if row is None:continue
+            if recovery_duplicate(state,row):duplicates+=1;continue
+            try:changed=writer.create_public_news("gameEvents/"+row["id"],row)
+            except ProviderQuotaUnavailable:
+                write_blocked=True;write_quota_blocked=True;result["status"]="WRITE_QUOTA_DEFERRED";break
+            except Exception as error:
+                result.update(status="CREATE_UNCONFIRMED",reasonCode=type(error).__name__);write_blocked=True;break
+            if changed:
+                created+=1;result["created"]+=1;remember_recovery_event(writer,row)
+            else:conflicts+=1
+        if write_blocked:break
+    return {"status":"PUBLIC_NEWS_RECOVERY_PARTIAL"if created else "PUBLIC_NEWS_RECOVERY_DEFERRED",
+        "backend":"FIREBASE","providerReadQuotaBlocked":True,"providerQuotaBlocked":True,"recoveryWriteQuotaBlocked":write_quota_blocked,
+        "recoveryWriteUnconfirmed":write_blocked and not write_quota_blocked,
+        "existingUpdatesDeferred":True,"fullSourceCoverageVerified":False,"collectionSucceeded":False,"recoveryCreated":created,
+        "sourceAttempts":attempted,"maxRecoverySources":20,"pageBudgetPerSource":1,"maxRecoveryWrites":25,"firestoreReads":0,
+        "remoteFirestoreWrites":writer.writes,"createConflicts":conflicts,"knownDuplicatesSkipped":duplicates,
+        "sourceApprovalObservedAt":state["sourceApprovalObservedAt"],"sourceApprovalExpiresAt":state["sourceApprovalExpiresAt"],
+        "usageAccountingConfirmed":False,"usageAccountingDeferred":True,"fcmSends":0,"results":results,
+        "newsOutcome":{"created":created,"updated":0,"eligibleNews":created,"fullSourceCoverageVerified":False},
+        "publicNewsChanges":deepcopy(getattr(writer,"public_news_changes",{})),
+        **({"publicNewsConfirmedAt":writer.public_news_confirmed_at}if getattr(writer,"public_news_changes",{})else {}),
+        "recordedAt":datetime.now(UTC).isoformat()}
+
+
 def seed_catalogue(store, games, registry):
     result={"games":0,"sources":0,"unchanged":0}
     for game in games:
@@ -2015,7 +2215,15 @@ def upsert_notice(store, source, document, observed, *, image_fetch=None, deadli
         if len(json.dumps(row,ensure_ascii=False,default=lambda value:value.isoformat()).encode())>900000:
             raise SafetyError("event_document_exceeds_safe_firestore_size")
         return row,"updated" if old else "created"
-    outcome=store.mutate("gameEvents/"+event_id,update)
+    confirmed_parent={}
+    def tracked_update(old):
+        if old:remember_recovery_event(store,old)  # This read completed inside the transaction.
+        value,result=update(old)
+        confirmed_parent.clear()
+        if value is not None:confirmed_parent.update(value)
+        return value,result
+    outcome=store.mutate("gameEvents/"+event_id,tracked_update)
+    if confirmed_parent:remember_recovery_event(store,confirmed_parent)  # Commit returned successfully.
     for pickup in document.get("pickups",[]):
         pickup_id=digest({"event":event_id,"game":source["game_id"],"region":pickup["server_region"],"server":pickup["server_label"],"kind":pickup["pickup_kind"]})
         def update_pickup(old):
@@ -2524,6 +2732,8 @@ def run(registry,store,start,end,mode="backfill",fetch=fetch_source,sleep=time.s
             if len(page)<100:break
             after=page[-1][0]
         else:registry_limited=True
+        if not registry_limited and hasattr(store,"project_id"):
+            refresh_recovery_approval(store,registry,public_sources)
         operating_registry={"games":[{"gameId":row["gameId"],"sources":[operating_source({**row,"id":source_id})]}
                            for source_id,row in public_sources if row.get("enabled") is True]}
     sources=[{**raw_source,"game_id":game["gameId"]} for game in operating_registry["games"] for raw_source in game.get("sources",[])]
@@ -2572,6 +2782,8 @@ def run(registry,store,start,end,mode="backfill",fetch=fetch_source,sleep=time.s
             "sourceAttempts":attempts,"registeredSourcesConsidered":len(sources),"sourceRegistryLimitReached":registry_limited,
             "collectionScope":"PUBLIC_CATALOGUE_NOT_USER_SUBSCRIPTIONS","pageBudgetPerSource":max_pages,
             "quotaPolicy":budget,"newsOutcome":news_outcome,"unattemptedSources":max(0,len(sources)-attempts),
+            "publicNewsChanges":deepcopy(getattr(store,"public_news_changes",{})),
+            **({"publicNewsConfirmedAt":store.public_news_confirmed_at}if getattr(store,"public_news_changes",{})else {}),
             "remoteFirestoreWrites":store.writes if store.remote else 0,"fcmSends":0,"windowHours":(end-start).total_seconds()/3600,
             "results":results,"verifiedEventSchedules":sum(row.get("metrics",{}).get("verifiedSchedules",0) for row in results),"fullSourceCoverageVerified":False,
             "candidateEventSchedules":sum(row.get("metrics",{}).get("candidateSchedules",0) for row in results),
@@ -2583,7 +2795,11 @@ def provider_quota_result(store=None, previous=None):
     return {**(previous or {}),"status":"PROVIDER_QUOTA_DEFERRED","reasonCode":"firestore_provider_quota_exhausted",
         "collectionSucceeded":False,"fullSourceCoverageVerified":False,"usageAccountingConfirmed":False,
         "usageAccountingDeferred":True,"workerRetriesAfterProviderQuota":0,
-        "storeInitialized":store is not None,"remoteFirestoreWrites":getattr(store,"writes",0),"fcmSends":0}
+        "storeInitialized":store is not None,"remoteFirestoreWrites":getattr(store,"writes",0),"fcmSends":0,
+        "providerQuotaBlocked":True,"existingUpdatesDeferred":True,
+        "publicNewsChanges":deepcopy(getattr(store,"public_news_changes",{})),
+        **({"publicNewsConfirmedAt":store.public_news_confirmed_at}if getattr(store,"public_news_changes",{})else {}),
+        "recordedAt":datetime.now(UTC).isoformat()}
 
 
 def main():
@@ -2600,14 +2816,20 @@ def main():
     parser.add_argument("--content-cleanup",action="store_true",help="Review only pre-October notices and expired exact YouTube metadata; --live reads production, --apply requires --cleanup-review")
     parser.add_argument("--cleanup-review",help="An exact previously inspected dry-run JSON; only used with --content-cleanup --apply")
     parser.add_argument("--report",default="reports/firebase-collector.json")
+    parser.add_argument("--public-recovery-state",help="Public approval/known-identity cache only; never credentials or private records")
     args=parser.parse_args()
     if not 1<=args.hours<=72:parser.error("hours must be 1..72")
     if not 1<=args.max_sources<=200 or not 1<=args.pages_per_source<=200:parser.error("bounded source/page budgets must be 1..200")
     registry=json.loads(Path(args.registry).read_text(encoding="utf-8-sig"))
     if args.content_cleanup and (args.seed or args.activate_reviewed_sources):parser.error("content cleanup cannot activate or seed sources")
-    store=None;result=None
+    store=None;result=None;recovery_state=None;recovery_writer=None;main_started=time.monotonic()
+    project_id=os.environ.get("FIREBASE_PROJECT_ID","")
+    if args.public_recovery_state or registry.get("quotaRecoveryBootstrap")is not None:
+        try:recovery_state=load_public_recovery_state(args.public_recovery_state,registry,project_id,check_expiry=False)
+        except SafetyError:pass
     try:
         store=FirestoreStore() if args.apply or args.content_cleanup and args.live else MemoryStore()
+        if recovery_state is not None:store.public_recovery_state=recovery_state
         if args.content_cleanup:
             if args.apply:
                 if not args.cleanup_review:parser.error("--apply cleanup requires a reviewed dry-run JSON")
@@ -2639,6 +2861,27 @@ def main():
     except Exception as error:
         if isinstance(error,ProviderQuotaUnavailable) or is_provider_quota_error(error):
             result=provider_quota_result(store)
+            operation=getattr(error,"operation",getattr(store,"provider_quota_operation","unknown"))
+            result["providerReadQuotaBlocked"]=operation=="read"
+            if operation=="read"and args.apply and args.live and not(args.seed or args.activate_reviewed_sources or args.content_cleanup):
+                try:
+                    current=getattr(store,"public_recovery_state",None)
+                    if current is not None:
+                        approved=validate_recovery_state(current,registry,project_id=project_id)
+                        recovery_state=current
+                    else:
+                        recovery_state=load_public_recovery_state(args.public_recovery_state,registry,project_id)
+                        approved=validate_recovery_state(recovery_state,registry,project_id=project_id)
+                    remaining=480-(time.monotonic()-main_started)
+                    if remaining<=0:raise SafetyError("recovery_run_time_limit")
+                    recovery_writer=PublicNewsCreateOnlyStore(allowed_source_ids=[source["id"]for source in approved])
+                    recovery_writer.public_recovery_state=recovery_state
+                    recovered=run_public_news_recovery(registry,recovery_state,recovery_writer,timeout_seconds=remaining)
+                    recovered["publicNewsChanges"]={**getattr(store,"public_news_changes",{}),**recovered["publicNewsChanges"]}
+                    recovered["remoteFirestoreWrites"]+=getattr(store,"writes",0)
+                    result=recovered
+                except Exception as recovery_error:
+                    result["recoveryReasonCode"]=str(recovery_error)if isinstance(recovery_error,SafetyError)else type(recovery_error).__name__
         elif isinstance(error,SafetyError) and str(error) in QUOTA_DEFERRAL_REASONS:
             result={"status":"DEFERRED_QUOTA_BUDGET","reasonCode":str(error),"fullSourceCoverageVerified":False,
                 "remoteFirestoreWrites":getattr(store,"writes",0)if getattr(store,"remote",False)else 0,"fcmSends":0}
@@ -2647,8 +2890,8 @@ def main():
         # Partial operations still count toward the free worker allowance.
         # A soft-budget deferral must not look like a zero-use successful run.
         if store is not None and store.remote and not (args.content_cleanup and not args.apply):
-            if (result or {}).get("status")=="PROVIDER_QUOTA_DEFERRED":
-                result=provider_quota_result(store,result)
+            if (result or {}).get("providerQuotaBlocked"):
+                pass  # The provider rejected control reads; recovery never retries them.
             else:
                 try:
                     store.finish_usage()
@@ -2656,6 +2899,19 @@ def main():
                 except Exception as error:
                     if not isinstance(error,ProviderQuotaUnavailable) and not is_provider_quota_error(error):raise
                     result=provider_quota_result(store,result)
+        if store is not None and getattr(store,"public_recovery_state",None)is not None:recovery_state=store.public_recovery_state
+        if recovery_writer is not None and getattr(recovery_writer,"public_recovery_state",None)is not None:recovery_state=recovery_writer.public_recovery_state
+        if args.public_recovery_state and recovery_state is not None:save_public_recovery_state(args.public_recovery_state,recovery_state)
+    if store is not None and store.remote:
+        result["publicNewsChanges"]={**getattr(store,"public_news_changes",{}),**result.get("publicNewsChanges",{})}
+    if recovery_writer is not None:
+        # Receipts survive a later local/reporting failure. A proposed callback,
+        # conflict or ambiguous timeout never enters this committed-change map.
+        result["publicNewsChanges"]={**result.get("publicNewsChanges",{}),**getattr(recovery_writer,"public_news_changes",{})}
+        result["remoteFirestoreWrites"]=getattr(store,"writes",0)+recovery_writer.writes
+    confirmations=[getattr(adapter,"public_news_confirmed_at",None)for adapter in (store,recovery_writer)]
+    if result.get("publicNewsChanges")and any(confirmations):result["publicNewsConfirmedAt"]=max(value for value in confirmations if value)
+    result["recordedAt"]=datetime.now(UTC).isoformat()
     output=Path(args.report);output.parent.mkdir(parents=True,exist_ok=True)
     output.write_text(json.dumps(result,ensure_ascii=False,indent=2,default=lambda v:v.isoformat())+"\n",encoding="utf-8")
     if args.live and store is not None and not store.remote:
