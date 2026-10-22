@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
-  "recordedAt": "2026-10-14T23:15:41.661109+00:00",
+  "recordedAt": "2026-10-22T14:35:17.080283+00:00",
   "scope": "APPROVED_PUBLIC_WORKER_EXPECTED_BYTES",
-  "sourceBaseCommit": "847171d1d3211532e2a307583a17e2a761fba366",
+  "sourceBaseCommit": "6d86c77c04c8205bac4ab5b1aff23d67222fde68",
   "files": [
     {
       "path": ".github/workflows/firebase-free-collector.yml",
-      "bytes": 2480,
-      "sha256": "098a7fda7c13d0142e8465b1268bd7357ef516efcf246ec0299f1669c21f8068"
+      "bytes": 4728,
+      "sha256": "348e2058f35584134135b5a5e04a1484914e0f57c25c593e4497319a2305022d"
     },
     {
       "path": ".gitignore",
@@ -26,8 +26,8 @@
     },
     {
       "path": "docs/github-free-runner-plan.md",
-      "bytes": 47491,
-      "sha256": "7aecc35402309e1a31ab85ca19549061906784994c16fb32fca3b87861591fe9"
+      "bytes": 50733,
+      "sha256": "c82436519a82c91857c05d41b8efdb9ca9ed7aaea26211202ad389e5d9fb99a9"
     },
     {
       "path": "README.md",
@@ -46,8 +46,8 @@
     },
     {
       "path": "services/collector/official_adapter.py",
-      "bytes": 64621,
-      "sha256": "b68dea5b254206246d2c6a595c1622182c164712544c141c360ab35716c44bb8"
+      "bytes": 68875,
+      "sha256": "2f561b138c5a5c0740db724cce9a6334802f10dd4108cf9cf391e12b2cf16374"
     },
     {
       "path": "services/collector/staging_store.py",
@@ -61,8 +61,8 @@
     },
     {
       "path": "services/firebase/collector.py",
-      "bytes": 204115,
-      "sha256": "05a08556b2205e04841ae2065e213911a71b80191b44c2707fb955bd4fd95028"
+      "bytes": 214462,
+      "sha256": "84db448f9fd8b5d2ba84c0ec1704a519d9a4a57f12e0d1a7bd8da553d6d6f22a"
     },
     {
       "path": "services/firebase/iam/orbit-free-fcm-sender-role.json",
@@ -91,16 +91,16 @@
     },
     {
       "path": "services/firebase/store.py",
-      "bytes": 17672,
-      "sha256": "bcc22a39e861549f167099c27b7deadac7614b7d7b04c1f33b9d018d3dcdeb30"
+      "bytes": 20467,
+      "sha256": "19e76a2db7c41f2ea02d420de26b7703ede93f5c415f8a3df281ec1f7128a464"
     },
     {
       "path": "services/firebase/tests/test_firebase.py",
-      "bytes": 312547,
-      "sha256": "72dfdd2620681d7edd4c165dd144390c363c470d73d3995ad6735aa0fb830e0c"
+      "bytes": 334819,
+      "sha256": "5e5843e7101038d048a2843764d2c8053fef57ecda23c7189fe0ec169baea856"
     }
   ],
-  "payloadBytes": 1798080,
+  "payloadBytes": 1843238,
   "excluded": [
     "images",
     "native apps",
