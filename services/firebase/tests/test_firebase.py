@@ -2820,11 +2820,89 @@ class PipelineQuotaRecoveryTests(unittest.TestCase):
         from collector import main
         class PublicStore(MemoryStore):remote=True
         store=PublicStore();store.writes=7;finished=[];store.finish_usage=lambda:finished.append(True)
-        with tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parents[3]/'work') as folder:
+        with tempfile.TemporaryDirectory(dir=Path.cwd()) as folder:
             registry=Path(folder)/'registry.json';registry.write_text('{"games":[]}',encoding='utf-8');report=Path(folder)/'report.json'
             with patch('sys.argv',['collector.py','--registry',str(registry),'--live','--apply','--report',str(report)]),patch('collector.FirestoreStore',return_value=store),patch('collector.run',side_effect=SafetyError('worker_run_soft_budget_exhausted')),patch('builtins.print'):
                 main()
             result=json.loads(report.read_text(encoding='utf-8'))
         self.assertEqual(finished,[True]);self.assertEqual(result['status'],'DEFERRED_QUOTA_BUDGET');self.assertEqual(result['totalFirestoreWrites'],9)
+
+
+class ProviderQuotaDeferralTests(unittest.TestCase):
+    # SDK-shaped exceptions keep these regressions independent of Firebase and
+    # google-cloud installation, credentials, account records, and networking.
+    QuotaError=type('ResourceExhausted',(Exception,),{'__module__':'google.api_core.exceptions'})
+
+    def store(self,database):
+        store=FirestoreStore.__new__(FirestoreStore);store.db=database;store.reads=0;store.writes=0
+        store.max_reads=2500;store.max_writes=500;store.daily_remaining_reads=35000;store.daily_remaining_writes=14000
+        return store
+
+    def test_sdk_quota_type_and_wrapped_cause_are_recognized_without_matching_arbitrary_text(self):
+        from store import is_provider_quota_error
+        quota=self.QuotaError('opaque provider details');self.assertTrue(is_provider_quota_error(quota))
+        wrapped=RuntimeError('retry deadline');wrapped.cause=quota;self.assertTrue(is_provider_quota_error(wrapped))
+        self.assertFalse(is_provider_quota_error(RuntimeError('429 Quota exceeded.')))
+        self.assertFalse(is_provider_quota_error(type('ResourceExhausted',(Exception,),{})('unrelated')))
+
+    def test_get_denial_opens_circuit_and_does_not_retry_audit_or_writes(self):
+        from store import ProviderQuotaUnavailable
+        requests=[];error=self.QuotaError('PROVIDER_MESSAGE_NOT_LOGGED')
+        class Document:
+            def get(self,**kwargs):requests.append(kwargs);raise error
+        class Database:
+            def document(self,_):return Document()
+        store=self.store(Database())
+        with self.assertRaises(ProviderQuotaUnavailable):store.get('gameSources/public-source')
+        for action in [lambda:store.get('gameSources/public-source'),lambda:store.put('collectionErrors/public-fixture',{}),store.finish_usage]:
+            with self.assertRaises(ProviderQuotaUnavailable):action()
+        self.assertEqual(len(requests),1);self.assertIsNone(requests[0]['retry']);self.assertTrue(store.provider_quota_exhausted)
+
+    def test_transaction_quota_is_normalized_once_without_marking_a_committed_write(self):
+        from store import ProviderQuotaUnavailable
+        requests=[];error=self.QuotaError('opaque provider details')
+        class Document:
+            def get(self,**kwargs):requests.append(kwargs);raise error
+        class Database:
+            def document(self,_):return Document()
+            def transaction(self,**kwargs):return object()
+        class Sdk:
+            @staticmethod
+            def transactional(callback):return lambda transaction:callback(transaction)
+        store=self.store(Database());store.firestore=Sdk()
+        with self.assertRaises(ProviderQuotaUnavailable):store.mutate('collectorLocks/public-source',lambda _:({},True))
+        self.assertEqual(len(requests),1);self.assertEqual(store.writes,0);self.assertTrue(store.provider_quota_exhausted)
+
+    def run_main(self,*,constructor_error=None,run_error=None,accounting_error=None):
+        import tempfile
+        from collector import main
+        class PublicStore(MemoryStore):remote=True
+        store=PublicStore();store.writes=3;accounting=[]
+        def finish():
+            accounting.append(True)
+            if accounting_error:raise accounting_error
+        store.finish_usage=finish
+        with tempfile.TemporaryDirectory(dir=Path.cwd()) as folder:
+            registry=Path(folder)/'registry.json';registry.write_text('{"games":[]}',encoding='utf-8');report=Path(folder)/'report.json'
+            with patch('sys.argv',['collector.py','--registry',str(registry),'--live','--apply','--report',str(report)]),patch('collector.FirestoreStore',return_value=store,side_effect=constructor_error),patch('collector.run',return_value={'backend':'FIREBASE','remoteFirestoreWrites':3},side_effect=run_error),patch('builtins.print') as printed:
+                main()
+            contents=report.read_text(encoding='utf-8');self.assertNotIn('PROVIDER_MESSAGE_NOT_LOGGED',contents)
+        return json.loads(contents),accounting,printed
+
+    def test_initial_store_quota_denial_still_writes_clear_deferred_report(self):
+        from store import ProviderQuotaUnavailable
+        result,accounting,_=self.run_main(constructor_error=ProviderQuotaUnavailable())
+        self.assertEqual(result['status'],'PROVIDER_QUOTA_DEFERRED');self.assertFalse(result['collectionSucceeded'])
+        self.assertFalse(result['storeInitialized']);self.assertFalse(result['usageAccountingConfirmed']);self.assertEqual(result['remoteFirestoreWrites'],0)
+        self.assertEqual(accounting,[]);self.assertEqual(result['workerRetriesAfterProviderQuota'],0)
+
+    def test_runtime_provider_quota_skips_a_second_firestore_accounting_attempt(self):
+        result,accounting,_=self.run_main(run_error=self.QuotaError('PROVIDER_MESSAGE_NOT_LOGGED'))
+        self.assertEqual(result['status'],'PROVIDER_QUOTA_DEFERRED');self.assertFalse(result['collectionSucceeded']);self.assertEqual(accounting,[])
+
+    def test_quota_during_usage_accounting_is_deferred_and_never_claims_full_success(self):
+        result,accounting,_=self.run_main(accounting_error=self.QuotaError('PROVIDER_MESSAGE_NOT_LOGGED'))
+        self.assertEqual(result['status'],'PROVIDER_QUOTA_DEFERRED');self.assertFalse(result['collectionSucceeded'])
+        self.assertTrue(result['usageAccountingDeferred']);self.assertEqual(accounting,[True]);self.assertFalse(result['fullSourceCoverageVerified'])
 
 
