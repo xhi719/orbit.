@@ -218,10 +218,13 @@ def parse_youtube_api_documents(raw, source, observed_at):
             image = image_map.get(quality)
             if not isinstance(image,dict): continue
             try:
-                url = normalize_url(image.get("url"))
+                original_url = image.get("url")
+                url = normalize_url(original_url)
                 parsed = urlsplit(url)
-                if (parsed.hostname not in ("i.ytimg.com","i1.ytimg.com","i2.ytimg.com","i3.ytimg.com","i4.ytimg.com")
-                    or not re.fullmatch(r"/(?:vi|vi_webp)/"+re.escape(video)+r"/[A-Za-z0-9_.-]+",parsed.path)):
+                if (url != original_url or parsed.fragment
+                    or parsed.hostname not in ("i.ytimg.com","i1.ytimg.com","i2.ytimg.com","i3.ytimg.com","i4.ytimg.com")
+                    or parsed.query and not re.fullmatch(r"v=[A-Fa-f0-9]{8}",parsed.query)
+                    or not re.fullmatch(r"/vi(?:_webp)?/"+re.escape(video)+r"/(?:default|mqdefault|hqdefault|sddefault|maxresdefault|fhddefault|qhddefault|uhddefault)(?:_live)?\.(?:jpg|webp)",parsed.path)):
                     continue
             except (ValidationError,ValueError,TypeError): continue
             if url not in thumbnails: thumbnails.append(url)
@@ -714,6 +717,79 @@ def parse_paired_ticket_notice(raw,source,document):
         "timezone":"Asia/Seoul","dailyOpeningHours":{"start":"10:00","end":"18:00"},"venue":"킨텍스 제2전시장 9홀","noticeUrl":request["url"]}
 
 
+# The public Steam news renderer expands {STEAM_CLAN_IMAGE} to
+# CLAN_CDN_ASSET_URL + "images/"; retain the same fixed HTTPS CDN and path.
+STEAM_CLAN_IMAGE_HOST = "clan.akamai.steamstatic.com"
+STEAM_CLAN_IMAGE_BASE = "https://" + STEAM_CLAN_IMAGE_HOST + "/images/"
+_STEAM_CLAN_IMAGE_TAG = re.compile(
+    r'\[img\](\{STEAM_CLAN_IMAGE\}/[1-9][0-9]{0,9}/[a-f0-9]{40}\.(?:png|jpe?g|webp))\[/img\]'
+    r'|\[img src=(?:"(\{STEAM_CLAN_IMAGE\}/[1-9][0-9]{0,9}/[a-f0-9]{40}\.(?:png|jpe?g|webp))"'
+    r"|'(\{STEAM_CLAN_IMAGE\}/[1-9][0-9]{0,9}/[a-f0-9]{40}\.(?:png|jpe?g|webp))')\]\[/img\]"
+)
+
+
+def _steam_clan_image_urls(contents):
+    """Resolve only Steam's exact image BBCode; keep the original item intact.
+
+    These are notice-image candidates, not proof of a character, event schedule,
+    copying permission, or an image's dimensions. The transport probes only the
+    fixed Steam clan CDN after the caller verifies the exact source document.
+    """
+    if not isinstance(contents, str) or len(contents) > 200000:
+        return []
+    urls = []
+    for match in _STEAM_CLAN_IMAGE_TAG.finditer(contents):
+        reference = next(value for value in match.groups() if value is not None)
+        clan, filename = reference.removeprefix("{STEAM_CLAN_IMAGE}/").split("/")
+        if int(clan) > 4294967295:
+            continue
+        url = STEAM_CLAN_IMAGE_BASE + clan + "/" + filename
+        if url not in urls:
+            urls.append(url)
+        if len(urls) == 20:
+            break
+    return urls
+
+
+def steam_notice_image_urls(document, source):
+    """Recreate candidates from the unchanged, same-app publisher API item.
+
+    The worker must not trust candidate URLs added to an otherwise valid
+    document. Its original API-item hash and all notice identity fields are
+    checked again before extracting the fixed-CDN references from raw contents.
+    """
+    if (not isinstance(document, dict) or not isinstance(source, dict)
+        or source.get("parser") != "steam_news" or type(source.get("steam_appid")) is not int
+        or not 1 <= source["steam_appid"] <= 4294967295
+        or source.get("feed_allowlist") != ["steam_community_announcements"]):
+        return []
+    try:
+        steam_request(source, 0, 1)
+        item = document.get("raw_json")
+        if not isinstance(item, dict) or item.get("feedname") != "steam_community_announcements":
+            return []
+        if type(item.get("appid")) is not int or item["appid"] != source["steam_appid"]:
+            return []
+        raw_hash = hashlib.sha256(json.dumps(item, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        if (raw_hash != document.get("raw_sha256") or item.get("title") != document.get("original_title")
+            or item.get("contents", "") != document.get("original_description")
+            or item.get("gid") != document.get("external_key")):
+            return []
+        official = normalize_url(item.get("url", ""))
+        parsed = urlsplit(official)
+        if (official != document.get("official_url") or parsed.hostname not in source.get("allowed_notice_hosts", [])
+            or parsed.query or not re.fullmatch(r"[0-9]{1,30}", str(item.get("gid", "")))):
+            return []
+        expected = "/news/externalpost/steam_community_announcements/" + item["gid"]
+        community = "/games/" + str(source["steam_appid"]) + "/announcements/detail/" + item["gid"]
+        if not (parsed.hostname == "steamstore-a.akamaihd.net" and parsed.path == expected
+                or parsed.hostname == "steamcommunity.com" and parsed.path == community):
+            return []
+        return _steam_clan_image_urls(item.get("contents", ""))
+    except (ValidationError, ValueError, TypeError, KeyError):
+        return []
+
+
 def parse_steam_documents(raw, source, observed_at):
     try:
         payload = json.loads(raw)
@@ -754,10 +830,13 @@ def parse_steam_documents(raw, source, observed_at):
                 pass
         original_json = json.dumps(item, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
         hints = [kind for kind, patterns in TYPES.items() if any(re.search(pattern, title + "\n" + content, re.I) for pattern in patterns)]
+        images = _steam_clan_image_urls(content)
         accepted.append({"external_key": gid, "raw_sha256": hashlib.sha256(original_json.encode()).hexdigest(),
             "raw_json": item, "raw_publication_timestamp": raw_date, "published_at": published,
             "source_updated_at": None, "observed_at": observed_at, "official_url": url,
             "original_title": title, "original_description": content, "original_language": "unknown",
+            "official_article_image_urls": images, "source_image_urls": images,
+            "official_article_image_hosts": [STEAM_CLAN_IMAGE_HOST],
             "server_region": source.get("server_region") or "UNSPECIFIED", "server_label": source.get("server_label"),
             "event_type_candidates": hints, "classification_status": "pending", "schedule_status": "DATE_UNCONFIRMED",
             "starts_at": None, "ends_at": None, "reservation_starts_at": None, "reservation_ends_at": None,
