@@ -1970,9 +1970,10 @@ class SelectiveOfficialSocialContentTests(unittest.TestCase):
 
 class OctoberCatalogueResumeTests(unittest.TestCase):
  """Mocked public provider pages; no cloud credential or physical device."""
- def test_month_upper_boundary_excludes_november_even_if_recent(self):
+ def test_continuous_news_admits_november_without_admitting_future_publications(self):
   from collector import CONTENT_MONTH_END
-  self.assertEqual(content_publication_status(CONTENT_MONTH_END,NOW+timedelta(days=40)), 'PUBLISHED_AFTER_CONTENT_MONTH')
+  self.assertEqual(content_publication_status(CONTENT_MONTH_END,NOW+timedelta(days=40)), 'INCLUDED')
+  self.assertEqual(content_publication_status(CONTENT_MONTH_END,NOW), 'PUBLICATION_DATE_IN_FUTURE')
   self.assertEqual(content_publication_status(CONTENT_MONTH_END-timedelta(seconds=1),NOW+timedelta(days=40)), 'INCLUDED')
  def test_youtube_description_is_discarded_before_hash_and_date_extraction(self):
   fixture=FirebaseYouTubeDataApiCollectionTests();payload=fixture.payload();payload['items'][0]['snippet']['description']='PRIVATE DESCRIPTION\nEvent starts at 2026-10-12T01:00:00Z and ends at 2026-10-20T01:00:00Z'
@@ -2633,5 +2634,197 @@ class CalendarPeriodTests(unittest.TestCase):
     def test_invalid_reversed_and_future_review_are_rejected(self):
         for key,value in [('startsOn','2026-09-31'),('startsOn','2026-10-23'),('checkedAt','2026-10-16T00:00:00Z')]:
             row=self.row();row['calendarPeriod'][key]=value;self.assertFalse(verified_calendar_day_period(row,self.now))
+
+
+class ContinuousOfficialPipelineTests(unittest.TestCase):
+    """Public provider fixtures only; no cloud, credentials, or private reads."""
+    def versioned_notice(self, query='v=6ad838f0'):
+        from collector import digest
+        source,notice=ExactOfficialYoutubeThumbnailTests().notice('Official special livestream')
+        url=notice['source_image_urls'][0]+'?'+query
+        metadata={url:{'width':480,'height':360,'quality':'high'}}
+        notice['source_image_urls']=[url];notice['source_image_metadata']=metadata
+        notice['raw_json'].update(thumbnailUrls=[url],thumbnailMetadata=metadata)
+        notice['raw_sha256']=digest(notice['raw_json'])
+        return source,notice,url
+
+    def test_exact_versioned_source_thumbnail_keeps_original_url_and_verified_pixels(self):
+        source,notice,url=self.versioned_notice();requests=[];store=MemoryStore()
+        def fetch(request):requests.append(request['url']);return synthetic_thumbnail_fetch(request)
+        upsert_notice(store,source,notice,NOW,image_fetch=fetch);row=store.list('gameEvents')[0][1]
+        self.assertEqual(requests,[url]);self.assertEqual(row['noticeImage']['url'],url)
+        self.assertTrue(row['newsEligible']);self.assertEqual(row['noticeImage']['imageVerification']['width'],480)
+
+    def test_versioned_thumbnail_rejects_other_duplicate_encoded_or_credential_parameters(self):
+        from collector import youtube_notice_thumbnail_url
+        for query in ['v=abc','v=123456789','v=6ad838f0&v=6ad838f0','v=6ad838f0&key=secret','V=6ad838f0','v=%36ad838f0','v=6ad838f0#fragment']:
+            source,notice,_=self.versioned_notice(query)
+            self.assertIsNone(automatic_youtube_notice_image(notice,source,event_identity(notice,source),NOW,image_fetch=lambda _:self.fail('unsafe image request')))
+        self.assertIsNone(youtube_notice_thumbnail_url('https://user:pass@i.ytimg.com/vi/abcdefghijk/hqdefault.jpg?v=1234abcd','abcdefghijk'))
+
+    def test_image_policy_upgrade_retries_before_previous_24hour_cache_expires(self):
+        source,notice,url=self.versioned_notice();store=MemoryStore()
+        upsert_notice(store,source,notice,NOW,image_fetch=lambda _:(404,b'',{}));key=event_identity(notice,source)
+        old=store.records['gameEvents/'+key];old['extractionVersion']=EXTRACTION_VERSION-1
+        self.assertFalse(old['newsEligible']);requests=[]
+        result=upsert_notice(store,source,notice,NOW+timedelta(hours=1),image_fetch=lambda request:(requests.append(request['url'])or synthetic_thumbnail_fetch(request)))
+        self.assertEqual(result,'updated');self.assertEqual(requests,[url]);self.assertTrue(store.get('gameEvents/'+key)['newsEligible'])
+
+    def steam_notice(self,title='Official update'):
+        from official_adapter import parse_steam_documents
+        payload=json.loads(response(title=title));item=payload['appnews']['newsitems'][0]
+        item['url']='https://steamcommunity.com/games/123/announcements/detail/1'
+        item['contents']='Official publisher announcement\n[img]{STEAM_CLAN_IMAGE}/123/'+'a'*40+'.jpg[/img]'
+        return parse_steam_documents(json.dumps(payload).encode(),SOURCE,NOW.isoformat())[0][0]
+
+    def test_steam_exact_body_art_is_notice_only_and_does_not_grant_pickup_subject(self):
+        notice=self.steam_notice('Official character pickup');store=MemoryStore();requests=[]
+        def fetch(request):
+            requests.append(request['url']);return synthetic_thumbnail_fetch({'url':'https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg'})
+        upsert_notice(store,SOURCE,notice,NOW,image_fetch=fetch);row=store.list('gameEvents')[0][1]
+        self.assertEqual(requests,['https://clan.akamai.steamstatic.com/images/123/'+'a'*40+'.jpg'])
+        self.assertEqual(row['sourceProvider'],'official-site');self.assertEqual(row['noticeImage']['kind'],'NOTICE_ART')
+        self.assertEqual(row['noticeImage']['subjectEvidence']['kind'],'notice');self.assertEqual(row['noticeImage']['subjectEvidence']['sourceSha256'],notice['raw_sha256'])
+        self.assertEqual(row['noticeImage']['imageVerification']['contentType'],'image/jpeg')
+        self.assertIsNone(row['image']);self.assertTrue(row['newsEligible']);self.assertFalse(row['calendarEligible'])
+        for _,pickup in store.list('pickupSchedules'):self.assertNotEqual((pickup.get('image')or{}).get('kind'),'NOTICE_ART')
+
+    def test_steam_tampered_sha_section_and_bad_mime_cannot_supply_notice_art(self):
+        from collector import automatic_official_notice_image
+        for change in [{'raw_sha256':'b'*64},{'_section_key':'child'},{'_parent_event_id':'parent'}]:
+            notice={**self.steam_notice(),**change}
+            self.assertIsNone(automatic_official_notice_image(notice,SOURCE,event_identity(notice,SOURCE),NOW,image_fetch=lambda _:self.fail('tampered image request')))
+        notice=self.steam_notice()
+        self.assertIsNone(automatic_official_notice_image(notice,SOURCE,event_identity(notice,SOURCE),NOW,image_fetch=lambda _:(200,b'<html/>',{'content-type':'text/html'})))
+
+    def test_explicit_patch_maintenance_and_update_titles_pass_without_body_guessing(self):
+        from collector import classify_notice_content
+        for title in ['October 21st Patch Notes','v3.21.2 Update','[IMPORTANT] Upcoming Maintenance on October 20th']:
+            self.assertEqual(classify_notice_content({'originalTitle':title,'rawSha256':'a'*64})['kind'],'game-notice')
+        for title in ['Patch guide','Update soundtrack OST','Maintenance highlights']:
+            self.assertNotEqual(classify_notice_content({'originalTitle':title,'rawSha256':'a'*64})['status'],'verified')
+        self.assertEqual(classify_notice_content({'originalTitle':'Developer diary','originalDescription':'Patch update maintenance','rawSha256':'a'*64})['kind'],'other')
+
+    def test_resumed_automatic_archive_fetches_new_head_then_saved_cursor(self):
+        fixture=FirebaseYouTubeDataApiCollectionTests();source=fixture.source()
+        class PublicStore(MemoryStore):remote=True
+        store=PublicStore({'gameSources/api-source':{**source_row(source,'blue-archive'),'enabled':True}})
+        fixture.collect(store,source,fetch=lambda _:(200,json.dumps(fixture.payload(nextPageToken='resume_2==')).encode(),{}),max_pages=1)
+        later=NOW+timedelta(days=2);store.records['collectorLocks/api-source']['nextRunAt']=later
+        fresh=fixture.payload(nextPageToken='new_head_2==');item=fresh['items'][0];video='NewVideo123'
+        item['snippet']['resourceId']['videoId']=video;item['contentDetails']['videoId']=video
+        item['contentDetails']['videoPublishedAt']=(later-timedelta(hours=1)).isoformat()
+        item['snippet']['thumbnails']={'high':{'url':f'https://i.ytimg.com/vi/{video}/hqdefault.jpg','width':480,'height':360}}
+        requests=[]
+        def fetch(request):
+            if request.get('parser')=='official_image_probe':return synthetic_thumbnail_fetch(request)
+            token=parse_qs(urlsplit(request['url']).query).get('pageToken',[None])[0];requests.append(token)
+            return 200,json.dumps(fixture.payload() if token=='resume_2==' else fresh).encode(),{}
+        with patch.dict(os.environ,{'YOUTUBE_API_KEY':'synthetic-local-only'}):
+            result=collect_one(store,source,later-timedelta(hours=72),later,mode='incremental',fetch=fetch,sleep=lambda _:None,now=later,max_pages=2)
+        self.assertEqual(requests,[None,'resume_2==']);self.assertEqual(result['mode'],'content-backfill')
+        self.assertTrue(result['metrics']['freshHeadFetched']);self.assertTrue(result['metrics']['backfillResumeUsed'])
+        self.assertTrue(store.get('collectorLocks/api-source')['contentBackfill']['complete'])
+        self.assertIn(video,[row.get('sourceVideoId')for _,row in store.list('gameEvents')])
+        self.assertEqual(result['metrics']['latestPublishedAtSeen'],later-timedelta(hours=1))
+
+    def test_continuous_backfill_after_31_days_keeps_page_budget(self):
+        later=NOW+timedelta(days=45);store=MemoryStore();calls=[]
+        result=collect_one(store,SOURCE,CONTENT_CUTOFF,later,mode='content-backfill',fetch=lambda request:(calls.append(request)or(200,response(date=later-timedelta(hours=1)),{})),sleep=lambda _:None,now=later,max_pages=1)
+        self.assertEqual(result['status'],'success');self.assertEqual(len(calls),1);self.assertEqual(result['metrics']['created'],1)
+
+    def test_one_page_fresh_head_does_not_overwrite_or_complete_pending_archive_cursor(self):
+        from collector import digest
+        fixture=FirebaseYouTubeDataApiCollectionTests();source=fixture.source();later=NOW+timedelta(days=2)
+        previous={'version':1,'policySha256':digest(source_policy(source)),'windowStart':CONTENT_CUTOFF,'windowEnd':NOW,
+            'pageToken':'resume_2==','providerCursor':int(NOW.timestamp())+1,'complete':False,'pagesCompleted':1}
+        class PublicStore(MemoryStore):remote=True
+        store=PublicStore({'gameSources/api-source':{**source_row(source,'blue-archive'),'enabled':True},'collectorLocks/api-source':{'contentBackfill':previous}})
+        requests=[]
+        def fetch(request):
+            if request.get('parser')=='official_image_probe':return synthetic_thumbnail_fetch(request)
+            requests.append(parse_qs(urlsplit(request['url']).query).get('pageToken',[None])[0])
+            return 200,json.dumps(fixture.payload(nextPageToken='fresh_2==')).encode(),{}
+        with patch.dict(os.environ,{'YOUTUBE_API_KEY':'synthetic-local-only'}):
+            result=collect_one(store,source,later-timedelta(hours=72),later,mode='incremental',fetch=fetch,sleep=lambda _:None,now=later,max_pages=1)
+        self.assertEqual(requests,[None]);self.assertEqual(result['status'],'SUCCESS_BOUNDED')
+        self.assertTrue(result['metrics']['freshHeadFetched']);self.assertFalse(result['metrics']['backfillCursorCommitted'])
+        self.assertEqual(store.get('collectorLocks/api-source')['contentBackfill'],previous)
+
+    def test_run_metrics_separate_successful_fetch_and_image_blocked_news(self):
+        result=collect_one(MemoryStore(),SOURCE,NOW-timedelta(hours=72),NOW,fetch=lambda _:(200,response(title='Official event preview'),{}),sleep=lambda _:None,now=NOW)
+        self.assertEqual(result['status'],'success');self.assertEqual(result['metrics']['created'],1)
+        self.assertEqual(result['metrics']['newsEligibleDocuments'],0);self.assertEqual(result['metrics']['newsBlockedByImage'],1)
+
+    def test_same_source_period_review_survives_ingestion_upgrade_but_changed_source_revokes_it(self):
+        from copy import deepcopy
+        notice=self.steam_notice('Official event preview');key=event_identity(notice,SOURCE);clock=CalendarPeriodTests.now
+        old=CalendarPeriodTests().row();old.update(id=key,originalTitle=notice['original_title'],officialUrl=notice['official_url'],rawSha256=notice['raw_sha256'],
+            publishedAt=notice['published_at'],calendarRole='main-event',sourceId=SOURCE['id'],externalKey=notice['external_key'],extractionVersion=EXTRACTION_VERSION-1)
+        for name in ['calendarPeriod','calendarRoleEvidence']:
+            old[name].update(sourceSha256=notice['raw_sha256'],sourceTitle=notice['original_title'])
+        old['calendarPeriod']['sourceUrl']=notice['official_url'];old['calendarRoleEvidence']['evidenceUrl']=notice['official_url']
+        old['image'].update(sourceUrl=notice['official_url']);old['image']['sourceReference'].update(sourceUrl=notice['official_url'])
+        old['image']['subjectEvidence'].update(eventId=key,officialUrl=notice['official_url'],sourceSha256=notice['raw_sha256'],sourceTitle=notice['original_title'])
+        self.assertTrue(verified_calendar_day_period(old,clock));store=MemoryStore({'gameEvents/'+key:deepcopy(old)})
+        upsert_notice(store,SOURCE,notice,clock);kept=store.get('gameEvents/'+key)
+        self.assertEqual(kept['calendarPeriod'],old['calendarPeriod']);self.assertEqual(kept['calendarRoleEvidence'],old['calendarRoleEvidence']);self.assertTrue(kept['calendarEligible'])
+        changed=deepcopy(notice);changed['raw_sha256']='b'*64;changed['original_title']='Corrected event notice'
+        upsert_notice(store,SOURCE,changed,clock+timedelta(minutes=1));revoked=store.get('gameEvents/'+key)
+        self.assertIsNone(revoked['calendarPeriod']);self.assertIsNone(revoked['calendarRole']);self.assertEqual(revoked['verificationStatus'],'pending')
+
+
+class PipelineQuotaRecoveryTests(unittest.TestCase):
+    def test_cursor_query_respects_daily_headroom_and_reserved_control_reads(self):
+        limits=[]
+        class Query:
+            def order_by(self,_):return self
+            def limit(self,value):limits.append(value);return self
+            def stream(self,**_):return []
+        class Database:
+            def collection(self,_):return Query()
+        store=FirestoreStore.__new__(FirestoreStore);store.db=Database();store.max_reads=100;store.reads=10
+        store.max_writes=50;store.writes=0;store.daily_remaining_reads=20;store.daily_remaining_writes=50
+        with store.reserve_budget(reads=5,writes=4):store.list_cursor('gameSources',limit=100)
+        self.assertEqual(limits,[4]);self.assertEqual(store.reserved_reads,0);self.assertEqual(store.reserved_writes,0)
+
+    def test_soft_budget_leaves_room_for_failure_record_and_lease_release(self):
+        class BoundedStore(MemoryStore):
+            remote=True
+            guard=FirestoreStore.guard;read_headroom=FirestoreStore.read_headroom;write_headroom=FirestoreStore.write_headroom
+            max_reads=100;max_writes=40;daily_remaining_reads=35000;daily_remaining_writes=14000
+            def get(self,path):self.guard();return super().get(path)
+            def put(self,path,value):self.guard(writing=True);return super().put(path,value)
+        store=BoundedStore({'gameSources/source':{'enabled':True}})
+        def fetch(_):
+            while store.write_headroom()>0:store.put('gameEvents/public-fixture-'+str(store.writes),{'fixture':True})
+            store.put('gameEvents/exhausted',{})
+        result=collect_one(store,SOURCE,NOW-timedelta(hours=72),NOW,fetch=fetch,sleep=lambda _:None,now=NOW)
+        self.assertEqual(result['status'],'DEFERRED_QUOTA_BUDGET');self.assertEqual(result['reasonCode'],'worker_run_soft_budget_exhausted')
+        self.assertIsNone(store.get('collectorLocks/source')['leaseUntil']);self.assertEqual(store.get('collectorLocks/source')['consecutiveFailures'],0)
+        self.assertEqual(len(store.list('collectionRuns')),1);self.assertEqual(len(store.list('collectionErrors')),1)
+        self.assertLessEqual(store.writes+2,store.max_writes)
+
+    def test_missed_cron_backlog_can_use_run_budget_without_spending_daily_reserves(self):
+        from collector import adaptive_source_budget
+        store=AdaptiveFreeWorkerBudgetTests().store();store.max_writes=500;store.max_reads=2500
+        normal=adaptive_source_budget(store,100,166,datetime(2026,10,22,7,tzinfo=UTC))
+        catchup=adaptive_source_budget(store,100,166,datetime(2026,10,22,7,tzinfo=UTC),overdue_sources=166)
+        self.assertGreater(catchup['effectiveSourceAttempts'],normal['effectiveSourceAttempts'])
+        self.assertLessEqual(catchup['effectiveRunWriteBudget'],500);self.assertTrue(catchup['catchupEnabled'])
+        store.daily_remaining_writes=20
+        self.assertEqual(adaptive_source_budget(store,100,166,datetime(2026,10,22,7,tzinfo=UTC),overdue_sources=166)['effectiveSourceAttempts'],0)
+
+    def test_main_accounts_partial_usage_and_writes_deferred_report(self):
+        import tempfile
+        from collector import main
+        class PublicStore(MemoryStore):remote=True
+        store=PublicStore();store.writes=7;finished=[];store.finish_usage=lambda:finished.append(True)
+        with tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parents[3]/'work') as folder:
+            registry=Path(folder)/'registry.json';registry.write_text('{"games":[]}',encoding='utf-8');report=Path(folder)/'report.json'
+            with patch('sys.argv',['collector.py','--registry',str(registry),'--live','--apply','--report',str(report)]),patch('collector.FirestoreStore',return_value=store),patch('collector.run',side_effect=SafetyError('worker_run_soft_budget_exhausted')),patch('builtins.print'):
+                main()
+            result=json.loads(report.read_text(encoding='utf-8'))
+        self.assertEqual(finished,[True]);self.assertEqual(result['status'],'DEFERRED_QUOTA_BUDGET');self.assertEqual(result['totalFirestoreWrites'],9)
 
 
