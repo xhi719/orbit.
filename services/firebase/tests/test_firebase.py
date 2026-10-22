@@ -2906,3 +2906,351 @@ class ProviderQuotaDeferralTests(unittest.TestCase):
         self.assertTrue(result['usageAccountingDeferred']);self.assertEqual(accounting,[True]);self.assertFalse(result['fullSourceCoverageVerified'])
 
 
+class PublicNewsRecoveryTests(unittest.TestCase):
+    """No credentials or network: public fixtures and SDK-shaped receipts only."""
+    PROJECT='orbit-example'
+    QuotaError=ProviderQuotaDeferralTests.QuotaError
+    Conflict=type('AlreadyExists',(Exception,),{'__module__':'google.api_core.exceptions'})
+
+    def registry(self,count=1):
+        return {'games':[{'gameId':'blue-archive','sources':[{**SOURCE,'id':f'source-{index:02}'}for index in range(count)]}]}
+
+    def state(self,registry=None,observed=NOW):
+        from collector import recovery_registry_sources,recovery_source_policy_hash,RECOVERY_SCOPE
+        registry=registry or self.registry()
+        return {'version':1,'projectId':self.PROJECT,'scope':RECOVERY_SCOPE,
+            'sourceApprovalObservedAt':observed.isoformat(),'sourceApprovalExpiresAt':(observed+timedelta(hours=24)).isoformat(),
+            'sources':[{'sourceId':source['id'],'gameId':source['game_id'],'policySha256':recovery_source_policy_hash(source)}for source in recovery_registry_sources(registry).values()],
+            'knownEvents':[],'rotationAfterSourceId':None}
+
+    def parent(self,source=None,external='1'):
+        from copy import deepcopy
+        source=source or self.registry()['games'][0]['sources'][0]
+        notice=ContinuousOfficialPipelineTests().steam_notice()
+        notice=deepcopy(notice);notice['external_key']=external
+        notice['official_url']='https://steamcommunity.com/games/123/announcements/detail/'+external
+        notice['raw_json'].update(gid=external,url=notice['official_url'])
+        # Reparse the provider response so the raw compact SHA/image binding is
+        # genuine even when exercising alternate stable external identities.
+        from official_adapter import parse_steam_documents
+        payload={'appnews':{'appid':123,'newsitems':[notice['raw_json']]}}
+        notice=parse_steam_documents(json.dumps(payload).encode(),source,NOW.isoformat())[0][0]
+        store=MemoryStore();upsert_notice(store,source,notice,NOW,image_fetch=lambda _:synthetic_thumbnail_fetch({'url':'https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg'}))
+        row=store.list('gameEvents')[0][1]
+        self.assertTrue(row['newsEligible'])
+        return row
+
+    def writer(self,error=None):
+        from store import PublicNewsCreateOnlyStore
+        requests=[]
+        class Document:
+            def create(self,value,**kwargs):
+                requests.append((value,kwargs))
+                if error:raise error
+                return object()
+            def get(self,**kwargs):raise AssertionError('recovery must never read Firestore')
+        class Database:
+            def document(self,path):
+                self.path=path;return Document()
+        writer=PublicNewsCreateOnlyStore.__new__(PublicNewsCreateOnlyStore)
+        writer.db=Database();writer.project_id=self.PROJECT;writer.allowed_source_ids=frozenset(f'source-{index:02}'for index in range(30))
+        writer.reads=0;writer.writes=0;writer.create_attempts=0;writer.public_news_changes={}
+        return writer,requests
+
+    def test_policy_hash_normalizes_operating_defaults_and_utc_but_binds_review_fields(self):
+        from collector import recovery_source_policy_hash
+        raw={**SOURCE};live=operating_source({**source_row(raw,'blue-archive'),'enabled':True})
+        self.assertEqual(recovery_source_policy_hash(raw),recovery_source_policy_hash(live))
+        self.assertEqual(recovery_source_policy_hash(raw),recovery_source_policy_hash({**raw,'terms_checked_at':NOW.astimezone(timezone(timedelta(hours=9))).isoformat()}))
+        for change in [{'allowed_notice_hosts':['steamcommunity.com','example.com']},{'content_language':'ja'},{'paired_recruitment_period_approved':True},{'collection_interval_minutes':30}]:
+            self.assertNotEqual(recovery_source_policy_hash(raw),recovery_source_policy_hash({**raw,**change}))
+
+    def test_manifest_exact_ttl_project_schema_and_policy_fail_closed(self):
+        from copy import deepcopy
+        from collector import validate_recovery_state
+        registry=self.registry();state=self.state(registry)
+        self.assertEqual(len(validate_recovery_state(state,registry,project_id=self.PROJECT,now=NOW)),1)
+        for changes,reason in [({'projectId':'other-project'},'manifest_invalid'),({'sourceApprovalExpiresAt':(NOW+timedelta(hours=25)).isoformat()},'timestamp_invalid'),({'sourceApprovalObservedAt':(NOW+timedelta(minutes=1)).isoformat()},'timestamp_invalid'),({'private':{}},'manifest_invalid')]:
+            with self.assertRaisesRegex(SafetyError,reason):validate_recovery_state({**state,**changes},registry,project_id=self.PROJECT,now=NOW)
+        with self.assertRaisesRegex(SafetyError,'expired'):validate_recovery_state(state,registry,project_id=self.PROJECT,now=NOW+timedelta(hours=24))
+        changed=deepcopy(registry);changed['games'][0]['sources'][0]['content_language']='ja'
+        with self.assertRaisesRegex(SafetyError,'policy_changed'):validate_recovery_state(state,changed,project_id=self.PROJECT,now=NOW)
+
+    def test_manifest_cannot_authorize_missing_or_unreviewed_sources(self):
+        from copy import deepcopy
+        from collector import validate_recovery_state
+        registry=self.registry(2);state=self.state(registry)
+        registry['games'][0]['sources'][1]['access_status']='manual_only'
+        self.assertEqual([source['id']for source in validate_recovery_state(state,registry,project_id=self.PROJECT,now=NOW)],['source-00'])
+        absent=deepcopy(registry);absent['games'][0]['sources']=[]
+        with self.assertRaisesRegex(SafetyError,'policy_changed'):validate_recovery_state(state,absent,project_id=self.PROJECT,now=NOW)
+
+    def test_newest_empty_control_observation_never_falls_back_to_older_bootstrap(self):
+        import tempfile
+        from collector import refresh_recovery_approval,load_public_recovery_state,save_public_recovery_state
+        registry=self.registry();registry['quotaRecoveryBootstrap']=self.state(registry)
+        store=MemoryStore();store.project_id=self.PROJECT;store.public_recovery_state=self.state(registry)
+        self.assertFalse(refresh_recovery_approval(store,registry,[],now=NOW+timedelta(hours=1)))
+        with tempfile.TemporaryDirectory(dir=Path.cwd())as folder:
+            path=Path(folder)/'public.json';save_public_recovery_state(path,store.public_recovery_state)
+            with self.assertRaisesRegex(SafetyError,'bounds_invalid'):load_public_recovery_state(path,registry,self.PROJECT,now=NOW+timedelta(hours=2))
+
+    def test_cache_known_identity_merge_never_extends_approval(self):
+        import tempfile
+        from collector import load_public_recovery_state,save_public_recovery_state,recovery_known_event
+        registry=self.registry();bootstrap=self.state(registry);bootstrap['knownEvents']=[recovery_known_event(self.parent())]
+        registry['quotaRecoveryBootstrap']=bootstrap;cache=self.state(registry,NOW+timedelta(hours=1))
+        with tempfile.TemporaryDirectory(dir=Path.cwd())as folder:
+            path=Path(folder)/'public.json';save_public_recovery_state(path,cache)
+            loaded=load_public_recovery_state(path,registry,self.PROJECT,now=NOW+timedelta(hours=2))
+        self.assertEqual(loaded['sourceApprovalExpiresAt'],cache['sourceApprovalExpiresAt']);self.assertEqual(len(loaded['knownEvents']),1)
+        self.assertEqual(set(loaded['knownEvents'][0]),{'id','sourceId','gameIds','externalKey','officialUrl'})
+
+    def test_semantic_dedup_rejects_manual_alternate_id_external_key_and_url(self):
+        from collector import recovery_duplicate,recovery_known_event
+        state=self.state();row=self.parent();state['knownEvents']=[{**recovery_known_event(row),'id':'manual-reviewed-id'}]
+        self.assertTrue(recovery_duplicate(state,row))
+        self.assertTrue(recovery_duplicate(state,{**row,'externalKey':'different'}))
+        self.assertTrue(recovery_duplicate(state,{**row,'officialUrl':'https://steamcommunity.com/announcement/different'}))
+        self.assertFalse(recovery_duplicate(state,{**row,'id':'new-id','externalKey':'different','officialUrl':'https://steamcommunity.com/announcement/different'}))
+        state['knownEvents']=[{**recovery_known_event(row),'id':'manual-no-source','sourceId':None,'externalKey':None}]
+        self.assertTrue(recovery_duplicate(state,row))
+        self.assertFalse(recovery_duplicate(state,{**row,'officialUrl':'https://steamcommunity.com/announcement/different'}))
+
+    def test_recovery_parent_removes_all_calendar_and_derived_fields(self):
+        from collector import recovery_parent_news
+        row=self.parent();row.update(startsAt=NOW,endsAt=NOW,calendarPeriod={'status':'verified'},calendarRole='main-event',calendarRoleEvidence={'status':'verified'},announcementStages=[{'startsAt':NOW}],announcementStageDateKeys=['2026-10-11'],derivedSectionCount=2,derivedCharacterAnnouncements=2,pairedTicketNoticeState='proof',venue='test',dailyOpeningHours='10:00')
+        parent=recovery_parent_news(row,NOW)
+        self.assertTrue(parent['newsEligible']);self.assertFalse(parent['calendarEligible']);self.assertFalse(parent['sourceClockOnly'])
+        for field in ['startsAt','endsAt','calendarPeriod','calendarRole','calendarRoleEvidence','pairedTicketNoticeState','venue','dailyOpeningHours']:self.assertIsNone(parent[field])
+        self.assertEqual(parent['announcementStages'],[]);self.assertEqual(parent['announcementStageDateKeys'],[])
+        self.assertEqual(parent['derivedSectionCount'],0);self.assertEqual(parent['derivedCharacterAnnouncements'],0)
+        self.assertEqual(parent['verificationStatus'],'pending');self.assertIsNotNone(row['startsAt'])
+
+    def test_unimaged_excluded_future_child_and_section_rows_cannot_recover(self):
+        from collector import recovery_parent_news
+        row=self.parent()
+        for changes in [{'noticeImage':None,'image':None},{'newsEligible':False},{'publishedAt':CONTENT_CUTOFF-timedelta(seconds=1)},{'publishedAt':NOW+timedelta(days=1)},{'parentEventId':'parent'},{'sourceSectionKey':'section'}]:
+            self.assertIsNone(recovery_parent_news({**row,**changes},NOW))
+
+    def test_create_writer_uses_only_conditional_create_and_receipt_tracks_public_change(self):
+        from collector import recovery_parent_news
+        writer,requests=self.writer();row=recovery_parent_news(self.parent(),NOW)
+        self.assertTrue(writer.create_public_news('gameEvents/'+row['id'],row))
+        self.assertEqual(requests[0][1],{'timeout':20,'retry':None});self.assertEqual(writer.reads,0);self.assertEqual(writer.writes,1)
+        self.assertEqual(writer.public_news_changes,{'gameEvents/'+row['id']:row})
+        self.assertGreaterEqual(timestamp(writer.public_news_confirmed_at),NOW)
+        row['title']='local edit';self.assertNotEqual(next(iter(writer.public_news_changes.values()))['title'],row['title'])
+
+    def test_create_writer_conflict_and_timeout_never_count_or_publish_unconfirmed_rows(self):
+        from collector import recovery_parent_news
+        row=recovery_parent_news(self.parent(),NOW)
+        for error in [self.Conflict('already exists'),TimeoutError('ambiguous transport result')]:
+            writer,requests=self.writer(error)
+            if isinstance(error,self.Conflict):self.assertFalse(writer.create_public_news('gameEvents/'+row['id'],row))
+            else:
+                with self.assertRaises(TimeoutError):writer.create_public_news('gameEvents/'+row['id'],row)
+            self.assertEqual(len(requests),1);self.assertEqual(writer.writes,0);self.assertEqual(writer.create_attempts,1);self.assertEqual(writer.public_news_changes,{})
+
+    def test_create_writer_rejects_changed_ids_sources_dates_and_all_other_access(self):
+        from collector import recovery_parent_news
+        writer,requests=self.writer();row=recovery_parent_news(self.parent(),NOW)
+        for changes in [{'id':'a'*64},{'sourceId':'disabled-cms'},{'startsAt':NOW},{'calendarEligible':True},{'verificationStatus':'verified'},{'parentEventId':'parent'},{'announcementStages':[{'startsAt':NOW}]}]:
+            changed={**row,**changes}
+            with self.assertRaises(SafetyError):writer.create_public_news('gameEvents/'+changed['id'],changed)
+        for path in ['pickupSchedules/'+row['id'],'collectionDocuments/proof','gameSources/source-00']:
+            with self.assertRaises(SafetyError):writer.create_public_news(path,row)
+        for method in ['get','put','mutate','delete','list_cursor','finish_usage']:
+            with self.assertRaisesRegex(SafetyError,'no_control_access'):getattr(writer,method)('ignored')
+        self.assertEqual(requests,[])
+
+    def test_create_writer_stops_after_25_attempts_and_provider_write_quota_opens_circuit(self):
+        from collector import recovery_parent_news
+        from store import ProviderQuotaUnavailable
+        row=recovery_parent_news(self.parent(),NOW);writer,requests=self.writer(self.Conflict('exists'))
+        for _ in range(25):self.assertFalse(writer.create_public_news('gameEvents/'+row['id'],row))
+        with self.assertRaisesRegex(SafetyError,'write_budget'):writer.create_public_news('gameEvents/'+row['id'],row)
+        self.assertEqual(len(requests),25)
+        writer,requests=self.writer(self.QuotaError('opaque'))
+        for _ in range(2):
+            with self.assertRaises(ProviderQuotaUnavailable)as raised:writer.create_public_news('gameEvents/'+row['id'],row)
+            self.assertEqual(raised.exception.operation,'write')
+        self.assertEqual(len(requests),1)
+
+    def test_live_provider_fixture_exports_only_pending_parent_and_preserves_approval_time(self):
+        from collector import run_public_news_recovery
+        registry=self.registry();state=self.state(registry);writer,requests=self.writer()
+        notice=ContinuousOfficialPipelineTests().steam_notice();payload=json.dumps({'appnews':{'appid':123,'newsitems':[notice['raw_json']]}}).encode();http=[]
+        def fetch(request):
+            http.append(request)
+            return synthetic_thumbnail_fetch({'url':'https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg'})if request.get('parser')=='official_image_probe'else(200,payload,{})
+        result=run_public_news_recovery(registry,state,writer,fetch=fetch,sleep=lambda _:None,now=NOW,clock=lambda:NOW)
+        self.assertEqual(result['recoveryCreated'],1);self.assertEqual(result['firestoreReads'],0);self.assertEqual(result['remoteFirestoreWrites'],1)
+        self.assertTrue(all(key.startswith('gameEvents/')for key in result['publicNewsChanges']))
+        self.assertTrue(result['providerReadQuotaBlocked']);self.assertTrue(result['providerQuotaBlocked']);self.assertFalse(result['collectionSucceeded']);self.assertEqual(result['fcmSends'],0)
+        self.assertEqual(state['sourceApprovalObservedAt'],NOW.isoformat());self.assertEqual(len(state['knownEvents']),1)
+        self.assertEqual(result['publicNewsConfirmedAt'],writer.public_news_confirmed_at)
+        self.assertTrue(all(request['request_timeout_seconds']<=20 for request in http))
+
+    def test_source_fairness_max20_and_one_page_budget(self):
+        from collector import run_public_news_recovery
+        registry=self.registry(23);state=self.state(registry);writer,_=self.writer();calls=[]
+        def collect(stage,source,start,end,**kwargs):calls.append((source['id'],kwargs['max_pages']));return {'status':'success','metrics':{}}
+        with patch('collector.collect_one',side_effect=collect):
+            first=run_public_news_recovery(registry,state,writer,now=NOW,clock=lambda:NOW)
+            second=run_public_news_recovery(registry,state,writer,now=NOW,clock=lambda:NOW)
+        self.assertEqual(first['sourceAttempts'],20);self.assertEqual(second['sourceAttempts'],20)
+        self.assertEqual(calls[0],('source-00',1));self.assertEqual(calls[20],('source-20',1));self.assertEqual(state['sourceApprovalObservedAt'],NOW.isoformat())
+
+    def test_recovery_25_write_bound_skips_known_duplicates_and_all_nonparent_collections(self):
+        from collector import run_public_news_recovery,recovery_known_event
+        registry=self.registry();state=self.state(registry);writer,requests=self.writer();rows=[self.parent(external=str(index))for index in range(28)]
+        state['knownEvents']=[{**recovery_known_event(rows[0]),'id':'reviewed-manual'}]
+        def collect(stage,*args,**kwargs):
+            for row in rows:stage.records['gameEvents/'+row['id']]=row
+            stage.records['pickupSchedules/private-not-a-parent']={'id':'ignored'};stage.records['collectionDocuments/proof']={'rawJson':'ignored'}
+            return {'status':'success','metrics':{}}
+        with patch('collector.collect_one',side_effect=collect):result=run_public_news_recovery(registry,state,writer,now=NOW,clock=lambda:NOW)
+        self.assertEqual(result['recoveryCreated'],25);self.assertEqual(result['knownDuplicatesSkipped'],1);self.assertEqual(len(requests),25)
+        self.assertEqual(len(result['publicNewsChanges']),25);self.assertEqual(len(state['knownEvents']),26)
+
+    def test_recovery_quota_and_timeout_stop_immediately_without_known_identity(self):
+        from collector import run_public_news_recovery
+        registry=self.registry(2);row=self.parent();calls=[]
+        def collect(stage,*args,**kwargs):calls.append(True);stage.records['gameEvents/'+row['id']]=row;return {'status':'success','metrics':{}}
+        for error,quota in [(self.QuotaError('opaque'),True),(TimeoutError('uncertain'),False)]:
+            state=self.state(registry);writer,requests=self.writer(error);calls.clear()
+            with patch('collector.collect_one',side_effect=collect):result=run_public_news_recovery(registry,state,writer,now=NOW,clock=lambda:NOW)
+            self.assertEqual(len(requests),1);self.assertEqual(len(calls),1);self.assertEqual(state['knownEvents'],[])
+            self.assertEqual(result['recoveryWriteQuotaBlocked'],quota);self.assertEqual(result['recoveryWriteUnconfirmed'],not quota)
+
+    def test_recovery_deadline_clamps_to_approval_remaining_not_full_runtime(self):
+        from collector import run_public_news_recovery
+        registry=self.registry();state=self.state(registry,NOW-timedelta(hours=24)+timedelta(seconds=2));writer,_=self.writer();deadlines=[]
+        def collect(stage,*args,**kwargs):deadlines.append(kwargs['deadline']);return {'status':'success','metrics':{}}
+        with patch('collector.time.monotonic',return_value=100),patch('collector.collect_one',side_effect=collect):
+            result=run_public_news_recovery(registry,state,writer,now=NOW,clock=lambda:NOW,timeout_seconds=480)
+        self.assertEqual(deadlines,[102]);self.assertEqual(result['sourceAttempts'],1);self.assertFalse(result['recoveryApprovalExpired'])
+        self.assertEqual(state['sourceApprovalExpiresAt'],(NOW+timedelta(seconds=2)).isoformat())
+
+    def test_expiry_during_fetch_prevents_create_even_if_monotonic_clock_has_not_advanced(self):
+        from collector import run_public_news_recovery
+        registry=self.registry(2);state=self.state(registry,NOW-timedelta(hours=24)+timedelta(seconds=2));writer,requests=self.writer();row=self.parent();wall=[NOW];calls=[]
+        def collect(stage,*args,**kwargs):
+            calls.append(True);stage.records['gameEvents/'+row['id']]=row;wall[0]=NOW+timedelta(seconds=2)
+            return {'status':'success','metrics':{}}
+        with patch('collector.time.monotonic',return_value=100),patch('collector.collect_one',side_effect=collect):
+            result=run_public_news_recovery(registry,state,writer,now=NOW,clock=lambda:wall[0])
+        self.assertEqual(requests,[]);self.assertEqual(len(calls),1);self.assertEqual(result['recoveryCreated'],0)
+        self.assertTrue(result['recoveryApprovalExpired']);self.assertEqual(result['results'][0]['status'],'APPROVAL_EXPIRED');self.assertEqual(state['knownEvents'],[])
+
+    def test_normal_approval_refresh_requires_completed_authoritative_registry_read(self):
+        from collector import refresh_recovery_approval
+        registry=self.registry();store=MemoryStore();store.project_id=self.PROJECT;store.public_recovery_state=self.state(registry)
+        active=source_row(registry['games'][0]['sources'][0],'blue-archive');active['enabled']=True
+        self.assertTrue(refresh_recovery_approval(store,registry,[('source-00',active)],now=NOW+timedelta(hours=1)))
+        self.assertEqual(store.public_recovery_state['sourceApprovalObservedAt'],(NOW+timedelta(hours=1)).isoformat())
+        class RemoteStore(MemoryStore):remote=True
+        failed=RemoteStore();failed.project_id=self.PROJECT;failed.public_recovery_state=self.state(registry)
+        failed.list_cursor=lambda *args:(_ for _ in()).throw(SafetyError('registry_read_failed'))
+        with patch('collector.expire_youtube_metadata',return_value={}):
+            with self.assertRaisesRegex(SafetyError,'registry_read_failed'):run(registry,failed,NOW-timedelta(hours=72),NOW,max_sources=1)
+        self.assertEqual(failed.public_recovery_state['sourceApprovalObservedAt'],NOW.isoformat())
+
+    def test_known_identity_is_learned_only_from_actual_old_read_or_committed_new_parent(self):
+        from collector import remember_recovery_event
+        store=MemoryStore();store.public_recovery_state=self.state();notice=ContinuousOfficialPipelineTests().steam_notice()
+        source=self.registry()['games'][0]['sources'][0]
+        class RejectedStore(MemoryStore):
+            def mutate(self,path,callback):
+                if path.startswith('gameEvents/'):
+                    callback(self.records.get(path));raise TimeoutError('commit not confirmed')
+                return super().mutate(path,callback)
+        rejected=RejectedStore();rejected.public_recovery_state=self.state()
+        with self.assertRaises(TimeoutError):upsert_notice(rejected,source,notice,NOW,image_fetch=lambda _:synthetic_thumbnail_fetch({'url':'https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg'}))
+        self.assertEqual(rejected.public_recovery_state['knownEvents'],[])
+        old=self.parent();rejected.records['gameEvents/'+old['id']]=old
+        with self.assertRaises(TimeoutError):upsert_notice(rejected,source,notice,NOW,image_fetch=lambda _:synthetic_thumbnail_fetch({'url':'https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg'}))
+        self.assertEqual(len(rejected.public_recovery_state['knownEvents']),1)
+        remember_recovery_event(store,old);before=store.public_recovery_state['sourceApprovalObservedAt'];remember_recovery_event(store,old)
+        self.assertEqual(len(store.public_recovery_state['knownEvents']),1);self.assertEqual(before,store.public_recovery_state['sourceApprovalObservedAt'])
+
+    def test_main_read_quota_uses_valid_manifest_no_accounting_and_retains_receipts_on_later_failure(self):
+        import tempfile
+        from collector import main,save_public_recovery_state,recovery_parent_news
+        from store import ProviderQuotaUnavailable
+        observed=datetime.now(UTC);registry=self.registry();state=self.state(registry,observed);writer,requests=self.writer()
+        row=recovery_parent_news(self.parent(),NOW)
+        def recover(*args,**kwargs):
+            writer.create_public_news('gameEvents/'+row['id'],row);raise RuntimeError('local post-commit failure')
+        with tempfile.TemporaryDirectory(dir=Path.cwd())as folder:
+            registry_path=Path(folder)/'registry.json';registry_path.write_text(json.dumps(registry),encoding='utf-8');state_path=Path(folder)/'public-state.json';save_public_recovery_state(state_path,state);report=Path(folder)/'report.json'
+            with patch.dict(os.environ,{'FIREBASE_PROJECT_ID':self.PROJECT}),patch('sys.argv',['collector.py','--registry',str(registry_path),'--live','--apply','--public-recovery-state',str(state_path),'--report',str(report)]),patch('collector.FirestoreStore',side_effect=ProviderQuotaUnavailable('read')),patch('collector.PublicNewsCreateOnlyStore',return_value=writer),patch('collector.run_public_news_recovery',side_effect=recover),patch('builtins.print'):
+                main()
+            result=json.loads(report.read_text());saved=json.loads(state_path.read_text())
+        self.assertEqual(len(requests),1);self.assertEqual(result['remoteFirestoreWrites'],1);self.assertEqual(len(result['publicNewsChanges']),1)
+        self.assertEqual(result['publicNewsConfirmedAt'],writer.public_news_confirmed_at);self.assertIn('recordedAt',result)
+        self.assertTrue(result['providerQuotaBlocked']);self.assertFalse(result['collectionSucceeded']);self.assertEqual(saved['sourceApprovalObservedAt'],state['sourceApprovalObservedAt'])
+
+    def test_main_write_quota_and_expired_manifest_never_initialize_recovery_writer(self):
+        import tempfile
+        from collector import main
+        from store import ProviderQuotaUnavailable
+        for operation,expired in [('write',False),('read',True)]:
+            registry=self.registry();registry['quotaRecoveryBootstrap']=self.state(registry,datetime.now(UTC)-timedelta(hours=25 if expired else 1))
+            with tempfile.TemporaryDirectory(dir=Path.cwd())as folder:
+                registry_path=Path(folder)/'registry.json';registry_path.write_text(json.dumps(registry),encoding='utf-8');report=Path(folder)/'report.json'
+                with patch.dict(os.environ,{'FIREBASE_PROJECT_ID':self.PROJECT}),patch('sys.argv',['collector.py','--registry',str(registry_path),'--live','--apply','--report',str(report)]),patch('collector.FirestoreStore',side_effect=ProviderQuotaUnavailable(operation)),patch('collector.PublicNewsCreateOnlyStore')as writer,patch('builtins.print'):
+                    main()
+                writer.assert_not_called();result=json.loads(report.read_text());self.assertEqual(result['remoteFirestoreWrites'],0)
+
+
+class ConfirmedPublicNewsChangeTests(unittest.TestCase):
+    def store(self,*,fail_commit=False):
+        requests=[]
+        class Snapshot:
+            def to_dict(self):return {'id':'existing'}
+        class Document:
+            def get(self,**kwargs):return Snapshot()
+            def set(self,value,**kwargs):
+                requests.append(('put',value))
+                if fail_commit:raise TimeoutError('commit unconfirmed')
+            def delete(self,**kwargs):requests.append(('delete',None))
+        class Transaction:
+            def set(self,ref,value):requests.append(('proposed',value))
+        class Database:
+            def document(self,path):return Document()
+            def transaction(self,**kwargs):return Transaction()
+        class Sdk:
+            @staticmethod
+            def transactional(callback):
+                def apply(transaction):
+                    value=callback(transaction)
+                    if fail_commit:raise TimeoutError('commit unconfirmed')
+                    return value
+                return apply
+        store=ProviderQuotaDeferralTests().store(Database());store.firestore=Sdk()
+        return store,requests
+
+    def test_only_confirmed_public_root_rows_and_deletes_are_exported(self):
+        store,_=self.store();row={'id':'event','title':'public fixture'}
+        store.put('gameEvents/event',row);first=store.public_news_confirmed_at
+        store.put('gameSources/source',{'enabled':False});store.put('users/test-user/records/record',{'fixture':'ignored'});store.put('collectionDocuments/raw',{'rawJson':'ignored'})
+        self.assertEqual(store.public_news_confirmed_at,first);self.assertEqual(set(store.public_news_changes),{'gameEvents/event'})
+        store.mutate('pickupSchedules/pickup',lambda old:({'id':'pickup'},True));store.delete('gameEvents/event')
+        self.assertEqual(store.public_news_changes,{'gameEvents/event':None,'pickupSchedules/pickup':{'id':'pickup'}})
+
+    def test_failed_put_and_failed_transaction_callback_never_export_proposed_rows(self):
+        for operation in ['put','mutate']:
+            store,requests=self.store(fail_commit=True)
+            with self.assertRaises(TimeoutError):
+                if operation=='put':store.put('gameEvents/event',{'id':'event'})
+                else:store.mutate('gameEvents/event',lambda old:({'id':'event'},True))
+            self.assertEqual(getattr(store,'public_news_changes',{}),{});self.assertFalse(hasattr(store,'public_news_confirmed_at'));self.assertEqual(store.writes,0)
+            self.assertEqual(len(requests),1)
+
+    def test_read_only_transaction_has_no_public_change(self):
+        store,_=self.store();self.assertEqual(store.mutate('gameEvents/event',lambda old:(None,'unchanged')),'unchanged')
+        self.assertEqual(getattr(store,'public_news_changes',{}),{});self.assertEqual(store.writes,0)
+
+
