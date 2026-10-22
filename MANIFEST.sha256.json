@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
-  "recordedAt": "2026-10-22T14:35:17.080283+00:00",
+  "recordedAt": "2026-10-22T22:39:35.564243+00:00",
   "scope": "APPROVED_PUBLIC_WORKER_EXPECTED_BYTES",
-  "sourceBaseCommit": "6d86c77c04c8205bac4ab5b1aff23d67222fde68",
+  "sourceBaseCommit": "a08ea33ea5f10670d7b8573b5d3f778506fda693",
   "files": [
     {
       "path": ".github/workflows/firebase-free-collector.yml",
-      "bytes": 4728,
-      "sha256": "348e2058f35584134135b5a5e04a1484914e0f57c25c593e4497319a2305022d"
+      "bytes": 5816,
+      "sha256": "5fabff5830b37e7189cb5a7207b7634e6bf9eee2bf2aea631c15730df30af320"
     },
     {
       "path": ".gitignore",
@@ -21,13 +21,13 @@
     },
     {
       "path": "data/official-sources.json",
-      "bytes": 622226,
-      "sha256": "cf6c6d0f80e0873fdf914685041c6440bab6c79dce06807589d0501a714612e3"
+      "bytes": 785169,
+      "sha256": "20bd29bfa87894c22eb93e12fa129087c37a5244363a2562bd922f21d21e1026"
     },
     {
       "path": "docs/github-free-runner-plan.md",
-      "bytes": 50733,
-      "sha256": "c82436519a82c91857c05d41b8efdb9ca9ed7aaea26211202ad389e5d9fb99a9"
+      "bytes": 52731,
+      "sha256": "732e667931526e6d09cd4535a341544989e3d67f5627554e4e758bae596e882e"
     },
     {
       "path": "README.md",
@@ -61,8 +61,8 @@
     },
     {
       "path": "services/firebase/collector.py",
-      "bytes": 214462,
-      "sha256": "84db448f9fd8b5d2ba84c0ec1704a519d9a4a57f12e0d1a7bd8da553d6d6f22a"
+      "bytes": 234157,
+      "sha256": "0d653247eb380a795aee47f8afe8d941f8c1f94165ad6c83b49d7360fb8b8a06"
     },
     {
       "path": "services/firebase/iam/orbit-free-fcm-sender-role.json",
@@ -91,16 +91,16 @@
     },
     {
       "path": "services/firebase/store.py",
-      "bytes": 20467,
-      "sha256": "19e76a2db7c41f2ea02d420de26b7703ede93f5c415f8a3df281ec1f7128a464"
+      "bytes": 25926,
+      "sha256": "ea7aee6878fd979b465fe6889c1837409d6040eac6e352d64d732b0617144d69"
     },
     {
       "path": "services/firebase/tests/test_firebase.py",
-      "bytes": 334819,
-      "sha256": "5e5843e7101038d048a2843764d2c8053fef57ecda23c7189fe0ec169baea856"
+      "bytes": 363776,
+      "sha256": "ed5e3e2b2ed93b7148b21f70750cffefb9d881fe3918a11e2013872565229580"
     }
   ],
-  "payloadBytes": 1843238,
+  "payloadBytes": 2063378,
   "excluded": [
     "images",
     "native apps",
