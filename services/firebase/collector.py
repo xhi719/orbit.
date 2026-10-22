@@ -1848,12 +1848,17 @@ def recovery_parent_news(row,observed):
     return result
 
 
-def run_public_news_recovery(registry,state,writer,*,fetch=fetch_source,sleep=time.sleep,now=None,timeout_seconds=480):
-    observed=now or datetime.now(UTC);deadline=time.monotonic()+min(480,max(1,timeout_seconds))
+def run_public_news_recovery(registry,state,writer,*,fetch=fetch_source,sleep=time.sleep,now=None,timeout_seconds=480,clock=None):
+    wall_clock=clock or (lambda:datetime.now(UTC))
+    observed=now or wall_clock()
     sources=sorted(validate_recovery_state(state,registry,project_id=writer.project_id,now=observed),key=lambda source:source["id"])
+    expires=timestamp(state["sourceApprovalExpiresAt"])
+    approval_remaining=(expires-timestamp(wall_clock())).total_seconds()
+    if approval_remaining<=0:raise SafetyError("recovery_manifest_expired")
+    deadline=time.monotonic()+min(480,max(1,timeout_seconds),approval_remaining)
     after=state.get("rotationAfterSourceId")
     if after:sources=[source for source in sources if source["id"]>after]+[source for source in sources if source["id"]<=after]
-    writer.public_recovery_state=state;results=[];created=0;conflicts=0;duplicates=0;attempted=0;write_blocked=False;write_quota_blocked=False
+    writer.public_recovery_state=state;results=[];created=0;conflicts=0;duplicates=0;attempted=0;write_blocked=False;write_quota_blocked=False;approval_expired=False
     for source in sources[:20]:
         if time.monotonic()>=deadline or getattr(writer,"create_attempts",0)>=25:break
         attempted+=1;stage=MemoryStore()
@@ -1870,6 +1875,10 @@ def run_public_news_recovery(registry,state,writer,*,fetch=fetch_source,sleep=ti
             row=recovery_parent_news(row,observed)
             if row is None:continue
             if recovery_duplicate(state,row):duplicates+=1;continue
+            # Recheck real UTC immediately before the conditional RPC as source
+            # fetching/image verification may have consumed the approval TTL.
+            if timestamp(wall_clock())>=expires:
+                approval_expired=True;result["status"]="APPROVAL_EXPIRED";break
             try:changed=writer.create_public_news("gameEvents/"+row["id"],row)
             except ProviderQuotaUnavailable:
                 write_blocked=True;write_quota_blocked=True;result["status"]="WRITE_QUOTA_DEFERRED";break
@@ -1878,10 +1887,11 @@ def run_public_news_recovery(registry,state,writer,*,fetch=fetch_source,sleep=ti
             if changed:
                 created+=1;result["created"]+=1;remember_recovery_event(writer,row)
             else:conflicts+=1
-        if write_blocked:break
+        if write_blocked or approval_expired:break
     return {"status":"PUBLIC_NEWS_RECOVERY_PARTIAL"if created else "PUBLIC_NEWS_RECOVERY_DEFERRED",
         "backend":"FIREBASE","providerReadQuotaBlocked":True,"providerQuotaBlocked":True,"recoveryWriteQuotaBlocked":write_quota_blocked,
         "recoveryWriteUnconfirmed":write_blocked and not write_quota_blocked,
+        "recoveryApprovalExpired":approval_expired or timestamp(wall_clock())>=expires,
         "existingUpdatesDeferred":True,"fullSourceCoverageVerified":False,"collectionSucceeded":False,"recoveryCreated":created,
         "sourceAttempts":attempted,"maxRecoverySources":20,"pageBudgetPerSource":1,"maxRecoveryWrites":25,"firestoreReads":0,
         "remoteFirestoreWrites":writer.writes,"createConflicts":conflicts,"knownDuplicatesSkipped":duplicates,
