@@ -6,6 +6,7 @@ checks and pre-enabled Firestore sources. Retained Supabase workers are inactive
 """
 from __future__ import annotations
 import argparse
+from contextlib import nullcontext
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 import hashlib
@@ -32,11 +33,11 @@ from store import MemoryStore, FirestoreStore, SafetyError, timestamp, document_
 
 UTC = timezone.utc
 DATETIME_TYPE = datetime
-EXTRACTION_VERSION = 11
+EXTRACTION_VERSION = 12
 CONTENT_PUBLISHED_NOT_BEFORE = "2026-10-01T00:00:00+09:00"
 CONTENT_CUTOFF = timestamp(CONTENT_PUBLISHED_NOT_BEFORE)
-CONTENT_PUBLISHED_BEFORE = "2026-11-01T00:00:00+09:00"
-CONTENT_MONTH_END = timestamp(CONTENT_PUBLISHED_BEFORE)
+CONTENT_PUBLISHED_BEFORE = None  # Continuous official news after the reviewed lower bound.
+CONTENT_MONTH_END = timestamp("2026-11-01T00:00:00+09:00")  # Legacy October-only review scripts.
 YOUTUBE_CHANNEL_ID = re.compile(r"UC[A-Za-z0-9_-]{22}")
 YOUTUBE_VIDEO_ID = re.compile(r"[A-Za-z0-9_-]{11}")
 YOUTUBE_FEED_PATHS = ("/feeds/videos.xml", "/xml/feeds/videos.xml")
@@ -45,7 +46,7 @@ YOUTUBE_API_TERMS = "https://developers.google.com/youtube/terms/api-services-te
 YOUTUBE_PARSERS = frozenset({"youtube_atom","youtube_data_api"})
 OFFICIAL_CMS_PARSERS = frozenset({"kuro_cms", "genshin_cms"})
 OFFICIAL_SITE_PARSERS = frozenset({"official_html","official_rss", *OFFICIAL_CMS_PARSERS})
-YOUTUBE_NOTICE_IMAGE_POLICY_VERSION = 3
+YOUTUBE_NOTICE_IMAGE_POLICY_VERSION = 4
 CONTENT_CLASSIFICATION_VERSION = 1
 NEWS_ONLY_KINDS = frozenset({"character-pv", "event-pv"})
 CALENDAR_PREVIEW_KINDS = frozenset({"broadcast-preview", "offline-preview", "pickup-preview", "event-preview"})
@@ -92,7 +93,7 @@ def classify_notice_content(row):
                 # A named procurement/banner heading is itself a pickup notice;
                 # a rerun does not need the word "new" to remain valid news.
                 kind, status = "pickup-preview", "verified"
-            elif CONTENT_PREVIEW.search(title):
+            elif CONTENT_PREVIEW.search(title) or CONTENT_GAME_NOTICE.search(title):
                 for candidate, pattern in (("broadcast-preview", CONTENT_BROADCAST), ("offline-preview", CONTENT_OFFLINE), ("pickup-preview", CONTENT_PICKUP), ("goods-preview", CONTENT_GOODS), ("collaboration-preview", CONTENT_COLLABORATION), ("event-preview", CONTENT_EVENT), ("game-notice", CONTENT_GAME_NOTICE)):
                     if pattern.search(title):
                         kind, status = candidate, "verified"
@@ -141,6 +142,7 @@ def notice_has_representative_image(row, observed=None):
             video,channel=row.get("sourceVideoId"),row.get("sourceChannelId")
             if (not isinstance(video,str)or not YOUTUBE_VIDEO_ID.fullmatch(video)or not isinstance(channel,str)or not YOUTUBE_CHANNEL_ID.fullmatch(channel)
                 or row.get("officialUrl")!="https://www.youtube.com/watch?"+urlencode({"v":video})):continue
+            if not youtube_notice_thumbnail_url(image.get("url"),video):continue
             if (type(verification.get("width")) is not int or type(verification.get("height")) is not int
                 or verification["width"] < 320 or verification["height"] < 180
                 or verification.get("width") != verification.get("expectedWidth") or verification.get("height") != verification.get("expectedHeight")
@@ -279,9 +281,19 @@ def content_publication_status(value, observed=None):
     try: published = timestamp(value)
     except (ValueError, TypeError): return "PUBLICATION_DATE_UNCONFIRMED"
     if published < CONTENT_CUTOFF: return "PUBLISHED_BEFORE_CONTENT_CUTOFF"
-    if published >= CONTENT_MONTH_END: return "PUBLISHED_AFTER_CONTENT_MONTH"
     if observed is not None and published > timestamp(observed): return "PUBLICATION_DATE_IN_FUTURE"
     return "INCLUDED"
+
+
+def youtube_notice_thumbnail_url(value, video):
+    """Only an exact supplied video thumbnail and its public cache version."""
+    url=safe_public_url(value)
+    if not url or url!=value or not isinstance(video,str) or not YOUTUBE_VIDEO_ID.fullmatch(video):return None
+    parsed=urlsplit(value)
+    if (parsed.hostname not in ("i.ytimg.com","i1.ytimg.com","i2.ytimg.com","i3.ytimg.com","i4.ytimg.com")
+        or parsed.fragment or parsed.query and not re.fullmatch(r"v=[A-Fa-f0-9]{8}",parsed.query)
+        or not re.fullmatch(r"/vi(?:_webp)?/"+re.escape(video)+r"/(?:default|mqdefault|hqdefault|sddefault|maxresdefault|fhddefault|qhddefault|uhddefault)(?:_live)?\.(?:jpg|webp)",parsed.path)):return None
+    return value
 
 
 def automatic_youtube_notice_image(document, source, event_id, observed, *, image_fetch=None, deadline=None, probe_status=None):
@@ -310,11 +322,11 @@ def automatic_youtube_notice_image(document, source, event_id, observed, *, imag
     if not isinstance(metadata,dict)or raw.get("thumbnailMetadata")!=metadata:
         probe_status["reasonCodes"].append("SOURCE_DIMENSIONS_UNCONFIRMED");return None
     for value in supplied:
-        url = safe_public_url(value)
+        url = youtube_notice_thumbnail_url(value,video)
         if not url or url not in document.get("source_image_urls", []): continue
         parsed = urlsplit(url)
         match = re.fullmatch(r"/vi(?:_webp)?/" + re.escape(video) + r"/(default|mqdefault|hqdefault|sddefault|maxresdefault|fhddefault|qhddefault|uhddefault)(?:_live)?\.(?:jpg|webp)", parsed.path)
-        if parsed.scheme != "https" or parsed.hostname not in ("i.ytimg.com", "i1.ytimg.com", "i2.ytimg.com", "i3.ytimg.com", "i4.ytimg.com") or parsed.query or not match: continue
+        if not match: continue
         expected=metadata.get(url)
         if (not isinstance(expected,dict)or not isinstance(expected.get("width"),int)or isinstance(expected["width"],bool)
             or not isinstance(expected.get("height"),int)or isinstance(expected["height"],bool)
@@ -363,7 +375,7 @@ def automatic_youtube_notice_image(document, source, event_id, observed, *, imag
 
 def youtube_document_metadata(document,source,observed):
     fields={"sourceProvider":None,"sourceChannelId":None,"sourceVideoId":None,"metadataCheckedAt":None,"metadataExpiresAt":None}
-    if source.get("parser")in OFFICIAL_SITE_PARSERS and reviewed(source):
+    if source.get("parser")in OFFICIAL_SITE_PARSERS|{"steam_news"} and reviewed(source):
         fields.update(sourceProvider="official-site",publicationPrecision=document.get("publication_precision")or"timestamp",publicationLocalDate=document.get("publication_local_date"))
         if document.get("announced_local_date"):fields["announcedLocalDate"]=document["announced_local_date"]
     if source.get("parser")not in YOUTUBE_PARSERS or not reviewed(source) or document.get("_section_key") or document.get("_parent_event_id"):return fields
@@ -376,21 +388,30 @@ def youtube_document_metadata(document,source,observed):
 
 def automatic_official_notice_image(document,source,event_id,observed,image_fetch=None,deadline=None):
     """Exact article body art from a reviewed template/feed; no cover fallback."""
-    if source.get("parser")not in OFFICIAL_SITE_PARSERS or not reviewed(source)or image_fetch is None:return None
+    if source.get("parser")not in OFFICIAL_SITE_PARSERS|{"steam_news"} or not reviewed(source)or image_fetch is None:return None
     raw=document.get("raw_json")or{}
-    if digest(raw)!=document.get("raw_sha256")or raw.get("officialUrl")!=document.get("official_url")or raw.get("title")!=document.get("original_title"):return None
-    for candidate in document.get("official_article_image_urls",[])[:3]:
+    if source.get("parser")=="steam_news":
+        if document.get("_section_key")or document.get("_parent_event_id"):return None
+        from official_adapter import steam_notice_image_urls,STEAM_CLAN_IMAGE_HOST
+        candidates=steam_notice_image_urls(document,source)
+        allowed_hosts=[STEAM_CLAN_IMAGE_HOST]
+    else:
+        if digest(raw)!=document.get("raw_sha256")or raw.get("officialUrl")!=document.get("official_url")or raw.get("title")!=document.get("original_title"):return None
+        candidates=[url for url in document.get("official_article_image_urls",[])if url in raw.get("imageUrls",[])]
+        allowed_hosts=source["article_format"]["allowedImageHosts"]
+    for candidate in candidates[:3]:
         url=safe_public_url(candidate)
-        if not url or url not in raw.get("imageUrls",[])or urlsplit(url).hostname not in source["article_format"]["allowedImageHosts"]or GENERIC_GAME_IMAGE.search(url):continue
+        if not url or url!=candidate or urlsplit(url).hostname not in allowed_hosts or GENERIC_GAME_IMAGE.search(url):continue
         if deadline is not None and time.monotonic()>=deadline:return None
         try:
             status,pixels,headers=image_fetch({"url":url,"official_host":urlsplit(url).hostname,"parser":"official_image_probe","enabled":True,"access_status":"approved",
                 "terms_url":source["terms_url"],"terms_checked_at":source["terms_checked_at"],"request_timeout_seconds":10,"max_response_bytes":2097152})
-            dimensions=image_dimensions(pixels)if status==200 and len(pixels)<=2097152 and str(headers.get("content-type","")).split(";",1)[0]in("image/jpeg","image/png","image/webp")else None
+            content_type=str(headers.get("content-type","")).split(";",1)[0].strip().lower()
+            dimensions=image_dimensions(pixels)if status==200 and isinstance(pixels,bytes)and len(pixels)<=2097152 and content_type in("image/jpeg","image/png","image/webp")else None
             if not dimensions or not 320<=dimensions[0]<=16384 or not 180<=dimensions[1]<=16384:continue
         except Exception:continue
         return {"url":url,"sourceUrl":document["official_url"],"kind":"NOTICE_ART","rightsStatus":"UNCONFIRMED","subjectStatus":"MATCHED",
-            "imageVerification":{"status":"verified","method":"SOURCE_IMAGE_DIMENSIONS","width":dimensions[0],"height":dimensions[1],"contentSha256":hashlib.sha256(pixels).hexdigest()},
+            "imageVerification":{"status":"verified","method":"SOURCE_IMAGE_DIMENSIONS","width":dimensions[0],"height":dimensions[1],"contentType":content_type,"contentSha256":hashlib.sha256(pixels).hexdigest(),"checkedAt":timestamp(observed).isoformat()},
             "sourceReference":{"mode":"OFFICIAL_NOTICE_IMAGE","sourceUrl":document["official_url"],"checkedAt":timestamp(observed).isoformat(),"allowedImageUrl":url},
             "subjectEvidence":{"status":"MATCHED","eventId":event_id,"officialUrl":document["official_url"],"kind":"notice","method":"source_section",
                 "sourceSha256":document["raw_sha256"],"sourceTitle":document["original_title"],"evidenceText":"Representative image inside the exact official article body","characterNames":[]}}
@@ -464,7 +485,7 @@ def parse_youtube_documents(raw, source, observed_at):
         thumbnails = []
         thumbnail_metadata={}
         for node in item.findall(media+"group/"+media+"thumbnail")[:5]:
-            image = safe_public_url(node.get("url"))
+            image = youtube_notice_thumbnail_url(node.get("url"),video)
             if image and urlsplit(image).hostname in ("i.ytimg.com", "i1.ytimg.com", "i2.ytimg.com", "i3.ytimg.com", "i4.ytimg.com"):
                 thumbnails.append(image)
                 try:width=int(node.get("width",""));height=int(node.get("height",""))
@@ -1869,7 +1890,7 @@ def upsert_notice(store, source, document, observed, *, image_fetch=None, deadli
                 store.mutate("collectionErrors/"+error_key,lambda old:(None,False)if old else({"sourceId":source["id"],"gameId":source["game_id"],"kind":"OFFICIAL_NOTICE_IMAGE",
                     "reasonCode":"NOTICE_IMAGE_VERIFICATION_FAILED","details":notice_image_verification,"createdAt":observed},True))
         else:notice_image=previous.get("noticeImage");notice_image_verification=previous.get("noticeImageVerification")
-    elif source.get("parser")in OFFICIAL_SITE_PARSERS:
+    elif source.get("parser")in OFFICIAL_SITE_PARSERS|{"steam_news"}:
         previous=store.get("gameEvents/"+event_id)
         same=bool(previous and previous.get("rawSha256")==document["raw_sha256"] and previous.get("extractionVersion")==EXTRACTION_VERSION
             and previous.get("extractionPolicySha256")==document["extraction_policy_sha256"])
@@ -1908,7 +1929,7 @@ def upsert_notice(store, source, document, observed, *, image_fetch=None, deadli
                 if refresh:
                     return apply_notice_content_policy({**old,"noticeImage":notice_image,"image":notice_image if old.get("categoryCandidate")!="recruitment" and not old.get("derivedCharacterAnnouncements") else old.get("image"),
                         "noticeImageVerification":notice_image_verification,**video_metadata,"lastCheckedAt":observed},observed),"updated"
-            elif source.get("parser")in OFFICIAL_SITE_PARSERS and notice_image!=old.get("noticeImage"):
+            elif source.get("parser")in OFFICIAL_SITE_PARSERS|{"steam_news"} and notice_image!=old.get("noticeImage"):
                 return apply_notice_content_policy({**old,"noticeImage":notice_image,"image":notice_image if old.get("categoryCandidate")!="recruitment" and not old.get("derivedCharacterAnnouncements")else old.get("image"),
                     **video_metadata,"lastCheckedAt":observed},observed),"updated"
             return None,"unchanged"
@@ -1981,7 +2002,16 @@ def upsert_notice(store, source, document, observed, *, image_fetch=None, deadli
             paired=document["paired_ticket_section"]
             row.update(reservationStartsAt=paired["reservationStartsAt"],ticketSalesAt=paired["ticketSalesAt"],venue=paired["venue"],dailyOpeningHours=paired["dailyOpeningHours"],
                 announcementStages=paired["announcementStages"],announcementStageDateKeys=sorted({timestamp(stage["startsAt"]).date().isoformat()for stage in paired["announcementStages"]}),scheduleEvidence=paired["evidence"])
-        row=apply_notice_content_policy(announcement_metadata(reviewed_calendar_role(localize_collected_row(row,source,observed),source),old,observed),observed)
+        row=reviewed_calendar_role(localize_collected_row(row,source,observed),source)
+        same_reviewed_period=bool(old and old.get("sourceId")==source["id"] and old.get("externalKey")==document["external_key"] and old.get("rawSha256")==document["raw_sha256"]
+            and old.get("originalTitle")==document["original_title"] and old.get("officialUrl")==document["official_url"]
+            and verified_calendar_day_period(old,observed))
+        if same_reviewed_period:
+            for key in ("calendarPeriod","calendarRole","calendarRoleEvidence","announcementKind","characterNames","rarityLabel","displayTitle","sourceSectionTitle","image","noticeImage","sourceImageOverride"):
+                if key in old:row[key]=deepcopy(old[key])
+        elif old and old.get("calendarPeriod"):
+            row.update(calendarPeriod=None,calendarRole=None,calendarRoleEvidence=None)
+        row=apply_notice_content_policy(announcement_metadata(row,old,observed),observed)
         if len(json.dumps(row,ensure_ascii=False,default=lambda value:value.isoformat()).encode())>900000:
             raise SafetyError("event_document_exceeds_safe_firestore_size")
         return row,"updated" if old else "created"
@@ -2125,15 +2155,20 @@ def checkpoint_month_backfill(store,source,token,start,end,*,page_token=None,cur
     store.mutate("collectorLocks/"+source["id"],update)
 
 
-def finish_source(store, source, token, now, success, error, http_status, mode, retry_after=0):
+QUOTA_DEFERRAL_REASONS = frozenset({"collector_free_quota_headroom", "worker_run_soft_budget_exhausted", "collector_daily_soft_budget_exhausted"})
+
+
+def finish_source(store, source, token, now, success, error, http_status, mode, retry_after=0, metrics=None):
     lock_path="collectorLocks/"+source["id"]
     def update(old):
         if not old or old.get("token")!=token:
             return None,False
-        count=old.get("consecutiveFailures",0)if error=="collector_free_quota_headroom"else 0 if success else old.get("consecutiveFailures",0)+1
+        count=old.get("consecutiveFailures",0)if error in QUOTA_DEFERRAL_REASONS else 0 if success else old.get("consecutiveFailures",0)+1
         delay=max(max(15,source.get("collection_interval_minutes",15))*60,
                   min(86400,900*2**min(count,6)) if not success else 0,retry_after)
         row={**old,"leaseUntil":None,"token":None,"consecutiveFailures":count,"nextRunAt":now+timedelta(seconds=delay)}
+        if success and (mode!="content-backfill" or (metrics or {}).get("freshHeadFetched")):
+            row["lastFreshCheckedAt"]=now
         if success and mode=="reverify":row["lastReverifiedAt"]=now
         return row,True
     if not store.mutate(lock_path,update):
@@ -2141,8 +2176,11 @@ def finish_source(store, source, token, now, success, error, http_status, mode, 
     def health(old):
         if not old:return None,False
         finished_lock=store.get(lock_path)
-        row={**old,"lastCheckedAt":now,"nextRunAt":finished_lock["nextRunAt"],"health":{"status":"DEFERRED_QUOTA_BUDGET"if error=="collector_free_quota_headroom"else "success" if success else "FETCH_FAILED",
+        row={**old,"lastCheckedAt":now,"nextRunAt":finished_lock["nextRunAt"],"health":{"status":"DEFERRED_QUOTA_BUDGET"if error in QUOTA_DEFERRAL_REASONS else "success" if success else "FETCH_FAILED",
              "httpStatus":http_status,"consecutiveFailures":finished_lock["consecutiveFailures"],"reasonCode":error}}
+        if finished_lock.get("lastFreshCheckedAt"):row["lastFreshCheckedAt"]=finished_lock["lastFreshCheckedAt"]
+        if metrics is not None:
+            row["lastCollectionOutcome"]={key:metrics.get(key) for key in ("created","updated","unchanged","newsEligibleDocuments","newsBlockedByImage","newsBlockedByClassification","latestPublishedAtSeen","latestRetainedPublishedAt")}
         if success:row["lastSuccessAt"]=now
         else:row["lastErrorAt"]=now
         if success and mode=="reverify":row["lastReverifiedAt"]=now
@@ -2153,10 +2191,10 @@ def finish_source(store, source, token, now, success, error, http_status, mode, 
 def collect_one(store, source, start, end, mode="backfill", fetch=fetch_source, sleep=time.sleep, now=None, deadline=None, max_pages=10):
     observed=now or datetime.now(UTC)
     if not reviewed(source):raise SafetyError("source_review_required")
-    content_backfill=mode=="content-backfill" and start==CONTENT_CUTOFF and end<=observed and end-start<=timedelta(days=31)
+    content_backfill=mode=="content-backfill" and start==CONTENT_CUTOFF and end<=observed
     if end<=start or end-start>timedelta(hours=72) and not content_backfill:raise SafetyError("window_must_be_at_most_72_hours")
     if type(max_pages) is not int or not 1<=max_pages<=200:raise SafetyError("bounded_page_budget_required")
-    start=max(start,CONTENT_CUTOFF);end=min(end,CONTENT_MONTH_END)
+    start=max(start,CONTENT_CUTOFF)
     if end<=start:raise SafetyError("content_window_before_publication_cutoff")
     if source.get("parser")=="youtube_data_api" and not os.environ.get("YOUTUBE_API_KEY"):
         return {"status":"DEFERRED","sourceId":source["id"],"reasonCode":"YOUTUBE_API_KEY_NOT_CONFIGURED","writes":0,"httpRequests":0}
@@ -2170,239 +2208,273 @@ def collect_one(store, source, start, end, mode="backfill", fetch=fetch_source, 
     if not selected_mode:
         return {"status":"DEFERRED","sourceId":source["id"],"writes":0}
     mode=selected_mode
-    if mode=="content-backfill":
-        start=CONTENT_CUTOFF
-        previous=(store.get("collectorLocks/"+source["id"]) or {}).get("contentBackfill") or {}
-        try:
-            matching=(previous.get("version")==1 and previous.get("policySha256")==digest(source_policy(source))
-                and timestamp(previous.get("windowStart"))==start and start<timestamp(previous.get("windowEnd"))<=end
-                and previous.get("complete") is not True)
-        except (ValueError,TypeError):matching=False
-        if matching:end=timestamp(previous["windowEnd"])
-    else:previous={};matching=False
+    fresh_end=end
+    # Reserve the small control tail even when a content page exhausts its
+    # budget. This never bypasses the store's run or daily soft limits.
+    budget_store=store if hasattr(store,"reserve_budget") else getattr(store,"store",None)
+    reservation=budget_store.reserve_budget(reads=12,writes=4)if hasattr(budget_store,"reserve_budget")else nullcontext()
+    if mode=="content-backfill":start=CONTENT_CUTOFF
+    previous={};matching=False
     run_id=digest([source["id"],token]);started_writes=store.writes
     metrics={"pagesFetched":0,"itemsSeen":0,"created":0,"updated":0,"unchanged":0,"verifiedSchedules":0,
              "knownEventsForReverify":0,"knownEventsQueryLimitReached":False,"olderUnseenSkipped":0,"ongoingOlderIncluded":0,
              "verifiedSectionSchedules":0,"derivedChildrenQueryLimitReached":False}
     metrics.update(candidateSchedules=0,candidateSectionSchedules=0,beforeContentCutoffSkipped=0,publicationUnconfirmedSkipped=0,contentExcluded=0,contentSuppressedUpdated=0,videoDetailsRequests=0,videoDetailsFailures=0)
-    metrics.update(afterContentMonthSkipped=0,backfillResumeUsed=bool(matching),backfillCursorCommitted=False,sharedChannelOtherGameSkipped=0)
+    metrics.update(afterContentMonthSkipped=0,backfillResumeUsed=False,backfillCursorCommitted=False,sharedChannelOtherGameSkipped=0,
+        freshHeadFetched=False,newsEligibleDocuments=0,newsBlockedByImage=0,newsBlockedByClassification=0,
+        latestPublishedAtSeen=None,latestRetainedPublishedAt=None,newsMetricScope="UNIQUE_PARENT_EVENTS_PROCESSED_PER_SOURCE_RUN")
     success,error,http_status,retry_after=False,None,None,0
+    reported_event_ids=set()
     cursor=1 if source["parser"]=="official_html" or source["parser"]in OFFICIAL_CMS_PARSERS else int(end.timestamp())+1;page_token=None;seen_page_tokens=set()
-    if matching:
-        if source["parser"]=="youtube_data_api" and previous.get("pageToken"):
-            page_token=previous["pageToken"]
-            if not isinstance(page_token,str) or not re.fullmatch(r"[A-Za-z0-9_+=./:-]{1,512}",page_token):raise SafetyError("backfill_cursor_invalid")
-            seen_page_tokens.add(page_token)
-        elif type(previous.get("providerCursor")) is int:cursor=previous["providerCursor"]
     try:
-        source,roster_metrics=refresh_localization_roster(store,source,observed,fetch,sleep,deadline)
-        metrics['localizationRoster']=roster_metrics
-        if roster_metrics['status'] in ('FETCH_FAILED','SOURCE_POLICY_CHANGED','REVIEW_REQUIRED'):
-            store.put('collectionErrors/'+run_id+'-roster',{'sourceId':source['id'],'gameId':source['game_id'],'kind':'LOCALIZATION_ROSTER',
-                'reasonCode':roster_metrics.get('reasonCode')or roster_metrics['status'],'createdAt':observed})
-        known_event_ids=set()
-        if mode=="reverify":
-            known_event_ids={event_id for event_id,_ in store.list_equal("gameEvents","sourceId",source["id"],50)}
-            metrics.update(knownEventsForReverify=len(known_event_ids),knownEventsQueryLimitReached=len(known_event_ids)==50)
-        for _ in range(max_pages):
-            if deadline is not None and time.monotonic()>=deadline:
-                if mode=="content-backfill" and metrics["pagesFetched"] and metrics["backfillCursorCommitted"]:
-                    success=True;metrics.update(pageLimitReached=True,timeBudgetReached=True,providerPaginationComplete=False);break
-                raise SafetyError("run_time_limit")
-            sleep(1)
-            if source["parser"]=="youtube_data_api":
-                from official_adapter import youtube_api_request,parse_youtube_api_documents
-                request=youtube_api_request(source,page_token=page_token,count=50)
-            elif source["parser"]=="official_html":
-                from official_adapter import official_html_request,parse_official_html_index,parse_official_html_article
-                request=official_html_request(source,page=cursor)
-            elif source["parser"]=="official_rss":
-                from official_adapter import official_rss_request,parse_official_rss_documents
-                request=official_rss_request(source)
-            elif source["parser"]in OFFICIAL_CMS_PARSERS:
-                from official_adapter import kuro_cms_request,parse_kuro_cms_index,parse_kuro_cms_article,genshin_cms_request,parse_genshin_cms_index,parse_genshin_cms_article
-                cms_request,cms_index,cms_article=(kuro_cms_request,parse_kuro_cms_index,parse_kuro_cms_article)if source["parser"]=="kuro_cms"else(genshin_cms_request,parse_genshin_cms_index,parse_genshin_cms_article)
-                request=cms_request(source,**({"page":cursor}if source["parser"]=="genshin_cms"else{}))
-            else:request=youtube_request(source) if source["parser"]=="youtube_atom" else steam_request({**source,"enabled":True},cursor,50)
-            http_status,raw,headers=fetch(request);metrics["pagesFetched"]+=1
-            if http_status!=200:
-                retry_after=retry_after_seconds(headers.get("retry-after"))
-                raise SafetyError("source_http_"+str(http_status))
-            if source["parser"]in OFFICIAL_CMS_PARSERS:
-                entries=cms_index(raw,source);documents=[]
-                dates_for_index=[entry["publishedDate"]for entry in entries]
-                for entry in entries:
-                    date=datetime.strptime(entry["publishedDate"],"%Y.%m.%d").replace(tzinfo=UTC)
-                    if date.date()<CONTENT_CUTOFF.astimezone(timezone(timedelta(hours=9))).date()or date.date()>=CONTENT_MONTH_END.astimezone(timezone(timedelta(hours=9))).date()or date.date()>observed.astimezone(ZoneInfo(source["article_format"]["timezone"])).date():continue
-                    if not source_document_allowed(source,entry["title"]):metrics["sharedChannelOtherGameSkipped"]+=1;continue
-                    if source.get("news_scope")=="relevant_game_news_v1" and classify_notice_content({"originalTitle":entry["title"],"rawSha256":"a"*64})["kind"]=="other":metrics["contentExcluded"]+=1;continue
-                    if metrics.get("publisherArticleRequests",0)>=40:raise SafetyError("publisher_article_request_limit")
-                    if deadline is not None and time.monotonic()>=deadline:raise SafetyError("run_time_limit")
-                    sleep(1);article_status,article_raw,_=fetch(cms_request(source,article_id=entry["id"]))
-                    metrics["publisherArticleRequests"]=metrics.get("publisherArticleRequests",0)+1
-                    if article_status!=200:raise SafetyError("publisher_article_http_"+str(article_status))
-                    article=cms_article(article_raw,source,entry["url"],observed.isoformat())
-                    if article.get("publication_local_date")!=entry["publishedDate"].replace(".","-")or plain_notice(article["original_title"])!=plain_notice(entry["title"]):raise SafetyError("publisher_list_article_identity_changed")
-                    documents.append(article)
-                parsed={"items_seen":len(entries),"items_accepted":len(documents),"items_skipped":len(entries)-len(documents),"skip_reasons":[],
-                    "publication_cutoff_reached":bool(dates_for_index and min(dates_for_index)<"2026.10.01"),"coverage_reason":"PUBLIC_PUBLISHER_CMS_INDEX"}
-            elif source["parser"]=="official_html":
-                entries=parse_official_html_index(raw,source,cursor);documents=[];dates_for_index=[entry["publishedDate"]for entry in entries]
-                if dates_for_index!=sorted(dates_for_index,reverse=True):raise SafetyError("publisher_board_publication_order_unconfirmed")
-                for entry in entries:
-                    if not source_document_allowed(source,entry["title"]):metrics["sharedChannelOtherGameSkipped"]+=1;continue
-                    date=datetime.strptime(entry["publishedDate"],"%Y.%m.%d").replace(tzinfo=timezone(timedelta(hours=9))).astimezone(UTC)
-                    if date<CONTENT_CUTOFF or date>=end:continue
-                    if deadline is not None and time.monotonic()>=deadline:raise SafetyError("run_time_limit")
-                    sleep(1);article_status,article_raw,_=fetch(official_html_request(source,article_url=entry["url"]))
-                    metrics["publisherArticleRequests"]=metrics.get("publisherArticleRequests",0)+1
-                    if article_status!=200:raise SafetyError("publisher_article_http_"+str(article_status))
-                    article=parse_official_html_article(article_raw,source,entry["url"],observed.isoformat())
-                    if article["raw_publication_timestamp"]!=entry["publishedDate"]or plain_notice(article["original_title"])!=plain_notice(entry["title"]):raise SafetyError("publisher_list_article_identity_changed")
-                    documents.append(article)
-                parsed={"items_seen":len(entries),"items_accepted":len(documents),"items_skipped":len(entries)-len(documents),"skip_reasons":[],
-                    "publication_cutoff_reached":bool(dates_for_index and dates_for_index[-1]<CONTENT_CUTOFF.astimezone(timezone(timedelta(hours=9))).strftime("%Y.%m.%d"))}
-            else:
-                documents,parsed=(parse_youtube_api_documents(raw,source,observed.isoformat()) if source["parser"]=="youtube_data_api" else parse_youtube_documents(raw,source,observed.isoformat()) if source["parser"]=="youtube_atom" else parse_official_rss_documents(raw,source,observed.isoformat(),published_start=CONTENT_CUTOFF,published_end=CONTENT_MONTH_END) if source["parser"]=="official_rss" else parse_steam_documents(raw,source,observed.isoformat()))
-            if source["parser"]=="youtube_atom":
-                metrics.update(windowCoverageVerified=False,coverageReason=parsed["coverage_reason"])
-            if source["parser"]=="official_rss":
-                metrics.update(windowCoverageVerified=False,coverageReason=parsed["coverage_reason"])
-                metrics["beforeContentCutoffSkipped"]+=parsed.get("before_window_skipped",0)
-                metrics["afterContentMonthSkipped"]+=parsed.get("after_window_skipped",0)
-            metrics["itemsSeen"]+=parsed["items_seen"]
-            if source["parser"]=="youtube_data_api":
-                metrics["apiUnitsEstimated"]=metrics.get("apiUnitsEstimated",0)+1  # playlistItems.list costs 1 API quota unit/page.
-                metrics["providerSkipped"]=metrics.get("providerSkipped",0)+parsed.get("items_skipped",0)
-                metrics["providerSkipReasons"]=list(dict.fromkeys(metrics.get("providerSkipReasons",[])+parsed.get("skip_reasons",[])))[:20]
-                metrics.update(windowCoverageVerified=False,coverageReason="PUBLIC_UPLOADS_PLAYLIST_BOUNDED_PAGES")
-                broadcast_documents=[document for document in documents if content_publication_status(document.get("published_at"),observed)=="INCLUDED"
-                    and classify_notice_content({"rawSha256":document["raw_sha256"],"originalTitle":document["original_title"]})["kind"]=="broadcast-preview"
-                    and (start<=aware_timestamp(document["published_at"])<end or mode=="reverify" and event_identity(document,source) in known_event_ids)]
-                if broadcast_documents and (deadline is None or time.monotonic()<deadline):
-                    from official_adapter import youtube_video_details_request,attach_youtube_video_details
-                    metrics["videoDetailsRequests"]+=1;metrics["apiUnitsEstimated"]+=1
-                    try:
-                        details_status,details_raw,_=fetch(youtube_video_details_request(source,[document["external_key"]for document in broadcast_documents]))
-                        if details_status!=200:raise ValidationError("youtube_video_details_http_"+str(details_status))
-                        attached=attach_youtube_video_details(details_raw,source,broadcast_documents)
-                        replacements={document["external_key"]:document for document in attached}
-                        documents=[replacements.get(document["external_key"],document)for document in documents]
-                    except Exception:
-                        metrics["videoDetailsFailures"]+=1
-                        error_key=digest([source["id"],run_id,"YOUTUBE_LIVE_DETAILS"])
-                        store.put("collectionErrors/"+error_key,{"sourceId":source["id"],"gameId":source["game_id"],"kind":"YOUTUBE_LIVE_DETAILS","reasonCode":"LIVE_DETAILS_UNCONFIRMED","createdAt":observed})
-            dates=[]
-            for document in documents:
-                gate=content_publication_status(document.get("published_at"),observed)
-                if gate!="INCLUDED":
-                    if gate=="PUBLISHED_BEFORE_CONTENT_CUTOFF":
-                        metrics["beforeContentCutoffSkipped"]+=1
-                        dates.append(int(timestamp(document["published_at"]).timestamp()))
-                    elif gate=="PUBLISHED_AFTER_CONTENT_MONTH":
-                        metrics["afterContentMonthSkipped"]+=1
-                    else:
-                        metrics["publicationUnconfirmedSkipped"]+=1
-                        key=digest([source["id"],document.get("external_key"),document.get("raw_sha256"),gate])
-                        store.mutate("collectionErrors/"+key,lambda old:(None,False) if old else ({"sourceId":source["id"],"gameId":source["game_id"],"kind":"PUBLICATION_QUARANTINE","reasonCode":gate,"createdAt":observed},True))
-                    continue
-                date=aware_timestamp(document["published_at"]);dates.append(int(date.timestamp()))
-                ongoing_old=date<start and confirmed_window_overlap(document,source,start,end)
-                changed=aware_timestamp(document["source_updated_at"]) if document.get("source_updated_at") else None
-                if start<=date<end or changed and start<=changed<end or ongoing_old or mode=="reverify" and event_identity(document,source) in known_event_ids:
-                    if not source_document_allowed(source,document.get("original_title")):
-                        metrics["sharedChannelOtherGameSkipped"]+=1;continue
-                    if document.get("linked_article_required"):
-                        from official_adapter import official_rss_article_request,attach_official_rss_article
+        with reservation:
+            if mode=="content-backfill":
+                previous=(store.get("collectorLocks/"+source["id"]) or {}).get("contentBackfill") or {}
+                try:
+                    matching=(previous.get("version")==1 and previous.get("policySha256")==digest(source_policy(source))
+                        and timestamp(previous.get("windowStart"))==start and start<timestamp(previous.get("windowEnd"))<=end
+                        and previous.get("complete") is not True)
+                except (ValueError,TypeError):matching=False
+                if matching:end=timestamp(previous["windowEnd"])
+            metrics["backfillResumeUsed"]=bool(matching)
+            if matching:
+                if source["parser"]=="youtube_data_api" and previous.get("pageToken"):
+                    page_token=previous["pageToken"]
+                    if not isinstance(page_token,str) or not re.fullmatch(r"[A-Za-z0-9_+=./:-]{1,512}",page_token):raise SafetyError("backfill_cursor_invalid")
+                    seen_page_tokens.add(page_token)
+                elif type(previous.get("providerCursor")) is int:cursor=previous["providerCursor"]
+            pending_resume=None
+            if matching and requested_mode=="incremental" and (page_token is not None or cursor!=(1 if source["parser"] in OFFICIAL_SITE_PARSERS else int(end.timestamp())+1)):
+                # A frozen archive cursor must not hide uploads published since the
+                # previous attempt. The fresh head consumes the same page budget.
+                pending_resume=(cursor,page_token,end)
+                cursor=1 if source["parser"] in OFFICIAL_SITE_PARSERS else int(fresh_end.timestamp())+1
+                page_token=None;end=fresh_end
+            source,roster_metrics=refresh_localization_roster(store,source,observed,fetch,sleep,deadline)
+            metrics['localizationRoster']=roster_metrics
+            if roster_metrics['status'] in ('FETCH_FAILED','SOURCE_POLICY_CHANGED','REVIEW_REQUIRED'):
+                store.put('collectionErrors/'+run_id+'-roster',{'sourceId':source['id'],'gameId':source['game_id'],'kind':'LOCALIZATION_ROSTER',
+                    'reasonCode':roster_metrics.get('reasonCode')or roster_metrics['status'],'createdAt':observed})
+            known_event_ids=set()
+            if mode=="reverify":
+                known_event_ids={event_id for event_id,_ in store.list_equal("gameEvents","sourceId",source["id"],50)}
+                metrics.update(knownEventsForReverify=len(known_event_ids),knownEventsQueryLimitReached=len(known_event_ids)==50)
+            for page_index in range(max_pages):
+                if deadline is not None and time.monotonic()>=deadline:
+                    if mode=="content-backfill" and metrics["pagesFetched"] and metrics["backfillCursorCommitted"]:
+                        success=True;metrics.update(pageLimitReached=True,timeBudgetReached=True,providerPaginationComplete=False);break
+                    raise SafetyError("run_time_limit")
+                sleep(1)
+                if source["parser"]=="youtube_data_api":
+                    from official_adapter import youtube_api_request,parse_youtube_api_documents
+                    request=youtube_api_request(source,page_token=page_token,count=50)
+                elif source["parser"]=="official_html":
+                    from official_adapter import official_html_request,parse_official_html_index,parse_official_html_article
+                    request=official_html_request(source,page=cursor)
+                elif source["parser"]=="official_rss":
+                    from official_adapter import official_rss_request,parse_official_rss_documents
+                    request=official_rss_request(source)
+                elif source["parser"]in OFFICIAL_CMS_PARSERS:
+                    from official_adapter import kuro_cms_request,parse_kuro_cms_index,parse_kuro_cms_article,genshin_cms_request,parse_genshin_cms_index,parse_genshin_cms_article
+                    cms_request,cms_index,cms_article=(kuro_cms_request,parse_kuro_cms_index,parse_kuro_cms_article)if source["parser"]=="kuro_cms"else(genshin_cms_request,parse_genshin_cms_index,parse_genshin_cms_article)
+                    request=cms_request(source,**({"page":cursor}if source["parser"]=="genshin_cms"else{}))
+                else:request=youtube_request(source) if source["parser"]=="youtube_atom" else steam_request({**source,"enabled":True},cursor,50)
+                http_status,raw,headers=fetch(request);metrics["pagesFetched"]+=1
+                if http_status!=200:
+                    retry_after=retry_after_seconds(headers.get("retry-after"))
+                    raise SafetyError("source_http_"+str(http_status))
+                if source["parser"]in OFFICIAL_CMS_PARSERS:
+                    entries=cms_index(raw,source);documents=[]
+                    dates_for_index=[entry["publishedDate"]for entry in entries]
+                    for entry in entries:
+                        date=datetime.strptime(entry["publishedDate"],"%Y.%m.%d").replace(tzinfo=UTC)
+                        if date.date()<CONTENT_CUTOFF.astimezone(timezone(timedelta(hours=9))).date()or date.date()>observed.astimezone(ZoneInfo(source["article_format"]["timezone"])).date():continue
+                        if not source_document_allowed(source,entry["title"]):metrics["sharedChannelOtherGameSkipped"]+=1;continue
+                        if source.get("news_scope")=="relevant_game_news_v1" and classify_notice_content({"originalTitle":entry["title"],"rawSha256":"a"*64})["kind"]=="other":metrics["contentExcluded"]+=1;continue
+                        if metrics.get("publisherArticleRequests",0)>=40:raise SafetyError("publisher_article_request_limit")
                         if deadline is not None and time.monotonic()>=deadline:raise SafetyError("run_time_limit")
-                        sleep(1);article_status,article_raw,_=fetch(official_rss_article_request(source,document))
+                        sleep(1);article_status,article_raw,_=fetch(cms_request(source,article_id=entry["id"]))
                         metrics["publisherArticleRequests"]=metrics.get("publisherArticleRequests",0)+1
                         if article_status!=200:raise SafetyError("publisher_article_http_"+str(article_status))
-                        document=attach_official_rss_article(article_raw,source,document)
-                    if ongoing_old:metrics["ongoingOlderIncluded"]+=1
-                    classification=classify_notice_content({"rawSha256":document["raw_sha256"],"originalTitle":document["original_title"]})
-                    if source["parser"]in YOUTUBE_PARSERS and (classification["status"]!="verified"or classification["kind"]not in YOUTUBE_ADMITTED_NEWS_KINDS):
-                        metrics["contentExcluded"]+=1
-                        metrics["contentSuppressedUpdated"]+=int(upsert_notice(store,source,document,observed)=="contentSuppressedUpdated")
+                        article=cms_article(article_raw,source,entry["url"],observed.isoformat())
+                        if article.get("publication_local_date")!=entry["publishedDate"].replace(".","-")or plain_notice(article["original_title"])!=plain_notice(entry["title"]):raise SafetyError("publisher_list_article_identity_changed")
+                        documents.append(article)
+                    parsed={"items_seen":len(entries),"items_accepted":len(documents),"items_skipped":len(entries)-len(documents),"skip_reasons":[],
+                        "publication_cutoff_reached":bool(dates_for_index and min(dates_for_index)<CONTENT_CUTOFF.astimezone(timezone(timedelta(hours=9))).strftime("%Y.%m.%d")),"coverage_reason":"PUBLIC_PUBLISHER_CMS_INDEX"}
+                elif source["parser"]=="official_html":
+                    entries=parse_official_html_index(raw,source,cursor);documents=[];dates_for_index=[entry["publishedDate"]for entry in entries]
+                    if dates_for_index!=sorted(dates_for_index,reverse=True):raise SafetyError("publisher_board_publication_order_unconfirmed")
+                    for entry in entries:
+                        if not source_document_allowed(source,entry["title"]):metrics["sharedChannelOtherGameSkipped"]+=1;continue
+                        date=datetime.strptime(entry["publishedDate"],"%Y.%m.%d").replace(tzinfo=timezone(timedelta(hours=9))).astimezone(UTC)
+                        if date<CONTENT_CUTOFF or date>=end:continue
+                        if deadline is not None and time.monotonic()>=deadline:raise SafetyError("run_time_limit")
+                        sleep(1);article_status,article_raw,_=fetch(official_html_request(source,article_url=entry["url"]))
+                        metrics["publisherArticleRequests"]=metrics.get("publisherArticleRequests",0)+1
+                        if article_status!=200:raise SafetyError("publisher_article_http_"+str(article_status))
+                        article=parse_official_html_article(article_raw,source,entry["url"],observed.isoformat())
+                        if article["raw_publication_timestamp"]!=entry["publishedDate"]or plain_notice(article["original_title"])!=plain_notice(entry["title"]):raise SafetyError("publisher_list_article_identity_changed")
+                        documents.append(article)
+                    parsed={"items_seen":len(entries),"items_accepted":len(documents),"items_skipped":len(entries)-len(documents),"skip_reasons":[],
+                        "publication_cutoff_reached":bool(dates_for_index and dates_for_index[-1]<CONTENT_CUTOFF.astimezone(timezone(timedelta(hours=9))).strftime("%Y.%m.%d"))}
+                else:
+                    documents,parsed=(parse_youtube_api_documents(raw,source,observed.isoformat()) if source["parser"]=="youtube_data_api" else parse_youtube_documents(raw,source,observed.isoformat()) if source["parser"]=="youtube_atom" else parse_official_rss_documents(raw,source,observed.isoformat(),published_start=CONTENT_CUTOFF,published_end=None) if source["parser"]=="official_rss" else parse_steam_documents(raw,source,observed.isoformat()))
+                if source["parser"]=="youtube_atom":
+                    metrics.update(windowCoverageVerified=False,coverageReason=parsed["coverage_reason"])
+                if source["parser"]=="official_rss":
+                    metrics.update(windowCoverageVerified=False,coverageReason=parsed["coverage_reason"])
+                    metrics["beforeContentCutoffSkipped"]+=parsed.get("before_window_skipped",0)
+                    metrics["afterContentMonthSkipped"]+=parsed.get("after_window_skipped",0)
+                metrics["itemsSeen"]+=parsed["items_seen"]
+                if source["parser"]=="youtube_data_api":
+                    metrics["apiUnitsEstimated"]=metrics.get("apiUnitsEstimated",0)+1  # playlistItems.list costs 1 API quota unit/page.
+                    metrics["providerSkipped"]=metrics.get("providerSkipped",0)+parsed.get("items_skipped",0)
+                    metrics["providerSkipReasons"]=list(dict.fromkeys(metrics.get("providerSkipReasons",[])+parsed.get("skip_reasons",[])))[:20]
+                    metrics.update(windowCoverageVerified=False,coverageReason="PUBLIC_UPLOADS_PLAYLIST_BOUNDED_PAGES")
+                    broadcast_documents=[document for document in documents if content_publication_status(document.get("published_at"),observed)=="INCLUDED"
+                        and classify_notice_content({"rawSha256":document["raw_sha256"],"originalTitle":document["original_title"]})["kind"]=="broadcast-preview"
+                        and (start<=aware_timestamp(document["published_at"])<end or mode=="reverify" and event_identity(document,source) in known_event_ids)]
+                    if broadcast_documents and (deadline is None or time.monotonic()<deadline):
+                        from official_adapter import youtube_video_details_request,attach_youtube_video_details
+                        metrics["videoDetailsRequests"]+=1;metrics["apiUnitsEstimated"]+=1
+                        try:
+                            details_status,details_raw,_=fetch(youtube_video_details_request(source,[document["external_key"]for document in broadcast_documents]))
+                            if details_status!=200:raise ValidationError("youtube_video_details_http_"+str(details_status))
+                            attached=attach_youtube_video_details(details_raw,source,broadcast_documents)
+                            replacements={document["external_key"]:document for document in attached}
+                            documents=[replacements.get(document["external_key"],document)for document in documents]
+                        except Exception:
+                            metrics["videoDetailsFailures"]+=1
+                            error_key=digest([source["id"],run_id,"YOUTUBE_LIVE_DETAILS"])
+                            store.put("collectionErrors/"+error_key,{"sourceId":source["id"],"gameId":source["game_id"],"kind":"YOUTUBE_LIVE_DETAILS","reasonCode":"LIVE_DETAILS_UNCONFIRMED","createdAt":observed})
+                dates=[]
+                for document in documents:
+                    gate=content_publication_status(document.get("published_at"),observed)
+                    if gate!="INCLUDED":
+                        if gate=="PUBLISHED_BEFORE_CONTENT_CUTOFF":
+                            metrics["beforeContentCutoffSkipped"]+=1
+                            dates.append(int(timestamp(document["published_at"]).timestamp()))
+                        elif gate=="PUBLISHED_AFTER_CONTENT_MONTH":
+                            metrics["afterContentMonthSkipped"]+=1
+                        else:
+                            metrics["publicationUnconfirmedSkipped"]+=1
+                            key=digest([source["id"],document.get("external_key"),document.get("raw_sha256"),gate])
+                            store.mutate("collectionErrors/"+key,lambda old:(None,False) if old else ({"sourceId":source["id"],"gameId":source["game_id"],"kind":"PUBLICATION_QUARANTINE","reasonCode":gate,"createdAt":observed},True))
                         continue
-                    outcome=upsert_notice(store,source,document,observed,image_fetch=fetch,deadline=deadline)
-                    metrics[outcome]+=1
-                    stored=store.get("gameEvents/"+event_identity(document,source))
-                    if stored and source["parser"]in YOUTUBE_PARSERS and outcome!="unchanged":
-                        image_check=stored.get("noticeImageVerification")or{}
-                        metrics["thumbnailProbeRequests"]=metrics.get("thumbnailProbeRequests",0)+image_check.get("requests",0)
-                        metrics["verifiedNoticeImages"]=metrics.get("verifiedNoticeImages",0)+int(image_check.get("status")=="verified")
-                        metrics["unverifiedNoticeImages"]=metrics.get("unverifiedNoticeImages",0)+int(image_check.get("status")!="verified")
-                    if stored and stored.get("verificationStatus")=="verified" and stored.get("startsAt") and stored.get("endsAt"):
-                        metrics["verifiedSchedules"]+=1
-                    if stored and stored.get("candidateStartsAt") and stored.get("candidateEndsAt") and stored.get("status")!="cancelled":
-                        metrics["candidateSchedules"]+=1
-                    if stored and stored.get("derivedSectionCount"):
-                        children=store.list_equal("gameEvents","parentEventId",stored["id"],50)
-                        metrics["derivedChildrenQueryLimitReached"]=metrics["derivedChildrenQueryLimitReached"] or len(children)==50
-                        verified_children=[row for _,row in children if row.get("verificationStatus")=="verified" and row.get("startsAt") and row.get("endsAt") and row.get("status")!="cancelled"]
-                        metrics["verifiedSchedules"]+=len(verified_children)
-                        metrics["verifiedSectionSchedules"]+=sum(bool(row.get("sourceSectionKey")) for row in verified_children)
-                        candidate_children=[row for _,row in children if row.get("verificationStatus")=="pending" and row.get("candidateStartsAt") and row.get("candidateEndsAt") and row.get("status")!="cancelled"]
-                        metrics["candidateSchedules"]+=len(candidate_children)
-                        metrics["candidateSectionSchedules"]+=sum(bool(row.get("sourceSectionKey")) for row in candidate_children)
-                elif mode=="reverify":
-                    metrics["olderUnseenSkipped"]+=1
-            oldest=min(dates) if dates else None
-            if source["parser"]in OFFICIAL_SITE_PARSERS:
-                if source["parser"]in("official_rss","kuro_cms") or mode=="reverify" or not parsed["items_seen"] or parsed.get("publication_cutoff_reached"):
-                    complete=source["parser"]in("official_html","genshin_cms","kuro_cms") and (source["parser"]=="kuro_cms"or not parsed["items_seen"]or parsed.get("publication_cutoff_reached"))
-                    metrics.update(providerPaginationComplete=bool(complete),publicationCutoffReached=bool(parsed.get("publication_cutoff_reached")),windowCoverageVerified=bool(complete),
-                        coverageReason="PUBLISHER_BOARD_DATE_BOUNDARY_REACHED" if complete else parsed.get("coverage_reason","PUBLIC_ARTICLES_BOUNDED_REVERIFY"))
-                    if mode=="content-backfill":checkpoint_month_backfill(store,source,token,start,end,cursor=cursor,complete=True,pages=1);metrics["backfillCursorCommitted"]=True
-                    success=True;break
-                cursor+=1
-                if mode=="content-backfill":checkpoint_month_backfill(store,source,token,start,end,cursor=cursor,pages=1);metrics["backfillCursorCommitted"]=True
-                continue
-            if source["parser"]=="youtube_data_api":
-                next_page=parsed.get("next_page_token")
-                # Playlist position/added time is not necessarily video publication
-                # order. An old video alone must not hide later October videos.
-                if not next_page or mode=="reverify":
-                    metrics["providerPaginationComplete"]=not bool(next_page)
-                    metrics["publicationCutoffReached"]=oldest is not None and oldest<int(CONTENT_CUTOFF.timestamp())
+                    date=aware_timestamp(document["published_at"]);dates.append(int(date.timestamp()))
+                    if metrics["latestPublishedAtSeen"] is None or date>metrics["latestPublishedAtSeen"]:metrics["latestPublishedAtSeen"]=date
+                    ongoing_old=date<start and confirmed_window_overlap(document,source,start,end)
+                    changed=aware_timestamp(document["source_updated_at"]) if document.get("source_updated_at") else None
+                    if start<=date<end or changed and start<=changed<end or ongoing_old or mode=="reverify" and event_identity(document,source) in known_event_ids:
+                        if not source_document_allowed(source,document.get("original_title")):
+                            metrics["sharedChannelOtherGameSkipped"]+=1;continue
+                        if document.get("linked_article_required"):
+                            from official_adapter import official_rss_article_request,attach_official_rss_article
+                            if deadline is not None and time.monotonic()>=deadline:raise SafetyError("run_time_limit")
+                            sleep(1);article_status,article_raw,_=fetch(official_rss_article_request(source,document))
+                            metrics["publisherArticleRequests"]=metrics.get("publisherArticleRequests",0)+1
+                            if article_status!=200:raise SafetyError("publisher_article_http_"+str(article_status))
+                            document=attach_official_rss_article(article_raw,source,document)
+                        if ongoing_old:metrics["ongoingOlderIncluded"]+=1
+                        classification=classify_notice_content({"rawSha256":document["raw_sha256"],"originalTitle":document["original_title"]})
+                        if source["parser"]in YOUTUBE_PARSERS and (classification["status"]!="verified"or classification["kind"]not in YOUTUBE_ADMITTED_NEWS_KINDS):
+                            metrics["contentExcluded"]+=1
+                            metrics["contentSuppressedUpdated"]+=int(upsert_notice(store,source,document,observed)=="contentSuppressedUpdated")
+                            continue
+                        outcome=upsert_notice(store,source,document,observed,image_fetch=fetch,deadline=deadline)
+                        metrics[outcome]+=1
+                        stored=store.get("gameEvents/"+event_identity(document,source))
+                        if stored and stored["id"] not in reported_event_ids:
+                            reported_event_ids.add(stored["id"])
+                            retained=timestamp(stored["publishedAt"])
+                            if metrics["latestRetainedPublishedAt"] is None or retained>metrics["latestRetainedPublishedAt"]:metrics["latestRetainedPublishedAt"]=retained
+                            content=classify_notice_content(stored)
+                            classified=content["status"]=="verified" and content["kind"]!="other"
+                            metrics["newsEligibleDocuments"]+=int(stored.get("newsEligible") is True)
+                            metrics["newsBlockedByImage"]+=int(classified and not notice_has_representative_image(stored,observed))
+                            metrics["newsBlockedByClassification"]+=int(not classified)
+                        if stored and source["parser"]in YOUTUBE_PARSERS and outcome!="unchanged":
+                            image_check=stored.get("noticeImageVerification")or{}
+                            metrics["thumbnailProbeRequests"]=metrics.get("thumbnailProbeRequests",0)+image_check.get("requests",0)
+                            metrics["verifiedNoticeImages"]=metrics.get("verifiedNoticeImages",0)+int(image_check.get("status")=="verified")
+                            metrics["unverifiedNoticeImages"]=metrics.get("unverifiedNoticeImages",0)+int(image_check.get("status")!="verified")
+                        if stored and stored.get("verificationStatus")=="verified" and stored.get("startsAt") and stored.get("endsAt"):
+                            metrics["verifiedSchedules"]+=1
+                        if stored and stored.get("candidateStartsAt") and stored.get("candidateEndsAt") and stored.get("status")!="cancelled":
+                            metrics["candidateSchedules"]+=1
+                        if stored and stored.get("derivedSectionCount"):
+                            children=store.list_equal("gameEvents","parentEventId",stored["id"],50)
+                            metrics["derivedChildrenQueryLimitReached"]=metrics["derivedChildrenQueryLimitReached"] or len(children)==50
+                            verified_children=[row for _,row in children if row.get("verificationStatus")=="verified" and row.get("startsAt") and row.get("endsAt") and row.get("status")!="cancelled"]
+                            metrics["verifiedSchedules"]+=len(verified_children)
+                            metrics["verifiedSectionSchedules"]+=sum(bool(row.get("sourceSectionKey")) for row in verified_children)
+                            candidate_children=[row for _,row in children if row.get("verificationStatus")=="pending" and row.get("candidateStartsAt") and row.get("candidateEndsAt") and row.get("status")!="cancelled"]
+                            metrics["candidateSchedules"]+=len(candidate_children)
+                            metrics["candidateSectionSchedules"]+=sum(bool(row.get("sourceSectionKey")) for row in candidate_children)
+                    elif mode=="reverify":
+                        metrics["olderUnseenSkipped"]+=1
+                if requested_mode=="incremental" and (not matching or pending_resume is not None):metrics["freshHeadFetched"]=True
+                if pending_resume is not None:
+                    cursor,page_token,end=pending_resume;pending_resume=None
+                    if page_index==max_pages-1:
+                        success=True;metrics.update(pageLimitReached=True,providerPaginationComplete=False,windowCoverageVerified=False,
+                            coverageReason="FRESH_HEAD_FETCHED_ARCHIVE_RESUME_PENDING");break
+                    continue
+                oldest=min(dates) if dates else None
+                if source["parser"]in OFFICIAL_SITE_PARSERS:
+                    if source["parser"]in("official_rss","kuro_cms") or mode=="reverify" or not parsed["items_seen"] or parsed.get("publication_cutoff_reached"):
+                        complete=source["parser"]in("official_html","genshin_cms","kuro_cms") and (source["parser"]=="kuro_cms"or not parsed["items_seen"]or parsed.get("publication_cutoff_reached"))
+                        metrics.update(providerPaginationComplete=bool(complete),publicationCutoffReached=bool(parsed.get("publication_cutoff_reached")),windowCoverageVerified=bool(complete),
+                            coverageReason="PUBLISHER_BOARD_DATE_BOUNDARY_REACHED" if complete else parsed.get("coverage_reason","PUBLIC_ARTICLES_BOUNDED_REVERIFY"))
+                        if mode=="content-backfill":checkpoint_month_backfill(store,source,token,start,end,cursor=cursor,complete=True,pages=1);metrics["backfillCursorCommitted"]=True
+                        success=True;break
+                    cursor+=1
+                    if mode=="content-backfill":checkpoint_month_backfill(store,source,token,start,end,cursor=cursor,pages=1);metrics["backfillCursorCommitted"]=True
+                    continue
+                if source["parser"]=="youtube_data_api":
+                    next_page=parsed.get("next_page_token")
+                    # Playlist position/added time is not necessarily video publication
+                    # order. An old video alone must not hide later October videos.
+                    if not next_page or mode=="reverify":
+                        metrics["providerPaginationComplete"]=not bool(next_page)
+                        metrics["publicationCutoffReached"]=oldest is not None and oldest<int(CONTENT_CUTOFF.timestamp())
+                        if mode=="content-backfill":
+                            checkpoint_month_backfill(store,source,token,start,end,complete=not bool(next_page),pages=1)
+                            metrics.update(backfillCursorCommitted=True,windowCoverageVerified=not bool(next_page) and not metrics.get("providerSkipped",0),
+                                coverageReason="PUBLIC_UPLOADS_PLAYLIST_EXHAUSTED" if not next_page else "PUBLIC_UPLOADS_PLAYLIST_BOUNDED_PAGES")
+                        success=True;break
+                    if not isinstance(next_page,str) or not re.fullmatch(r"[A-Za-z0-9_+=./:-]{1,512}",next_page) or next_page in seen_page_tokens:raise SafetyError("youtube_pagination_token_not_advancing")
+                    seen_page_tokens.add(next_page);page_token=next_page
                     if mode=="content-backfill":
-                        checkpoint_month_backfill(store,source,token,start,end,complete=not bool(next_page),pages=1)
-                        metrics.update(backfillCursorCommitted=True,windowCoverageVerified=not bool(next_page) and not metrics.get("providerSkipped",0),
-                            coverageReason="PUBLIC_UPLOADS_PLAYLIST_EXHAUSTED" if not next_page else "PUBLIC_UPLOADS_PLAYLIST_BOUNDED_PAGES")
+                        checkpoint_month_backfill(store,source,token,start,end,page_token=page_token,pages=1);metrics["backfillCursorCommitted"]=True
+                    continue
+                if parsed["items_seen"]>=50 and oldest is not None and dates.count(oldest)>1 and oldest>=int(start.timestamp()):
+                    raise SafetyError("pagination_boundary_ambiguous")
+                if source["parser"]=="youtube_atom" or mode=="reverify" or parsed["items_seen"]<50 or oldest is not None and oldest<int(start.timestamp()):
+                    if mode=="content-backfill":
+                        complete=source["parser"]!="youtube_atom"
+                        checkpoint_month_backfill(store,source,token,start,end,cursor=cursor,complete=complete,pages=1)
+                        metrics.update(backfillCursorCommitted=True,providerPaginationComplete=complete,windowCoverageVerified=complete)
                     success=True;break
-                if not isinstance(next_page,str) or not re.fullmatch(r"[A-Za-z0-9_+=./:-]{1,512}",next_page) or next_page in seen_page_tokens:raise SafetyError("youtube_pagination_token_not_advancing")
-                seen_page_tokens.add(next_page);page_token=next_page
+                if oldest is None or oldest>=cursor:raise SafetyError("pagination_cursor_not_advancing")
+                cursor=oldest
                 if mode=="content-backfill":
-                    checkpoint_month_backfill(store,source,token,start,end,page_token=page_token,pages=1);metrics["backfillCursorCommitted"]=True
-                continue
-            if parsed["items_seen"]>=50 and oldest is not None and dates.count(oldest)>1 and oldest>=int(start.timestamp()):
-                raise SafetyError("pagination_boundary_ambiguous")
-            if source["parser"]=="youtube_atom" or mode=="reverify" or parsed["items_seen"]<50 or oldest is not None and oldest<int(start.timestamp()):
-                if mode=="content-backfill":
-                    complete=source["parser"]!="youtube_atom"
-                    checkpoint_month_backfill(store,source,token,start,end,cursor=cursor,complete=complete,pages=1)
-                    metrics.update(backfillCursorCommitted=True,providerPaginationComplete=complete,windowCoverageVerified=complete)
-                success=True;break
-            if oldest is None or oldest>=cursor:raise SafetyError("pagination_cursor_not_advancing")
-            cursor=oldest
-            if mode=="content-backfill":
-                checkpoint_month_backfill(store,source,token,start,end,cursor=cursor,pages=1);metrics["backfillCursorCommitted"]=True
-        if not success:
-            if source["parser"]=="youtube_data_api" and page_token is not None:
-                success=True
-                metrics.update(pageLimitReached=True,providerPaginationComplete=False,windowCoverageVerified=False,
-                    coverageReason="PAGE_LIMIT_REACHED_WITH_MORE_UPLOADS")
-            elif mode=="content-backfill" and metrics["backfillCursorCommitted"]:
-                success=True;metrics.update(pageLimitReached=True,providerPaginationComplete=False,windowCoverageVerified=False,coverageReason="PAGE_LIMIT_REACHED_WITH_RESUME_CURSOR")
-            else:raise SafetyError("page_limit_reached")
+                    checkpoint_month_backfill(store,source,token,start,end,cursor=cursor,pages=1);metrics["backfillCursorCommitted"]=True
+            if not success:
+                if source["parser"]=="youtube_data_api" and page_token is not None:
+                    success=True
+                    metrics.update(pageLimitReached=True,providerPaginationComplete=False,windowCoverageVerified=False,
+                        coverageReason="PAGE_LIMIT_REACHED_WITH_MORE_UPLOADS")
+                elif mode=="content-backfill" and metrics["backfillCursorCommitted"]:
+                    success=True;metrics.update(pageLimitReached=True,providerPaginationComplete=False,windowCoverageVerified=False,coverageReason="PAGE_LIMIT_REACHED_WITH_RESUME_CURSOR")
+                else:raise SafetyError("page_limit_reached")
     except Exception as failure:
         error=str(failure)[:120] if isinstance(failure,(SafetyError,ValidationError)) else type(failure).__name__
         store.put("collectionErrors/"+run_id,{"sourceId":source["id"],"gameId":source["game_id"],"reasonCode":error,
                   "httpStatus":http_status,"createdAt":observed,"retryAfterSeconds":retry_after})
     finished=datetime.now(UTC)
-    finish_source(store,source,token,finished,success,error,http_status,mode,retry_after)
-    result={"sourceId":source["id"],"gameId":source["game_id"],"status":"DEFERRED_QUOTA_BUDGET"if error=="collector_free_quota_headroom"else "SUCCESS_BOUNDED" if success and metrics.get("pageLimitReached")else "success" if success else "FETCH_FAILED",
+    finish_source(store,source,token,finished,success,error,http_status,mode,retry_after,metrics)
+    result={"sourceId":source["id"],"gameId":source["game_id"],"status":"DEFERRED_QUOTA_BUDGET"if error in QUOTA_DEFERRAL_REASONS else "SUCCESS_BOUNDED" if success and metrics.get("pageLimitReached")else "success" if success else "FETCH_FAILED",
             "contentPublishedNotBefore":CONTENT_PUBLISHED_NOT_BEFORE,
             "windowStart":start,"windowEnd":end,"mode":mode,"requestedMode":requested_mode,"metrics":metrics,"reasonCode":error,
             "httpStatus":http_status,"createdAt":observed,"finishedAt":finished,
@@ -2411,7 +2483,7 @@ def collect_one(store, source, start, end, mode="backfill", fetch=fetch_source, 
     return result
 
 
-def adaptive_source_budget(store,requested,source_count,now=None):
+def adaptive_source_budget(store,requested,source_count,now=None,overdue_sources=0):
     """Worker-accounted soft quota sharing; provider Spark limits remain final.
 
     Repeated 116-source/15-minute maintenance would require at least 44,544
@@ -2426,8 +2498,14 @@ def adaptive_source_budget(store,requested,source_count,now=None):
     writes=max(0,store.daily_remaining_writes-store.writes);reads=max(0,store.daily_remaining_reads-store.reads)
     per_slot_writes=writes//slots;per_slot_reads=reads//slots
     effective=min(requested,25,max(0,(per_slot_writes-24)//5),max(0,(per_slot_reads-source_count-32)//8))
+    catchup=min(requested,overdue_sources,max(0,(min(writes-2,getattr(store,"max_writes",500)-store.writes-2)-24)//5),
+        max(0,(min(reads-1,getattr(store,"max_reads",2500)-store.reads-1)-32)//8))
+    effective=max(effective,catchup)
+    write_budget=min(getattr(store,"max_writes",500)-store.writes,writes,max(per_slot_writes,catchup*5+26 if catchup else 0))
     return {**base,"enabled":True,"effectiveSourceAttempts":effective,"remainingScheduleSlotsInQuotaDay":slots,"remainingWorkerWrites":writes,"remainingWorkerReads":reads,
-        "slotWriteBudget":per_slot_writes,"slotReadBudget":per_slot_reads,"reservedWritesPerSlot":24,"estimatedMaintenanceWritesPerSource":5,
+        "slotWriteBudget":per_slot_writes,"slotReadBudget":per_slot_reads,"effectiveRunWriteBudget":write_budget,
+        "overdueSourceCount":overdue_sources,"catchupEnabled":catchup>0,"catchupThresholdHours":3,
+        "reservedWritesPerSlot":24,"estimatedMaintenanceWritesPerSource":5,
         "unadaptedMaintenanceWritesPerDay":source_count*96*4,"estimatedMinimumRotationMinutes":((source_count+effective-1)//effective)*15 if effective else None,
         "reasonCode":"WORKER_FREE_QUOTA_ADAPTIVE_CAP"if effective else "WORKER_FREE_QUOTA_HEADROOM_LOW","allSourcesEvery15MinutesVerified":False}
 
@@ -2449,13 +2527,18 @@ def run(registry,store,start,end,mode="backfill",fetch=fetch_source,sleep=time.s
         operating_registry={"games":[{"gameId":row["gameId"],"sources":[operating_source({**row,"id":source_id})]}
                            for source_id,row in public_sources if row.get("enabled") is True]}
     sources=[{**raw_source,"game_id":game["gameId"]} for game in operating_registry["games"] for raw_source in game.get("sources",[])]
-    budget=adaptive_source_budget(store,max_sources,len(sources))
-    max_sources=budget["effectiveSourceAttempts"]
-    if budget["enabled"]:
-        store.max_writes=min(store.max_writes,max(store.writes+24,store.writes+budget["slotWriteBudget"]))
     def last_checked(source):
         try:return timestamp(source.get("last_checked_at")) if source.get("last_checked_at") else datetime.min.replace(tzinfo=UTC)
         except (ValueError,TypeError):return datetime.min.replace(tzinfo=UTC)
+    now=datetime.now(UTC)
+    def is_due(source):
+        try:return not source.get("next_run_at") or timestamp(source["next_run_at"])<=now
+        except (ValueError,TypeError):return True
+    overdue=sum(is_due(source) and last_checked(source)<=now-timedelta(hours=3) for source in sources)
+    budget=adaptive_source_budget(store,max_sources,len(sources),now,overdue)
+    max_sources=budget["effectiveSourceAttempts"]
+    if budget["enabled"]:
+        store.max_writes=min(store.max_writes,max(store.writes+24,store.writes+budget["effectiveRunWriteBudget"]))
     # Previously unattempted or longest-waiting sources come first; failed
     # sources use lastChecked, so they cannot monopolize every subsequent run.
     sources.sort(key=lambda source:(last_checked(source),source["id"]))
@@ -2477,12 +2560,18 @@ def run(registry,store,start,end,mode="backfill",fetch=fetch_source,sleep=time.s
         results.append(result)
         if result.get("status") not in ("DEFERRED","DISABLED"):attempts+=1
         if result.get("httpStatus")==429:limited_hosts.add(host)
+    news_outcome={"scope":"UNIQUE_PARENT_EVENTS_PROCESSED_PER_SOURCE_RUN","eligibleNews":sum(row.get("metrics",{}).get("newsEligibleDocuments",0)for row in results),
+        "heldForImage":sum(row.get("metrics",{}).get("newsBlockedByImage",0)for row in results),
+        "heldForClassification":sum(row.get("metrics",{}).get("newsBlockedByClassification",0)for row in results),
+        "created":sum(row.get("metrics",{}).get("created",0)for row in results),"updated":sum(row.get("metrics",{}).get("updated",0)for row in results),
+        "failedSources":sum(row.get("status")=="FETCH_FAILED"for row in results),"notDueSources":sum(row.get("reasonCode")=="SOURCE_NOT_DUE"for row in results),
+        "quotaDeferredSources":sum(row.get("status")=="DEFERRED_QUOTA_BUDGET"for row in results),"fullSourceCoverageVerified":False}
     return {"recordedAt":datetime.now(UTC),"backend":"FIREBASE" if store.remote else "LOCAL_STAGING",
             "youtubeMetadataRetention":retention,
             "contentPublishedNotBefore":CONTENT_PUBLISHED_NOT_BEFORE,"contentPublishedBefore":CONTENT_PUBLISHED_BEFORE,
             "sourceAttempts":attempts,"registeredSourcesConsidered":len(sources),"sourceRegistryLimitReached":registry_limited,
             "collectionScope":"PUBLIC_CATALOGUE_NOT_USER_SUBSCRIPTIONS","pageBudgetPerSource":max_pages,
-            "quotaPolicy":budget,"unattemptedSources":max(0,len(sources)-attempts),
+            "quotaPolicy":budget,"newsOutcome":news_outcome,"unattemptedSources":max(0,len(sources)-attempts),
             "remoteFirestoreWrites":store.writes if store.remote else 0,"fcmSends":0,"windowHours":(end-start).total_seconds()/3600,
             "results":results,"verifiedEventSchedules":sum(row.get("metrics",{}).get("verifiedSchedules",0) for row in results),"fullSourceCoverageVerified":False,
             "candidateEventSchedules":sum(row.get("metrics",{}).get("candidateSchedules",0) for row in results),
@@ -2509,37 +2598,46 @@ def main():
     registry=json.loads(Path(args.registry).read_text(encoding="utf-8-sig"))
     if args.content_cleanup and (args.seed or args.activate_reviewed_sources):parser.error("content cleanup cannot activate or seed sources")
     store=FirestoreStore() if args.apply or args.content_cleanup and args.live else MemoryStore()
-    if args.content_cleanup:
-        if args.apply:
-            if not args.cleanup_review:parser.error("--apply cleanup requires a reviewed dry-run JSON")
-            result=apply_content_cleanup(store,json.loads(Path(args.cleanup_review).read_text(encoding="utf-8-sig")))
-        else:result=content_cleanup_plan(store)
-    elif args.activate_reviewed_sources:
-        if not store.remote:parser.error("activation requires --apply and explicit Spark authorization")
-        activated=0
-        for game in registry["games"]:
-            for source in game.get("sources",[]):
-                if not reviewed(source):continue
-                row=store.get("gameSources/"+source["id"])
-                if not row:raise SafetyError("seed_reviewed_source_before_activation")
-                # Reset rule/service region verification is independent from feed permission.
-                expected=source_row(source,game["gameId"])
-                if any(row.get(k)!=expected.get(k) for k in ["gameId","url","steamAppid","termsUrl","allowedNoticeHosts","feedAllowlist"]):raise SafetyError("source_configuration_changed_requires_manual_review")
-                if row.get("enabled") is not True:
-                    store.put("gameSources/"+source["id"],{**row,"enabled":True,"health":{"status":"READY","consecutiveFailures":0}});activated+=1
-        result={"status":"EXPLICIT_REVIEWED_SOURCE_ACTIVATION","activatedSources":activated,"remoteFirestoreWrites":store.writes}
-    elif args.seed:
-        result=seed_catalogue(store,json.loads(Path("data/game-candidates.json").read_text(encoding="utf-8-sig")),registry)
-        result={"status":"SEEDED" if store.remote else "DRY_RUN","remoteFirestoreWrites":store.writes if store.remote else 0,**result}
-    elif not args.live:
-        result={"status":"PLAN_ONLY","reviewedSources":sum(reviewed(s) for g in registry["games"] for s in g.get("sources",[])),
-                "remoteFirestoreWrites":0,"httpRequests":0,"fcmSends":0,"firebaseConnected":False}
-    else:
-        end=min(datetime.now(UTC),CONTENT_MONTH_END);start=CONTENT_CUTOFF if args.mode=="content-backfill" else max(CONTENT_CUTOFF,end-timedelta(hours=args.hours))
-        result=run(registry,store,start,end,args.mode,max_sources=args.max_sources,max_pages=args.pages_per_source)
-    if store.remote and not (args.content_cleanup and not args.apply):
-        store.finish_usage()
-        result.update(usageAccountingWrites=2,totalFirestoreWrites=store.writes+2)
+    result=None
+    try:
+        if args.content_cleanup:
+            if args.apply:
+                if not args.cleanup_review:parser.error("--apply cleanup requires a reviewed dry-run JSON")
+                result=apply_content_cleanup(store,json.loads(Path(args.cleanup_review).read_text(encoding="utf-8-sig")))
+            else:result=content_cleanup_plan(store)
+        elif args.activate_reviewed_sources:
+            if not store.remote:parser.error("activation requires --apply and explicit Spark authorization")
+            activated=0
+            for game in registry["games"]:
+                for source in game.get("sources",[]):
+                    if not reviewed(source):continue
+                    row=store.get("gameSources/"+source["id"])
+                    if not row:raise SafetyError("seed_reviewed_source_before_activation")
+                    # Reset rule/service region verification is independent from feed permission.
+                    expected=source_row(source,game["gameId"])
+                    if any(row.get(k)!=expected.get(k) for k in ["gameId","url","steamAppid","termsUrl","allowedNoticeHosts","feedAllowlist"]):raise SafetyError("source_configuration_changed_requires_manual_review")
+                    if row.get("enabled") is not True:
+                        store.put("gameSources/"+source["id"],{**row,"enabled":True,"health":{"status":"READY","consecutiveFailures":0}});activated+=1
+            result={"status":"EXPLICIT_REVIEWED_SOURCE_ACTIVATION","activatedSources":activated,"remoteFirestoreWrites":store.writes}
+        elif args.seed:
+            result=seed_catalogue(store,json.loads(Path("data/game-candidates.json").read_text(encoding="utf-8-sig")),registry)
+            result={"status":"SEEDED" if store.remote else "DRY_RUN","remoteFirestoreWrites":store.writes if store.remote else 0,**result}
+        elif not args.live:
+            result={"status":"PLAN_ONLY","reviewedSources":sum(reviewed(s) for g in registry["games"] for s in g.get("sources",[])),
+                    "remoteFirestoreWrites":0,"httpRequests":0,"fcmSends":0,"firebaseConnected":False}
+        else:
+            end=datetime.now(UTC);start=CONTENT_CUTOFF if args.mode=="content-backfill" else max(CONTENT_CUTOFF,end-timedelta(hours=args.hours))
+            result=run(registry,store,start,end,args.mode,max_sources=args.max_sources,max_pages=args.pages_per_source)
+    except SafetyError as error:
+        if str(error) not in QUOTA_DEFERRAL_REASONS:raise
+        result={"status":"DEFERRED_QUOTA_BUDGET","reasonCode":str(error),"fullSourceCoverageVerified":False,
+            "remoteFirestoreWrites":store.writes if store.remote else 0,"fcmSends":0}
+    finally:
+        # Partial operations still count toward the free worker allowance.
+        # A soft-budget deferral must not look like a zero-use successful run.
+        if store.remote and not (args.content_cleanup and not args.apply):
+            store.finish_usage()
+            if result is not None:result.update(usageAccountingWrites=2,totalFirestoreWrites=store.writes+2)
     output=Path(args.report);output.parent.mkdir(parents=True,exist_ok=True)
     output.write_text(json.dumps(result,ensure_ascii=False,indent=2,default=lambda v:v.isoformat())+"\n",encoding="utf-8")
     if args.live and not store.remote:

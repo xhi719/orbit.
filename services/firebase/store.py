@@ -4,6 +4,7 @@ No paid service is created. A read-only billing check must prove no billing acco
 is attached before any Firestore/FCM operation. MemoryStore is test/local evidence.
 """
 from __future__ import annotations
+from contextlib import contextmanager
 from copy import deepcopy
 from datetime import datetime, timezone
 import hashlib
@@ -47,7 +48,22 @@ def timestamp(value):
     return result.astimezone(timezone.utc)
 
 
-class MemoryStore:
+class BudgetReservation:
+    @contextmanager
+    def reserve_budget(self, *, reads=0, writes=0):
+        """Keep room for lease release and audit records without raising limits."""
+        previous_reads = getattr(self, "reserved_reads", 0)
+        previous_writes = getattr(self, "reserved_writes", 0)
+        self.reserved_reads = previous_reads + reads
+        self.reserved_writes = previous_writes + writes
+        try:
+            yield
+        finally:
+            self.reserved_reads = previous_reads
+            self.reserved_writes = previous_writes
+
+
+class MemoryStore(BudgetReservation):
     remote = False
 
     def __init__(self, records=None):
@@ -151,7 +167,7 @@ def verify_no_billing(project_id, credentials, opener=urlopen):
     return True
 
 
-class FirestoreStore:
+class FirestoreStore(BudgetReservation):
     remote = True
 
     def __init__(self, env=None):
@@ -199,8 +215,16 @@ class FirestoreStore:
         if prior.get("writes",0) >= 14000 or prior.get("reads",0) >= 35000:
             raise SafetyError("collector_daily_soft_budget_exhausted")
 
+    def read_headroom(self):
+        return max(0, min(max(0,self.max_reads-1), max(0, getattr(self, "daily_remaining_reads", self.max_reads) - 1))
+                   - self.reads - getattr(self, "reserved_reads", 0))
+
+    def write_headroom(self):
+        return max(0, min(max(0,self.max_writes-2), max(0, getattr(self, "daily_remaining_writes", self.max_writes) - 2))
+                   - self.writes - getattr(self, "reserved_writes", 0))
+
     def guard(self, writing=False):
-        if self.reads >= self.max_reads or self.reads>=getattr(self,"daily_remaining_reads",self.max_reads+1)or writing and(self.writes>=self.max_writes or self.writes>=max(0,getattr(self,"daily_remaining_writes",self.max_writes+3)-2)):
+        if self.read_headroom() == 0 or writing and self.write_headroom() == 0:
             raise SafetyError("worker_run_soft_budget_exhausted")
 
     def get(self, path):
@@ -218,6 +242,7 @@ class FirestoreStore:
         ref = self.db.document(path)
         @self.firestore.transactional
         def apply(transaction):
+            self.guard(writing=True)
             self.reads += 1
             value, result = callback(ref.get(transaction=transaction).to_dict())
             if value is not None:
@@ -229,7 +254,7 @@ class FirestoreStore:
 
     def list(self, collection, limit=200):
         self.guard()
-        rows = [(document.id, document.to_dict()) for document in self.db.collection(collection).limit(min(limit,self.max_reads-self.reads)).stream(timeout=20)]
+        rows = [(document.id, document.to_dict()) for document in self.db.collection(collection).limit(min(limit,self.read_headroom())).stream(timeout=20)]
         self.reads += max(1,len(rows))
         return rows
 
@@ -269,7 +294,7 @@ class FirestoreStore:
         self.guard()
         if not 1<=limit<=50:raise SafetyError("bounded_source_query_limit_required")
         from google.cloud.firestore_v1.base_query import FieldFilter
-        remaining=min(limit,self.max_reads-self.reads)
+        remaining=min(limit,self.read_headroom())
         query=self.db.collection(collection).where(filter=FieldFilter(field,"==",value)).limit(remaining)
         rows=[(document.id,document.to_dict()) for document in query.stream(timeout=20)]
         self.reads+=max(1,len(rows))
@@ -278,7 +303,7 @@ class FirestoreStore:
     def list_cursor(self,collection,after_id=None,limit=25):
         self.guard()
         if not 1<=limit<=100 or after_id is not None and (not isinstance(after_id,str) or '/' in after_id):raise SafetyError("bounded_document_cursor_required")
-        remaining=min(limit,self.max_reads-self.reads)
+        remaining=min(limit,self.read_headroom())
         parent=self.db.collection(collection)
         query=parent.order_by("__name__")
         if after_id is not None:query=query.start_after([parent.document(after_id)])
@@ -289,7 +314,7 @@ class FirestoreStore:
         self.guard()
         if collection!="gameEvents" or field!="announcementPublishedAt" or not 1<=limit<=200:raise SafetyError("bounded_announcement_query_required")
         from google.cloud.firestore_v1.base_query import FieldFilter
-        remaining=min(limit,self.max_reads-self.reads)
+        remaining=min(limit,self.read_headroom())
         query=self.db.collection(collection).where(filter=FieldFilter(field,">=",timestamp(since))).order_by(field,direction="DESCENDING").limit(remaining)
         rows=[(document.id,document.to_dict()) for document in query.stream(timeout=20)]
         self.reads+=max(1,len(rows));return rows
@@ -298,7 +323,7 @@ class FirestoreStore:
         self.guard()
         if not isinstance(date_keys,list)or not 1<=len(date_keys)<=8 or any(not isinstance(day,str)or not re.fullmatch(r"20\d{2}-\d{2}-\d{2}",day)for day in date_keys)or not 1<=limit<=50:raise SafetyError("bounded_public_stage_date_query_required")
         from google.cloud.firestore_v1.base_query import FieldFilter
-        remaining=min(limit,self.max_reads-self.reads)
+        remaining=min(limit,self.read_headroom())
         query=self.db.collection("gameEvents").where(filter=FieldFilter("announcementStageDateKeys","array_contains_any",date_keys)).limit(remaining)
         rows=[(document.id,document.to_dict())for document in query.stream(timeout=20)]
         self.reads+=max(1,len(rows));return rows
@@ -307,7 +332,7 @@ class FirestoreStore:
         self.guard()
         if collection not in ("gameEvents","collectionDocuments") or not 1<=limit<=50:raise SafetyError("bounded_public_youtube_expiry_query_required")
         from google.cloud.firestore_v1.base_query import FieldFilter
-        remaining=min(limit,self.max_reads-self.reads)
+        remaining=min(limit,self.read_headroom())
         # The lower bound excludes null/non-timestamp legacy metadata from
         # monopolizing the bounded expiry queue. Both bounds use one field index.
         query=self.db.collection(collection).where(filter=FieldFilter("metadataExpiresAt",">=",datetime(1970,1,1,tzinfo=timezone.utc))).where(filter=FieldFilter("metadataExpiresAt","<=",timestamp(before))).order_by("metadataExpiresAt").limit(remaining)
