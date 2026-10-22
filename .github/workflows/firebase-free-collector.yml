@@ -39,6 +39,12 @@ jobs:
         with:
           python-version: '3.11'
       - run: python -m pip install -r services/firebase/requirements.txt
+      - name: Restore public approval and deduplication state
+        uses: actions/cache/restore@v4
+        with:
+          path: work/public-recovery-state.json
+          key: orbit-public-recovery-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: orbit-public-recovery-
       - name: Seed only when explicitly requested
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.seed }}
         run: python services/firebase/collector.py --seed --apply
@@ -52,7 +58,13 @@ jobs:
           MODE=incremental
           if [[ "${{ github.event.schedule }}" == '53 4 * * *' ]]; then MODE=reverify; fi
           if [[ "${{ github.event_name }}" == 'workflow_dispatch' ]]; then MODE='${{ inputs.mode }}'; fi
-          python services/firebase/collector.py --mode "$MODE" --hours 72 --max-sources 100 --pages-per-source 3 --live --apply --report reports/firebase-collector.json
+          python services/firebase/collector.py --mode "$MODE" --hours 72 --max-sources 100 --pages-per-source 3 --live --apply --public-recovery-state work/public-recovery-state.json --report reports/firebase-collector.json
+      - name: Preserve bounded public recovery state
+        if: ${{ always() && hashFiles('work/public-recovery-state.json') != '' }}
+        uses: actions/cache/save@v4
+        with:
+          path: work/public-recovery-state.json
+          key: orbit-public-recovery-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Report publication and holding outcomes
         id: collection_report
         if: always()
@@ -73,9 +85,10 @@ jobs:
               report = json.loads(path.read_text(encoding="utf-8"))
               dispatch_allowed = not report.get("providerQuotaBlocked", False) and report.get("status") not in ("PROVIDER_QUOTA_DEFERRED", "FAILED") and not str(report.get("status", "")).startswith("DEFERRED")
               results = report.get("results", [])
-              summary = {key: report.get(key) for key in ["status", "backend", "recordedAt", "sourceAttempts", "registeredSourcesConsidered", "unattemptedSources", "newsOutcome", "quotaPolicy", "fullSourceCoverageVerified"]}
-              summary["createdDocuments"] = sum(row.get("metrics", {}).get("created", 0) for row in results)
-              summary["updatedDocuments"] = sum(row.get("metrics", {}).get("updated", 0) for row in results)
+              summary = {key: report.get(key) for key in ["status", "backend", "recordedAt", "sourceAttempts", "registeredSourcesConsidered", "unattemptedSources", "newsOutcome", "quotaPolicy", "providerReadQuotaBlocked", "recoveryReasonCode", "remoteFirestoreWrites", "existingUpdatesDeferred", "fullSourceCoverageVerified"]}
+              recovering = str(report.get("status", "")).startswith("PUBLIC_NEWS_RECOVERY_")
+              summary["createdDocuments"] = report.get("recoveryCreated", 0) if recovering else sum(row.get("metrics", {}).get("created", 0) for row in results)
+              summary["updatedDocuments"] = 0 if recovering else sum(row.get("metrics", {}).get("updated", 0) for row in results)
               summary["sourceOutcomes"] = {status: sum(row.get("status") == status for row in results) for status in sorted({row.get("status", "UNKNOWN") for row in results})}
               print(json.dumps({"publicationPipeline": summary}, ensure_ascii=False))
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
@@ -84,5 +97,7 @@ jobs:
       - name: Dispatch enabled FCM notifications
         if: ${{ success() && steps.collection_report.outputs.dispatch_allowed == 'true' }}
         run: python services/firebase/notifications.py --apply
-    # No artifact upload/cache/billing attachment, Functions, Cloud Run, Cloud
-    # Scheduler, App Hosting or Cloud Storage is created by this workflow.
+    # Only a bounded public source-approval/identity file enters the default free
+    # cache. Never cache credentials, private records, or change its paid limit.
+    # No artifacts, billing attachment, Functions, Cloud Run, Cloud Scheduler,
+    # App Hosting or Cloud Storage are created by this workflow.
