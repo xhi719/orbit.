@@ -29,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "collector"))
 from engine import fetch_source, ValidationError, normalize_url, image_dimensions
 from official_adapter import steam_request, parse_steam_documents, aware_timestamp, TYPES
 from backfill import retry_after_seconds
-from store import MemoryStore, FirestoreStore, SafetyError, timestamp, document_fingerprint, cleanup_path, CONTENT_CLEANUP_COLLECTIONS
+from store import MemoryStore, FirestoreStore, SafetyError, ProviderQuotaUnavailable, is_provider_quota_error, timestamp, document_fingerprint, cleanup_path, CONTENT_CLEANUP_COLLECTIONS
 
 UTC = timezone.utc
 DATETIME_TYPE = datetime
@@ -2578,6 +2578,14 @@ def run(registry,store,start,end,mode="backfill",fetch=fetch_source,sleep=time.s
             "extractionVersion":EXTRACTION_VERSION,"imageReuseRequiresSeparateReview":True}
 
 
+def provider_quota_result(store=None, previous=None):
+    """A provider denial is observable even when Firestore bookkeeping cannot run."""
+    return {**(previous or {}),"status":"PROVIDER_QUOTA_DEFERRED","reasonCode":"firestore_provider_quota_exhausted",
+        "collectionSucceeded":False,"fullSourceCoverageVerified":False,"usageAccountingConfirmed":False,
+        "usageAccountingDeferred":True,"workerRetriesAfterProviderQuota":0,
+        "storeInitialized":store is not None,"remoteFirestoreWrites":getattr(store,"writes",0),"fcmSends":0}
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--registry",default="data/official-sources.json")
@@ -2597,9 +2605,9 @@ def main():
     if not 1<=args.max_sources<=200 or not 1<=args.pages_per_source<=200:parser.error("bounded source/page budgets must be 1..200")
     registry=json.loads(Path(args.registry).read_text(encoding="utf-8-sig"))
     if args.content_cleanup and (args.seed or args.activate_reviewed_sources):parser.error("content cleanup cannot activate or seed sources")
-    store=FirestoreStore() if args.apply or args.content_cleanup and args.live else MemoryStore()
-    result=None
+    store=None;result=None
     try:
+        store=FirestoreStore() if args.apply or args.content_cleanup and args.live else MemoryStore()
         if args.content_cleanup:
             if args.apply:
                 if not args.cleanup_review:parser.error("--apply cleanup requires a reviewed dry-run JSON")
@@ -2628,19 +2636,29 @@ def main():
         else:
             end=datetime.now(UTC);start=CONTENT_CUTOFF if args.mode=="content-backfill" else max(CONTENT_CUTOFF,end-timedelta(hours=args.hours))
             result=run(registry,store,start,end,args.mode,max_sources=args.max_sources,max_pages=args.pages_per_source)
-    except SafetyError as error:
-        if str(error) not in QUOTA_DEFERRAL_REASONS:raise
-        result={"status":"DEFERRED_QUOTA_BUDGET","reasonCode":str(error),"fullSourceCoverageVerified":False,
-            "remoteFirestoreWrites":store.writes if store.remote else 0,"fcmSends":0}
+    except Exception as error:
+        if isinstance(error,ProviderQuotaUnavailable) or is_provider_quota_error(error):
+            result=provider_quota_result(store)
+        elif isinstance(error,SafetyError) and str(error) in QUOTA_DEFERRAL_REASONS:
+            result={"status":"DEFERRED_QUOTA_BUDGET","reasonCode":str(error),"fullSourceCoverageVerified":False,
+                "remoteFirestoreWrites":getattr(store,"writes",0)if getattr(store,"remote",False)else 0,"fcmSends":0}
+        else:raise
     finally:
         # Partial operations still count toward the free worker allowance.
         # A soft-budget deferral must not look like a zero-use successful run.
-        if store.remote and not (args.content_cleanup and not args.apply):
-            store.finish_usage()
-            if result is not None:result.update(usageAccountingWrites=2,totalFirestoreWrites=store.writes+2)
+        if store is not None and store.remote and not (args.content_cleanup and not args.apply):
+            if (result or {}).get("status")=="PROVIDER_QUOTA_DEFERRED":
+                result=provider_quota_result(store,result)
+            else:
+                try:
+                    store.finish_usage()
+                    if result is not None:result.update(usageAccountingWrites=2,totalFirestoreWrites=store.writes+2,usageAccountingConfirmed=True)
+                except Exception as error:
+                    if not isinstance(error,ProviderQuotaUnavailable) and not is_provider_quota_error(error):raise
+                    result=provider_quota_result(store,result)
     output=Path(args.report);output.parent.mkdir(parents=True,exist_ok=True)
     output.write_text(json.dumps(result,ensure_ascii=False,indent=2,default=lambda v:v.isoformat())+"\n",encoding="utf-8")
-    if args.live and not store.remote:
+    if args.live and store is not None and not store.remote:
         evidence=output.with_name(output.stem+"-local-evidence.json")
         evidence.write_text(json.dumps(store.records,ensure_ascii=False,indent=2,default=lambda v:v.isoformat())+"\n",encoding="utf-8")
     print(json.dumps({"status":result.get("status",result.get("backend")),"report":str(output),"remoteFirestoreWrites":result["remoteFirestoreWrites"]}))

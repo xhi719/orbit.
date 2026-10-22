@@ -19,6 +19,23 @@ class SafetyError(ValueError):
     pass
 
 
+class ProviderQuotaUnavailable(SafetyError):
+    """The provider rejected work; worker counters cannot prove free headroom."""
+    def __init__(self):
+        super().__init__("firestore_provider_quota_exhausted")
+
+
+def is_provider_quota_error(error):
+    """Recognize SDK quota errors without importing cloud dependencies or text."""
+    seen=set()
+    for _ in range(5):
+        if error is None or id(error) in seen:return False
+        seen.add(id(error))
+        if any(base.__module__=="google.api_core.exceptions" and base.__name__ in ("ResourceExhausted","TooManyRequests") for base in type(error).__mro__):return True
+        error=getattr(error,"cause",None) or getattr(error,"__cause__",None)
+    return False
+
+
 CONTENT_CLEANUP_COLLECTIONS = frozenset({"gameEvents", "pickupSchedules", "collectionDocuments"})
 
 
@@ -208,7 +225,7 @@ class FirestoreStore(BudgetReservation):
         self.max_writes = 500
         from zoneinfo import ZoneInfo
         self.quota_day = datetime.now(timezone.utc).astimezone(ZoneInfo("America/Los_Angeles")).date().isoformat()
-        prior = self.db.document("quotaBudgets/" + self.quota_day).get(timeout=20).to_dict() or {}
+        prior = self._provider_call(lambda:self.db.document("quotaBudgets/" + self.quota_day).get(timeout=20,retry=None).to_dict()) or {}
         self.reads += 1
         self.daily_remaining_reads=max(0,35000-prior.get("reads",0))
         self.daily_remaining_writes=max(0,14000-prior.get("writes",0))
@@ -224,17 +241,26 @@ class FirestoreStore(BudgetReservation):
                    - self.writes - getattr(self, "reserved_writes", 0))
 
     def guard(self, writing=False):
+        if getattr(self,"provider_quota_exhausted",False):raise ProviderQuotaUnavailable()
         if self.read_headroom() == 0 or writing and self.write_headroom() == 0:
             raise SafetyError("worker_run_soft_budget_exhausted")
+
+    def _provider_call(self, operation):
+        if getattr(self,"provider_quota_exhausted",False):raise ProviderQuotaUnavailable()
+        try:return operation()
+        except Exception as error:
+            if not is_provider_quota_error(error):raise
+            self.provider_quota_exhausted=True
+            raise ProviderQuotaUnavailable() from None
 
     def get(self, path):
         self.guard()
         self.reads += 1
-        return self.db.document(path).get(timeout=20).to_dict()
+        return self._provider_call(lambda:self.db.document(path).get(timeout=20,retry=None).to_dict())
 
     def put(self, path, value):
         self.guard(writing=True)
-        self.db.document(path).set(value, timeout=20)
+        self._provider_call(lambda:self.db.document(path).set(value, timeout=20,retry=None))
         self.writes += 1
 
     def mutate(self, path, callback):
@@ -244,23 +270,23 @@ class FirestoreStore(BudgetReservation):
         def apply(transaction):
             self.guard(writing=True)
             self.reads += 1
-            value, result = callback(ref.get(transaction=transaction).to_dict())
+            value, result = callback(ref.get(transaction=transaction,timeout=20,retry=None).to_dict())
             if value is not None:
                 transaction.set(ref, value)
             return value is not None, result
-        changed, result = apply(self.db.transaction(max_attempts=3))
+        changed, result = self._provider_call(lambda:apply(self.db.transaction(max_attempts=3)))
         self.writes += int(changed)
         return result
 
     def list(self, collection, limit=200):
         self.guard()
-        rows = [(document.id, document.to_dict()) for document in self.db.collection(collection).limit(min(limit,self.read_headroom())).stream(timeout=20)]
+        rows = self._provider_call(lambda:[(document.id, document.to_dict()) for document in self.db.collection(collection).limit(min(limit,self.read_headroom())).stream(timeout=20,retry=None)])
         self.reads += max(1,len(rows))
         return rows
 
     def delete(self, path):
         self.guard(writing=True)
-        self.db.document(path).delete(timeout=20)
+        self._provider_call(lambda:self.db.document(path).delete(timeout=20,retry=None))
         self.writes += 1
 
     def delete_content_if_unchanged(self, path, expected_fingerprint, guards=None, predicate=None):
@@ -274,19 +300,19 @@ class FirestoreStore(BudgetReservation):
         def apply(transaction):
             self.guard(writing=True)
             self.reads += 1
-            row = ref.get(transaction=transaction).to_dict()
+            row = ref.get(transaction=transaction,timeout=20,retry=None).to_dict()
             if row is None or document_fingerprint(row) != expected_fingerprint: return False
             guard_rows = {}
             for guard_path, expected in guards.items():
                 self.guard()
                 self.reads += 1
-                guard_row = self.db.document(guard_path).get(transaction=transaction).to_dict()
+                guard_row = self.db.document(guard_path).get(transaction=transaction,timeout=20,retry=None).to_dict()
                 if document_fingerprint(guard_row) != expected: return False
                 guard_rows[guard_path] = guard_row
             if predicate is not None and not predicate(row, guard_rows): return False
             transaction.delete(ref)
             return True
-        changed = apply(self.db.transaction(max_attempts=3))
+        changed = self._provider_call(lambda:apply(self.db.transaction(max_attempts=3)))
         self.writes += int(changed)
         return changed
 
@@ -296,7 +322,7 @@ class FirestoreStore(BudgetReservation):
         from google.cloud.firestore_v1.base_query import FieldFilter
         remaining=min(limit,self.read_headroom())
         query=self.db.collection(collection).where(filter=FieldFilter(field,"==",value)).limit(remaining)
-        rows=[(document.id,document.to_dict()) for document in query.stream(timeout=20)]
+        rows=self._provider_call(lambda:[(document.id,document.to_dict()) for document in query.stream(timeout=20,retry=None)])
         self.reads+=max(1,len(rows))
         return rows
 
@@ -307,7 +333,7 @@ class FirestoreStore(BudgetReservation):
         parent=self.db.collection(collection)
         query=parent.order_by("__name__")
         if after_id is not None:query=query.start_after([parent.document(after_id)])
-        rows=[(document.id,document.to_dict()) for document in query.limit(remaining).stream(timeout=20)]
+        rows=self._provider_call(lambda:[(document.id,document.to_dict()) for document in query.limit(remaining).stream(timeout=20,retry=None)])
         self.reads+=max(1,len(rows));return rows
 
     def list_since(self,collection,field,since,limit=200):
@@ -316,7 +342,7 @@ class FirestoreStore(BudgetReservation):
         from google.cloud.firestore_v1.base_query import FieldFilter
         remaining=min(limit,self.read_headroom())
         query=self.db.collection(collection).where(filter=FieldFilter(field,">=",timestamp(since))).order_by(field,direction="DESCENDING").limit(remaining)
-        rows=[(document.id,document.to_dict()) for document in query.stream(timeout=20)]
+        rows=self._provider_call(lambda:[(document.id,document.to_dict()) for document in query.stream(timeout=20,retry=None)])
         self.reads+=max(1,len(rows));return rows
 
     def list_stage_dates(self,date_keys,limit=50):
@@ -325,7 +351,7 @@ class FirestoreStore(BudgetReservation):
         from google.cloud.firestore_v1.base_query import FieldFilter
         remaining=min(limit,self.read_headroom())
         query=self.db.collection("gameEvents").where(filter=FieldFilter("announcementStageDateKeys","array_contains_any",date_keys)).limit(remaining)
-        rows=[(document.id,document.to_dict())for document in query.stream(timeout=20)]
+        rows=self._provider_call(lambda:[(document.id,document.to_dict())for document in query.stream(timeout=20,retry=None)])
         self.reads+=max(1,len(rows));return rows
 
     def list_expired_youtube(self,collection,before,limit=50):
@@ -336,24 +362,25 @@ class FirestoreStore(BudgetReservation):
         # The lower bound excludes null/non-timestamp legacy metadata from
         # monopolizing the bounded expiry queue. Both bounds use one field index.
         query=self.db.collection(collection).where(filter=FieldFilter("metadataExpiresAt",">=",datetime(1970,1,1,tzinfo=timezone.utc))).where(filter=FieldFilter("metadataExpiresAt","<=",timestamp(before))).order_by("metadataExpiresAt").limit(remaining)
-        rows=[(document.id,document.to_dict())for document in query.stream(timeout=20)]
+        rows=self._provider_call(lambda:[(document.id,document.to_dict())for document in query.stream(timeout=20,retry=None)])
         self.reads+=max(1,len(rows));return rows
 
     def finish_usage(self):
         """Worker-only observations; Firebase client traffic is NOT measured here."""
+        if getattr(self,"provider_quota_exhausted",False):raise ProviderQuotaUnavailable()
         ref = self.db.document("quotaBudgets/" + self.quota_day)
         @self.firestore.transactional
         def finish(transaction):
-            old = ref.get(transaction=transaction).to_dict() or {}
+            old = ref.get(transaction=transaction,timeout=20,retry=None).to_dict() or {}
             values = {"reads":old.get("reads",0)+self.reads+1,"writes":old.get("writes",0)+self.writes+2,
                       "scope":"externalWorkersOnly","updatedAt":datetime.now(timezone.utc)}
             transaction.set(ref,values)
             return values
-        values = finish(self.db.transaction(max_attempts=3))
+        values = self._provider_call(lambda:finish(self.db.transaction(max_attempts=3)))
         max_percent = max(values["reads"] / 50000,values["writes"] / 20000)*100
         level = "95" if max_percent>=95 else "85" if max_percent>=85 else "70" if max_percent>=70 else "normal"
-        self.db.document("usageSnapshots/"+self.quota_day).set({**values,"readUsagePercent":round(values["reads"]/50000*100,2),
+        self._provider_call(lambda:self.db.document("usageSnapshots/"+self.quota_day).set({**values,"readUsagePercent":round(values["reads"]/50000*100,2),
              "writeUsagePercent":round(values["writes"]/20000*100,2),"warningThreshold":level,
-             "fullProjectUsageVerified":False,"clientUsageIncluded":False,"storageUsageBytes":None,"transferUsageBytes":None},timeout=20)
+             "fullProjectUsageVerified":False,"clientUsageIncluded":False,"storageUsageBytes":None,"transferUsageBytes":None},timeout=20,retry=None))
         return values
 
