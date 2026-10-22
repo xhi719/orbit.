@@ -664,7 +664,14 @@
           "schedule_extraction_evidence_url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067925601",
           "section_schedule_format": "heading_period_v1",
           "paired_recruitment_period_approved": true,
-          "highest_character_rarity": null,
+          "highest_character_rarity": {
+            "evidenceUrl": "https://gf2.haoplay.com/game/probability.html",
+            "labels": [
+              "Elite",
+              "정예"
+            ],
+            "checkedAt": "2026-10-14T00:34:44.054538+00:00"
+          },
           "image_reuse": null,
           "identity_evidence": {
             "url": "https://store.steampowered.com/app/3308670/",
@@ -674,7 +681,1076 @@
             "observedAt": "2026-10-13T07:26:21.714286+00:00",
             "notes": "HAOPLAY publisher channel; English/GMT+0 does not establish KR, JP, Asia or global server identity."
           },
-          "notes": "Official bounded API only. Source dates remain pending while region is unconfirmed. No highest-rarity/new/rerun or image reuse inferred."
+          "notes": "Official bounded API only. Source dates remain pending while region is unconfirmed. No highest-rarity/new/rerun or image reuse inferred.",
+          "calendar_role_policy": {
+            "automaticRules": {
+              "newHighestCharacter": true,
+              "mode": "explicit_main_role_extraction_v1",
+              "gameId": "girls-frontline-2",
+              "evidenceUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067925601",
+              "mainEventFormat": "gf2_story_event_v1",
+              "parser": "steam_news",
+              "checkedAt": "2026-10-14T00:18:03.028730+00:00"
+            },
+            "mode": "reviewed_main_roles_v1",
+            "roles": [
+              {
+                "sourceTitle": "Amber Reel of Moonlight",
+                "characterNames": [],
+                "sourceSha256": "7da6bc31987c513ebe47ae1dd1f9523e85931045eb22cfb41e9cd4d30b793195",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/",
+                "role": "main-event",
+                "checkedAt": "2026-10-13T22:02:36.575697+00:00"
+              },
+              {
+                "sourceTitle": "Targeted Procurement Event | Mityl",
+                "characterNames": [
+                  "Mityl"
+                ],
+                "sourceSha256": "7da6bc31987c513ebe47ae1dd1f9523e85931045eb22cfb41e9cd4d30b793195",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/",
+                "role": "main-character",
+                "checkedAt": "2026-10-13T22:02:36.575697+00:00"
+              }
+            ],
+            "version": 2
+          },
+          "content_localization": {
+            "gameId": "girls-frontline-2",
+            "sourceLanguage": "en",
+            "terms": [
+              {
+                "names": {
+                  "ko": "미틸"
+                },
+                "publisherUnitId": "58",
+                "sourceName": "Mityl",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "소프"
+                },
+                "publisherUnitId": "57",
+                "sourceName": "Soppo",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "OTs-14"
+                },
+                "publisherUnitId": "55",
+                "sourceName": "OTs-14",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "네메시스·연광"
+                },
+                "publisherUnitId": "56",
+                "sourceName": "NEMESIS: GNOSIS",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "류시"
+                },
+                "publisherUnitId": "52",
+                "sourceName": "Liushih",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "샤이엔"
+                },
+                "publisherUnitId": "53",
+                "sourceName": "Cheyanne",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "파에투사"
+                },
+                "publisherUnitId": "48",
+                "sourceName": "Phaetusa",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "레이니"
+                },
+                "publisherUnitId": "46",
+                "sourceName": "Lainie",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "보이마스티나"
+                },
+                "publisherUnitId": "45",
+                "sourceName": "Voymastina",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "루이스"
+                },
+                "publisherUnitId": "41",
+                "sourceName": "Lewis",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "로벨라"
+                },
+                "publisherUnitId": "40",
+                "sourceName": "ROBELLA",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "리바"
+                },
+                "publisherUnitId": "38",
+                "sourceName": "Leva",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "린드"
+                },
+                "publisherUnitId": "37",
+                "sourceName": "Lind",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "니키타"
+                },
+                "publisherUnitId": "32",
+                "sourceName": "Nikketa",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "클루카이"
+                },
+                "publisherUnitId": "23",
+                "sourceName": "Klukai",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "마키아토"
+                },
+                "publisherUnitId": "17",
+                "sourceName": "Makiatto",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "파파샤"
+                },
+                "publisherUnitId": "18",
+                "sourceName": "Papasha",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "롯타"
+                },
+                "publisherUnitId": "2",
+                "sourceName": "Lotta",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "토로로"
+                },
+                "publisherUnitId": "9",
+                "sourceName": "TOLOLO",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "네메시스"
+                },
+                "publisherUnitId": "4",
+                "sourceName": "NEMESIS",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "샤크리"
+                },
+                "publisherUnitId": "12",
+                "sourceName": "SHARKRY",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "경구"
+                },
+                "publisherUnitId": "10",
+                "sourceName": "Qiongjiu",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "리타라"
+                },
+                "publisherUnitId": "16",
+                "sourceName": "Littara",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "모신나강"
+                },
+                "publisherUnitId": "15",
+                "sourceName": "Mosin-Nagant",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "페리티아"
+                },
+                "publisherUnitId": "7",
+                "sourceName": "PERITYA",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "하프시"
+                },
+                "publisherUnitId": "51",
+                "sourceName": "HARPSY",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "사쿠라"
+                },
+                "publisherUnitId": "42",
+                "sourceName": "Sakura",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "비욜카"
+                },
+                "publisherUnitId": "34",
+                "sourceName": "Belka",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "추화"
+                },
+                "publisherUnitId": "31",
+                "sourceName": "QIUHUA",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "페이"
+                },
+                "publisherUnitId": "30",
+                "sourceName": "Faye",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "조휘"
+                },
+                "publisherUnitId": "27",
+                "sourceName": "ZHAOHUI",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "대연"
+                },
+                "publisherUnitId": "19",
+                "sourceName": "Daiyan",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "울리드"
+                },
+                "publisherUnitId": "1",
+                "sourceName": "Ullrid",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "캐롤릭"
+                },
+                "publisherUnitId": "5",
+                "sourceName": "KROLIK",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "베프리"
+                },
+                "publisherUnitId": "8",
+                "sourceName": "Vepley",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "섹스턴스"
+                },
+                "publisherUnitId": "54",
+                "sourceName": "Sextans",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "로렐라이"
+                },
+                "publisherUnitId": "50",
+                "sourceName": "LORELEY",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "바스티"
+                },
+                "publisherUnitId": "49",
+                "sourceName": "BASTI",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "앨바"
+                },
+                "publisherUnitId": "43",
+                "sourceName": "Alva",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "바틸다"
+                },
+                "publisherUnitId": "44",
+                "sourceName": "Bathilde",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "레나"
+                },
+                "publisherUnitId": "39",
+                "sourceName": "Lenna",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "플로렌스"
+                },
+                "publisherUnitId": "36",
+                "sourceName": "Florence",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "강우"
+                },
+                "publisherUnitId": "35",
+                "sourceName": "JIANGYU",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "스프링필드"
+                },
+                "publisherUnitId": "28",
+                "sourceName": "Springfield",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "유희"
+                },
+                "publisherUnitId": "26",
+                "sourceName": "Yoohee",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "벡터"
+                },
+                "publisherUnitId": "25",
+                "sourceName": "Vector",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "미슈티"
+                },
+                "publisherUnitId": "24",
+                "sourceName": "Mechty",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "센타우레이시"
+                },
+                "publisherUnitId": "22",
+                "sourceName": "Centaureissi",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "드셰브니"
+                },
+                "publisherUnitId": "20",
+                "sourceName": "Dushevnaya",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "수오미"
+                },
+                "publisherUnitId": "0",
+                "sourceName": "Suomi",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "콜펜"
+                },
+                "publisherUnitId": "6",
+                "sourceName": "COLPHNE",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "치타"
+                },
+                "publisherUnitId": "13",
+                "sourceName": "CHEETA",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "나강"
+                },
+                "publisherUnitId": "14",
+                "sourceName": "NAGANT",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "크세니아"
+                },
+                "publisherUnitId": "21",
+                "sourceName": "Ksenia",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "헬렌"
+                },
+                "publisherUnitId": "47",
+                "sourceName": "HELEN",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "안도리스"
+                },
+                "publisherUnitId": "33",
+                "sourceName": "Andoris",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "페리"
+                },
+                "publisherUnitId": "29",
+                "sourceName": "Peri",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "그로자"
+                },
+                "publisherUnitId": "3",
+                "sourceName": "GROZA",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "names": {
+                  "ko": "사브리나"
+                },
+                "publisherUnitId": "11",
+                "sourceName": "SABRINA",
+                "checkedAt": "2026-10-13T22:04:26.939771+00:00",
+                "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+                "aliases": [],
+                "pairedTargetSha256": "6e6bde2499ea28be676e217769b11116ad4e2d2bd3c47158e342f40226a77709",
+                "kind": "character",
+                "pairedSourceSha256": "6955721468a29c5d2d8ff3592bf11e5ba375072a66d1a499d556608c51e96e82"
+              },
+              {
+                "evidenceUrl": "https://steamcommunity.com/app/3308670/allnews/?l=koreana",
+                "names": {
+                  "ko": "스쿼럴 노바"
+                },
+                "checkedAt": "2026-10-13T22:02:36.575697+00:00",
+                "sourceName": "Squirrel Nova",
+                "kind": "weapon",
+                "aliases": []
+              },
+              {
+                "evidenceUrl": "https://steamcommunity.com/app/3308670/allnews/?l=koreana",
+                "names": {
+                  "ko": "나이트 카다멈"
+                },
+                "checkedAt": "2026-10-13T22:02:36.575697+00:00",
+                "sourceName": "Nightwalker Cardamom",
+                "kind": "weapon",
+                "aliases": []
+              },
+              {
+                "evidenceUrl": "https://steamcommunity.com/app/3308670/allnews/?l=koreana",
+                "names": {
+                  "ko": "절영"
+                },
+                "checkedAt": "2026-10-13T22:02:36.575697+00:00",
+                "sourceName": "Transience",
+                "kind": "weapon",
+                "aliases": []
+              },
+              {
+                "evidenceUrl": "https://steamcommunity.com/app/3308670/allnews/?l=koreana",
+                "names": {
+                  "ko": "밀려드는 야상곡"
+                },
+                "checkedAt": "2026-10-13T22:02:36.575697+00:00",
+                "sourceName": "Nighttide Nocturne",
+                "kind": "weapon",
+                "aliases": []
+              },
+              {
+                "evidenceUrl": "https://steamcommunity.com/app/3308670/allnews/?l=koreana",
+                "names": {
+                  "ko": "6P33"
+                },
+                "checkedAt": "2026-10-13T22:02:36.575697+00:00",
+                "sourceName": "6P33",
+                "kind": "weapon",
+                "aliases": []
+              },
+              {
+                "evidenceUrl": "https://steamcommunity.com/app/3308670/allnews/?l=koreana",
+                "names": {
+                  "ko": "쇄천의 하울링"
+                },
+                "checkedAt": "2026-10-13T22:02:36.575697+00:00",
+                "sourceName": "Sky-Shattering Howl",
+                "kind": "weapon",
+                "aliases": []
+              },
+              {
+                "evidenceUrl": "https://steamcommunity.com/app/3308670/allnews/?l=koreana",
+                "names": {
+                  "ko": "써니 이매진"
+                },
+                "checkedAt": "2026-10-13T22:02:36.575697+00:00",
+                "sourceName": "Sunny Imagine",
+                "kind": "weapon",
+                "aliases": []
+              },
+              {
+                "evidenceUrl": "https://steamcommunity.com/app/3308670/allnews/?l=koreana",
+                "names": {
+                  "ko": "장난감 장인"
+                },
+                "checkedAt": "2026-10-13T22:02:36.575697+00:00",
+                "sourceName": "Toysmith",
+                "kind": "weapon",
+                "aliases": []
+              },
+              {
+                "evidenceUrl": "https://steamcommunity.com/app/3308670/allnews/?l=koreana",
+                "names": {
+                  "ko": "수호의 자장가"
+                },
+                "checkedAt": "2026-10-13T22:02:36.575697+00:00",
+                "sourceName": "Dulcet Defender",
+                "kind": "weapon",
+                "aliases": []
+              },
+              {
+                "evidenceUrl": "https://steamcommunity.com/app/3308670/allnews/?l=koreana",
+                "names": {
+                  "ko": "써니 이매진"
+                },
+                "checkedAt": "2026-10-13T22:02:36.575697+00:00",
+                "sourceName": "Perihelion",
+                "kind": "weapon",
+                "aliases": []
+              },
+              {
+                "evidenceUrl": "https://steamcommunity.com/app/3308670/allnews/?l=koreana",
+                "names": {
+                  "ko": "심홍의 계약"
+                },
+                "checkedAt": "2026-10-13T22:02:36.575697+00:00",
+                "sourceName": "Crimson Covenant",
+                "kind": "weapon",
+                "aliases": []
+              },
+              {
+                "evidenceUrl": "https://steamcommunity.com/app/3308670/allnews/?l=koreana",
+                "names": {
+                  "ko": "교활한 여우"
+                },
+                "checkedAt": "2026-10-13T22:02:36.575697+00:00",
+                "sourceName": "Schlitzohr",
+                "kind": "weapon",
+                "aliases": []
+              },
+              {
+                "evidenceUrl": "https://steamcommunity.com/app/3308670/allnews/?l=koreana",
+                "names": {
+                  "ko": "호박색 달빛"
+                },
+                "checkedAt": "2026-10-13T22:02:36.575697+00:00",
+                "sourceName": "Amber Reel of Moonlight",
+                "kind": "event",
+                "aliases": []
+              },
+              {
+                "evidenceUrl": "https://steamcommunity.com/app/3308670/allnews/?l=koreana",
+                "names": {
+                  "ko": "원정 일지"
+                },
+                "checkedAt": "2026-10-13T22:02:36.575697+00:00",
+                "sourceName": "Voyage Logs",
+                "kind": "event",
+                "aliases": []
+              },
+              {
+                "evidenceUrl": "https://steamcommunity.com/app/3308670/allnews/?l=koreana",
+                "names": {
+                  "ko": "패러독스 훈련"
+                },
+                "checkedAt": "2026-10-13T22:02:36.575697+00:00",
+                "sourceName": "Inverse Cipher",
+                "kind": "event",
+                "aliases": []
+              },
+              {
+                "evidenceUrl": "https://steamcommunity.com/app/3308670/allnews/?l=koreana",
+                "names": {
+                  "ko": "메이링의 정보 보급"
+                },
+                "checkedAt": "2026-10-13T22:02:36.575697+00:00",
+                "sourceName": "Intelligence Supplies",
+                "kind": "event",
+                "aliases": []
+              },
+              {
+                "evidenceUrl": "https://steamcommunity.com/app/3308670/allnews/?l=koreana",
+                "names": {
+                  "ko": "엘모호 소원 연못"
+                },
+                "checkedAt": "2026-10-13T22:02:36.575697+00:00",
+                "sourceName": "Elmo's Wishing Well",
+                "kind": "event",
+                "aliases": []
+              },
+              {
+                "evidenceUrl": "https://steamcommunity.com/app/3308670/allnews/?l=koreana",
+                "names": {
+                  "ko": "사전 보급"
+                },
+                "checkedAt": "2026-10-13T22:02:36.575697+00:00",
+                "sourceName": "Para Bellum",
+                "kind": "event",
+                "aliases": []
+              },
+              {
+                "evidenceUrl": "https://steamcommunity.com/app/3308670/allnews/?l=koreana",
+                "names": {
+                  "ko": "분열·표준 동기화"
+                },
+                "checkedAt": "2026-10-13T22:02:36.575697+00:00",
+                "sourceName": "Standardizing Sync - Fission",
+                "kind": "event",
+                "aliases": []
+              },
+              {
+                "evidenceUrl": "https://steamcommunity.com/app/3308670/allnews/?l=koreana",
+                "names": {
+                  "ko": "미틸 코스튬 · 두근거림의 계절"
+                },
+                "checkedAt": "2026-10-13T22:02:36.575697+00:00",
+                "sourceName": "Mityl' Outfit | 90s' Sunset Memories",
+                "kind": "event",
+                "aliases": []
+              }
+            ],
+            "version": 2,
+            "evidenceUrl": "https://gf2.haoplay.com/kr/roleinfo/allroles.html",
+            "mode": "reviewed_templates_v1",
+            "reviewedAt": "2026-10-13T22:02:36.575697+00:00",
+            "formats": [
+              "gf2_targeted_procurement_v1",
+              "gf2_military_upgrade_v1",
+              "highest_character_new_rerun_v1"
+            ]
+          },
+          "localization_roster": {
+            "termsCheckedAt": "2026-10-13T22:02:36.575697+00:00",
+            "gameId": "girls-frontline-2",
+            "identityCheckedAt": "2026-10-13T22:02:36.575697+00:00",
+            "sourceLanguage": "en",
+            "targetUrls": {
+              "ko": "https://gf2.haoplay.com/kr/roleinfo/allroles.html"
+            },
+            "sourceUrl": "https://gf2.haoplay.com/en/roleinfo/allroles.html",
+            "termsUrl": "https://www.haoplay.com/services/?l=kr#terms",
+            "enabled": true,
+            "mode": "gf2_paired_roster_v1",
+            "accessStatus": "approved"
+          },
+          "original_image_reference": {
+            "evidenceUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067925601",
+            "mode": "matched_original_link_v1",
+            "reviewedAt": "2026-10-13T22:02:36.575697+00:00",
+            "allowedHosts": [
+              "res.17996cdn.net",
+              "shared.fastly.steamstatic.com",
+              "clan.fastly.steamstatic.com",
+              "steamuserimages-a.akamaihd.net"
+            ]
+          },
+          "reviewed_notice_references": {
+            "mode": "exact_reviewed_notice_links_v1",
+            "references": [
+              {
+                "sourceTitle": "Amber Reel of Moonlight",
+                "url": "https://res.17996cdn.net/gf2/news/261008/kr/1.png",
+                "evidenceText": "호박색 달빛 공식 이벤트 배너 / Amber Reel of Moonlight",
+                "checkedAt": "2026-10-13T22:02:36.575697+00:00",
+                "sourceUrl": "https://gf2.haoplay.com/kr/",
+                "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067925601",
+                "kind": "EVENT_ART",
+                "characterNames": [],
+                "sourceSha256": "7da6bc31987c513ebe47ae1dd1f9523e85931045eb22cfb41e9cd4d30b793195"
+              },
+              {
+                "sourceTitle": "Targeted Procurement Event | Mityl",
+                "url": "https://res.17996cdn.net/gf2/news/261008/kr/2.png",
+                "evidenceText": "지정 발주 [미틸] [캐롤릭] [네메시스] 획득 확률 UP 공식 픽업 배너 / Mityl Krolik Nemesis RATE UP",
+                "checkedAt": "2026-10-13T22:02:36.575697+00:00",
+                "sourceUrl": "https://gf2.haoplay.com/kr/",
+                "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067925601",
+                "kind": "PICKUP_ART",
+                "characterNames": [
+                  "Mityl"
+                ],
+                "sourceSha256": "7da6bc31987c513ebe47ae1dd1f9523e85931045eb22cfb41e9cd4d30b793195"
+              }
+            ]
+          }
         },
         {
           "id": "dba5b496-113f-5d8d-b59c-7ee3b9a2cc5a",
@@ -13944,6 +15020,11 @@
         "policySha256": "dd7bdd5d9786ffb7c24e2bba0acb993cb6403df1daba4b8119a6ad56219d93b0"
       },
       {
+        "sourceId": "d641c1f0-5226-58e7-b5d2-d26a85604d29",
+        "gameId": "girls-frontline-2",
+        "policySha256": "40e90a0d3ad1440bda471fc55d6107b97248075f4f57378c0244590077285c01"
+      },
+      {
         "sourceId": "d93175b7-6c50-53bd-88a5-154a0e1cfc6d",
         "gameId": "crystal-of-atlan",
         "policySha256": "5f76d73266b13df5868be93a0febd69cadc8e9d75a2f471a63f51951273a51ce"
@@ -15904,8 +16985,17 @@
         ],
         "externalKey": "167007",
         "officialUrl": "https://genshin.hoyoverse.com/ko/news/detail/167007"
+      },
+      {
+        "id": "79bcb9433099e6ca7c985f5ade2bc5f23cc005f90c35a40e836ee43f2cc37533",
+        "sourceId": "2087cfc7-d2c6-5d6f-8280-5b8539294a5f",
+        "gameIds": [
+          "epic-seven"
+        ],
+        "externalKey": "ErsVprsrIqw",
+        "officialUrl": "https://www.youtube.com/watch?v=ErsVprsrIqw"
       }
     ],
-    "rotationAfterSourceId": null
+    "rotationAfterSourceId": "2087cfc7-d2c6-5d6f-8280-5b8539294a5f"
   }
 }
