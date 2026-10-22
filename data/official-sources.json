@@ -13230,5 +13230,2682 @@
     "currentCatalogueGames": 137,
     "completeWorldwideCoverageVerified": false,
     "automaticSourceCoverageComplete": false
+  },
+  "quotaRecoveryBootstrap": {
+    "version": 1,
+    "projectId": "orbit-7c729",
+    "scope": "APPROVED_PUBLIC_PARENT_NEWS_CREATE_ONLY",
+    "sourceApprovalObservedAt": "2026-10-22T14:03:50.441784+00:00",
+    "sourceApprovalExpiresAt": "2026-10-23T14:03:50.441784+00:00",
+    "sources": [
+      {
+        "sourceId": "004df017-0187-5128-a256-c4b31ba10fc6",
+        "gameId": "dragon-sword",
+        "policySha256": "eb6ed3bca2afdcc4d18f41ea1467b05b3a0cc8c19a1a25c7de9bb07873f499dd"
+      },
+      {
+        "sourceId": "01756142-80fc-5ca8-934b-ca41c07d5300",
+        "gameId": "honkai-impact-3rd",
+        "policySha256": "05eac018706b5ecd40648f401da82e1efad7173b2a39bea0eb942dca46143c4b"
+      },
+      {
+        "sourceId": "055ec80a-92e3-5df7-81d0-fbb8eab9a63e",
+        "gameId": "love-nikki",
+        "policySha256": "c6f7a1dd46f6548c656425e1e9fb9bdee7689f8968ba91e5a4a250e24bfa240e"
+      },
+      {
+        "sourceId": "096b92c9-e3f8-5cba-9e1a-9312f5e26b30",
+        "gameId": "disney-twisted-wonderland",
+        "policySha256": "d2c7b64af0a0c7578dc7b0121aaded83e116d282d6e735d4a3fe59b9a8daeda8"
+      },
+      {
+        "sourceId": "0cc9db33-144f-5b84-bc59-d0cfc43d0892",
+        "gameId": "phantasy-star-online-2-new-genesis",
+        "policySha256": "8e2f835a5241f80e16c1a224fc6ccdf1f434a6654dd8392642aabef2589635a5"
+      },
+      {
+        "sourceId": "0d022546-230b-5dd4-9212-91c47879d731",
+        "gameId": "chaos-zero-nightmare",
+        "policySha256": "7cee61e028b85521b924f7b06bdb24b0cf13a451d05cce46bd0a22ed95ae8af6"
+      },
+      {
+        "sourceId": "0da0c2dc-e5a2-5f8b-b391-8039ad3cbfd4",
+        "gameId": "granblue-fantasy-relink",
+        "policySha256": "b6edc783b2953147433c4154ecf8d9461a72611d3c8aaa36ae83c403df90d916"
+      },
+      {
+        "sourceId": "0db970a9-d40e-5e4e-be0a-ba6481dfaba3",
+        "gameId": "madoka-magica-magia-exedra",
+        "policySha256": "d0ba1f21c830b8e2133f57223417f388f99a2091d4a31f24eba47a9af5f9882e"
+      },
+      {
+        "sourceId": "0de6d70e-3af6-5332-a71f-db8047afac27",
+        "gameId": "silver-and-blood",
+        "policySha256": "bc38442cfc53e9c128e68604fd51eca51364047d07090ff598e1856f4a68f391"
+      },
+      {
+        "sourceId": "0f87e4cd-a010-59fb-b8a0-7bd10b07026c",
+        "gameId": "neverness-to-everness",
+        "policySha256": "b046d58458af51af773ee796fd73e1e6364b380c67f7869b49cb487706da145f"
+      },
+      {
+        "sourceId": "10ccf2c7-3738-5f3d-8b86-b3a9cf4a5e1e",
+        "gameId": "lost-sword",
+        "policySha256": "936fd3a35afb10ccf7545bb53c22edaea722ed897a9ff366006ae06df676355c"
+      },
+      {
+        "sourceId": "10fea439-2515-5c57-b4d1-6e6ea36b3fdf",
+        "gameId": "destiny-child",
+        "policySha256": "e81ab469d2c599d6a56da7c4d9389d4f95abf4b709baee4092ff6793e7cbca2b"
+      },
+      {
+        "sourceId": "1299aa7f-4237-5f7c-98a7-e3ce1471127d",
+        "gameId": "blue-oath",
+        "policySha256": "713f4e47a11e55e79828d689ca8c38d4b915e4f66a881714e91b21148057ed4e"
+      },
+      {
+        "sourceId": "18566e76-dd68-562f-afd5-c443f38e6f5f",
+        "gameId": "kings-raid-reverse",
+        "policySha256": "703589aad73ac18c12ccddd46684b4fff8da11c6ee6054f98422b782699cfa82"
+      },
+      {
+        "sourceId": "1e911f93-174c-5976-a2fd-0e0c75e2030c",
+        "gameId": "takt-op-symphony",
+        "policySha256": "800985ce2c7a1f6780daf98ff8f6d01aca459ce5f530efdb6f9c2cd644fb0a2a"
+      },
+      {
+        "sourceId": "1e97bd4c-589f-5173-be79-39ceedac1a06",
+        "gameId": "elpis-fallen-star",
+        "policySha256": "8960da140cc3525c145575af9e60c8693a97677d72974fc0fb9b385791aab0be"
+      },
+      {
+        "sourceId": "1efd7b18-f9b6-5121-82a6-19d9761c37e3",
+        "gameId": "fate-grand-order",
+        "policySha256": "45dfe96141d90aa5da8d292bd8ba54501dd3f93a5fb7d019baec033cf3118e51"
+      },
+      {
+        "sourceId": "1f32489b-d363-57bf-9f97-2ca2de439080",
+        "gameId": "persona-5-royal",
+        "policySha256": "6f34600760eb2a6ef124495522d80334a7d9fc5ef715590ce1fe1203f65ae66b"
+      },
+      {
+        "sourceId": "1f58dc42-cff2-53bf-9c2f-dbe79caf7710",
+        "gameId": "sword-of-convallaria",
+        "policySha256": "6745a0a126a6b073d554389e3e5ebe70e627b06c17ed964f5a0ca423625445f9"
+      },
+      {
+        "sourceId": "2087cfc7-d2c6-5d6f-8280-5b8539294a5f",
+        "gameId": "epic-seven",
+        "policySha256": "f671fc5ecb7f3d8b869da6be78244fae9a4d2c398bf20b0f899cfe3250d22b02"
+      },
+      {
+        "sourceId": "2128037e-479e-5a0c-bcad-8fe5a29fac7d",
+        "gameId": "brave-nine",
+        "policySha256": "c5ba12f1e63ce56d52c6165467fd60269f7e7803597a3c3ecee5c61e689d6436"
+      },
+      {
+        "sourceId": "22a268ae-6ba2-56b5-b625-101645edf678",
+        "gameId": "infinity-nikki",
+        "policySha256": "9e2908d4c66480bb490ef41ef67c2b457dac90776db5485548277ef2e8954ea4"
+      },
+      {
+        "sourceId": "24ce3771-df0c-5ba8-a0b6-2c5b0ea603cc",
+        "gameId": "ensemble-stars-music",
+        "policySha256": "148fe2094318ad9e8780b318ccdda2d0a09f6f621f5578fd4c8e625a855f7a4b"
+      },
+      {
+        "sourceId": "25262c30-8ed4-5dae-9c14-a964dcc915d3",
+        "gameId": "tales-of-arise",
+        "policySha256": "442e278ef7dc407eac17809e74c84ac0fad49b6f4745f353fd7ae4d4df63e369"
+      },
+      {
+        "sourceId": "2b50b223-e8ff-54db-9a0e-26d171856fe1",
+        "gameId": "echocalypse",
+        "policySha256": "4f22e753894622b1c31037b6728c587b30642128dabcbb24fbf2c80016b706d3"
+      },
+      {
+        "sourceId": "2bbdb0d2-754a-5af7-b834-a1a378638b5e",
+        "gameId": "star-savior",
+        "policySha256": "3cacf974468c8a972f2b8e14139b9ed970c9cfd42bec0421109a764201ac2f28"
+      },
+      {
+        "sourceId": "2bfac93b-1f6b-5e59-af3a-93bda4ee0a26",
+        "gameId": "metaphor-refantazio",
+        "policySha256": "313b55495a7dbd7bcd852a6ca6ac26d3436a7591d18c5fc4b88095dcac1120f3"
+      },
+      {
+        "sourceId": "2c01343f-655e-5de6-ac64-301eb2804f80",
+        "gameId": "heaven-burns-red",
+        "policySha256": "f553b5b2354ff8665bbc199bde3465e24a2bb10e706e3947e568987967ca8798"
+      },
+      {
+        "sourceId": "2d31c356-c96a-580f-a2a3-e5d18eb7e1e9",
+        "gameId": "reverse-1999",
+        "policySha256": "1e12fc67252bf15195e1bc10a16ccfba69e4b1e4b3025b618cd75cd3d8df02e9"
+      },
+      {
+        "sourceId": "2e9ba728-487d-5642-8198-b51611a908b2",
+        "gameId": "onmyoji-arena",
+        "policySha256": "294b611558fdbdd9cb7e6ef3d8dddca4f57c41b11d0c42e56a0b2f438e29a8f2"
+      },
+      {
+        "sourceId": "2f4ab89b-3dc4-51f6-ae5d-83cad7ca1b30",
+        "gameId": "heaven-burns-red",
+        "policySha256": "11b107e865a50e6d5cfea2d81918597704dfc725a211fbb3e49402430ed9684a"
+      },
+      {
+        "sourceId": "3044c335-21a4-53ba-b28f-49d23a6b3d8d",
+        "gameId": "blue-archive",
+        "policySha256": "43dcae9f2e076b4ca5ca09c6a7d5ec87144e3e2f8a7a427e0c28bffc5c27b23b"
+      },
+      {
+        "sourceId": "307110bc-1863-50d3-a4d4-9a84b816f70a",
+        "gameId": "zenless-zone-zero",
+        "policySha256": "92eb75ce4190367349135cdbf3dd25cf7c0e042727473c297ec57ba1fd6cf84c"
+      },
+      {
+        "sourceId": "33a87fe8-4fbd-59b1-a0ee-fd6eb64eaaee",
+        "gameId": "shining-nikki",
+        "policySha256": "280a3b778f9c6a3ffbd6779c1bdc4e983cce5d8f104b3a2dff5b4f79533f1503"
+      },
+      {
+        "sourceId": "3637b87a-a848-562a-8cd6-a1e9212f2a20",
+        "gameId": "blue-reflection-second-light",
+        "policySha256": "5cc6441037745f110bf062039458ce9d4d67c21f2fc410e1642985bdd0bd57c4"
+      },
+      {
+        "sourceId": "36ad1c11-c288-5aa9-9d6e-d81878b1387c",
+        "gameId": "soulworker",
+        "policySha256": "302b543314e254be9f07d99cdefcd6853485f7d663c01aac646e19a5d4f7b461"
+      },
+      {
+        "sourceId": "36c36d96-2b47-5c32-9e1c-e4cdf98ec998",
+        "gameId": "alice-gear-aegis",
+        "policySha256": "c0d3db3a5dc43977f9f83f859e2fac20d2ae78706deff6442303886ab503d441"
+      },
+      {
+        "sourceId": "381800dd-ff13-5008-9a6f-2dfafcd9fc0d",
+        "gameId": "persona-4-golden",
+        "policySha256": "b3891ac9ec7ffb8f4947d3d5327b257554ab3bb2321700087f951749f31c892a"
+      },
+      {
+        "sourceId": "3875e840-6c14-5002-b493-1aa0648802af",
+        "gameId": "disgaea-rpg",
+        "policySha256": "9973ef360eed19b2456e6373cad4beaad4a3cc31bae24cc7182215daa01e03e9"
+      },
+      {
+        "sourceId": "39f76b2c-b0f5-54fb-9093-711d9dcfbfb1",
+        "gameId": "afk-journey",
+        "policySha256": "2ae852ee1fb5cf179f9bef603f1d452b8ca2e30722f06e2d2d77083a13ad5025"
+      },
+      {
+        "sourceId": "3d30db35-d126-5b27-82ae-9606f613769a",
+        "gameId": "last-origin",
+        "policySha256": "7031c5e287438afe5674f47c1f4d2fcb691554bc9643407b2db6285890fe9e93"
+      },
+      {
+        "sourceId": "3dee9354-450b-544d-bbc2-ddd001488d1c",
+        "gameId": "path-to-nowhere",
+        "policySha256": "3bc27a40e4c45e91aff691c272b52f7d1508ebe48ef3e2d9ae91c72d5c757b7f"
+      },
+      {
+        "sourceId": "40f4887f-ac0a-5e46-8d2f-2faebfd24ec2",
+        "gameId": "persona-5-strikers",
+        "policySha256": "4cdb144f98c2d8b47641174bb4fa1be3ad479a83f80e25e798615ed2993d7e92"
+      },
+      {
+        "sourceId": "44d7202b-1ece-5e74-abc8-9215a1792946",
+        "gameId": "konosuba-fantastic-days",
+        "policySha256": "4425918fa15ca88871d423c4a35832e9890af5bb6b04d7ff7e1284329a17d898"
+      },
+      {
+        "sourceId": "4a1a96ef-63dd-5e20-8d5f-08d2bfd9a77c",
+        "gameId": "metaphor-refantazio",
+        "policySha256": "2f8f00ab288dc9293ddc74465943231b4b29551f780e846e4df9ad1b9c8d66c9"
+      },
+      {
+        "sourceId": "4ab30b2c-fa73-51c6-8bfa-5b3eb20b7671",
+        "gameId": "granblue-fantasy-versus-rising",
+        "policySha256": "132141e6bef65b65af621036cd01a55e44f8b5c81cbfe69c7dc894fad508989a"
+      },
+      {
+        "sourceId": "4b57caf3-656e-57f1-adc6-e2fb1526c5c9",
+        "gameId": "dragalia-lost",
+        "policySha256": "ca7ddd81f1bef12d3469f82589de781da7afd6de3abc30aa41921e23858c6aaa"
+      },
+      {
+        "sourceId": "4c14b6cf-84c1-58e9-a7f9-478fb22ea304",
+        "gameId": "atelier-resleriana-red-alchemist-white-guardian",
+        "policySha256": "d7fa79cf355895108379b15795ba457870bc3faefc3d77538e78e5406d282033"
+      },
+      {
+        "sourceId": "4e5745cf-deae-5bdb-8413-75e94447e380",
+        "gameId": "assault-lily-last-bullet",
+        "policySha256": "607486fdd06dc4a370700ad776fc4f6e8339257d20761e7cb8d3bdd6b4197ec6"
+      },
+      {
+        "sourceId": "4fef6b83-1d70-5bec-85ce-d825cf80266b",
+        "gameId": "cat-fantasy",
+        "policySha256": "796751bc07e96d2c0fce23b3e934511af0a7dfc8d03e1942d8341c9717409560"
+      },
+      {
+        "sourceId": "500d3467-84d1-55c0-8370-814faae2c74c",
+        "gameId": "archeland",
+        "policySha256": "a2e9a2c5caa611f8beed62c49c0571c47f2a3174f8eb136f6c1e5d649d999b68"
+      },
+      {
+        "sourceId": "50e604b7-3d9f-51c6-9e3d-e49ff153db8f",
+        "gameId": "tower-of-fantasy",
+        "policySha256": "fca1b52ed055b34e1e5212bc58a031dd557f74b56fce8430b7519e595205f101"
+      },
+      {
+        "sourceId": "5139728f-4bcf-57ad-b5e7-a8a70d7fb3d6",
+        "gameId": "artery-gear-fusion",
+        "policySha256": "2c1e91682bafde2afaba15058dfb7976458c2a21004f1fc56ac18579c2815129"
+      },
+      {
+        "sourceId": "52828664-6712-5d6b-bdc7-6b6198ffa89d",
+        "gameId": "aether-gazer",
+        "policySha256": "8de366a98fc3e8d1cf7b2b8a9fe18e1a74ec7c35c24413a106fc510affe2b84a"
+      },
+      {
+        "sourceId": "56c66cf1-f58b-514d-b043-17902be7165d",
+        "gameId": "eminence-in-shadow-master-of-garden",
+        "policySha256": "37cf0f8c1e7519e8e0ed31c0b21862ec3075fcd6b9e184f169fc2d0722ea2964"
+      },
+      {
+        "sourceId": "59f04d25-aada-5729-8f75-f506c54def39",
+        "gameId": "punishing-gray-raven",
+        "policySha256": "b3c9b6ed9159fad2ceac5b9ba525d581441338aa4b4ea1405f7c07ea4cf2f4ef"
+      },
+      {
+        "sourceId": "5a8fc747-496e-5028-afd1-8283c2aba074",
+        "gameId": "outerplane",
+        "policySha256": "25ba458344e5e52af6c4f71e38abeaf056f5e31f542d63f948300f8a75012fdb"
+      },
+      {
+        "sourceId": "5b6f406a-d582-51a6-b386-64f335b771e4",
+        "gameId": "memento-mori",
+        "policySha256": "2f716ab241e4c00eaec85b64fce611b1cfd49243a9221aded2377792f9c7746a"
+      },
+      {
+        "sourceId": "5c2922ac-e986-51ba-ba8e-e9e023f6c35f",
+        "gameId": "umamusume-pretty-derby",
+        "policySha256": "e749e97bb74445e0a81fd954e4a56b0c52cb9b6472d96a34cb9648aa09d6eef4"
+      },
+      {
+        "sourceId": "5d4aea15-af26-53f0-8045-d449158f4c33",
+        "gameId": "honkai-star-rail",
+        "policySha256": "3b4c89a3f35bcbde39535abebf4cbcb3ffd77c1b27646fac5f4d76ae2d9c057a"
+      },
+      {
+        "sourceId": "5dbede5a-67b9-5fc0-a9d2-a1a5abd6e7a8",
+        "gameId": "alchemy-stars",
+        "policySha256": "e605cf7c3d02f540ec0dd52fffdde99d908269a8ed686a090655c49bb1b72fcd"
+      },
+      {
+        "sourceId": "63569706-da34-5b72-acb5-1e6503021b56",
+        "gameId": "limbus-company",
+        "policySha256": "36204039a56cf77813eac0ff8f85ca813e5fe7461e7fe22b13f914005dc33a7f"
+      },
+      {
+        "sourceId": "64609ae3-274e-559d-b10d-80868656421e",
+        "gameId": "afk-journey",
+        "policySha256": "e3fc23c3874265fb551bbcfbb2740328311ffd5081cbb6f4e2dca29796450f0c"
+      },
+      {
+        "sourceId": "66a19d4d-1a95-5e4f-949c-273c8debe0b3",
+        "gameId": "blue-reflection",
+        "policySha256": "7155f9721633b376886f1713b3dc88d620f3dcf175b7acce6476cf05e8c87658"
+      },
+      {
+        "sourceId": "683dfce2-5275-520c-8e8b-1514b12358fb",
+        "gameId": "bungo-stray-dogs-tales-of-the-lost",
+        "policySha256": "e47b8b082a3cd8639c54897536b9c70706301894a85875ad5da1640c14bdbbf7"
+      },
+      {
+        "sourceId": "6926c731-47ca-50f3-951a-0cc5160d07c6",
+        "gameId": "atelier-resleriana",
+        "policySha256": "2e258663a4f992d79e5e88f187026c8a728cc4bec8796a178733c7623447ae01"
+      },
+      {
+        "sourceId": "6a4bf853-e856-5a0a-962f-2d276015f826",
+        "gameId": "haze-reverb",
+        "policySha256": "12983e3e5112fb7777a959ffbb30c23158f3bb50b291869fea6f5321ec93c60e"
+      },
+      {
+        "sourceId": "6ada3406-d7eb-5abb-ad1b-2978a9662cbc",
+        "gameId": "azur-lane",
+        "policySha256": "ec5077a17f1051d754c4a0a00a42fdb396bc52e85fa642808d2614d211596fff"
+      },
+      {
+        "sourceId": "6b96871a-9a0e-5a49-94f9-65fe04b41b83",
+        "gameId": "snowbreak-containment-zone",
+        "policySha256": "b07b8bacccbb7a8e52ce6fa7a2c67bd1d91d4186332cf6f533278a6e0428f885"
+      },
+      {
+        "sourceId": "6fda6570-af94-5fb6-8489-96f724445557",
+        "gameId": "girls-frontline-2",
+        "policySha256": "73363154f210fcbb060fc3335e5337c5b4ffe79139ff57e7ea41b4a3ccb9ab6d"
+      },
+      {
+        "sourceId": "70c381e2-8089-51aa-955a-c40c594e6c33",
+        "gameId": "arknights-endfield",
+        "policySha256": "b083726288b7ef8fc3371c09fc68ba0c35bcecac2168319e460a9ed8695ea153"
+      },
+      {
+        "sourceId": "73ea3597-bd8a-5e00-9e0b-3e7010f540a5",
+        "gameId": "velvet-code",
+        "policySha256": "526f368c11106318baacb640ba82b3742b30b1e2c020b7d6a1fdcc3e8b3e69dd"
+      },
+      {
+        "sourceId": "73f815e8-5714-5df3-986a-d7a116812821",
+        "gameId": "seven-deadly-sins-grand-cross",
+        "policySha256": "c580ca41447fa965e8d0ad950dc2c2161f8a821901f4f03556b43adaa61546b6"
+      },
+      {
+        "sourceId": "74b3ae83-4c40-5d9e-a0db-a4b94925d2dc",
+        "gameId": "fate-grand-order",
+        "policySha256": "95ceb859fb133fd7d72cda59e06e331c0d380498931b866333887826c4b336d2"
+      },
+      {
+        "sourceId": "752e9335-51fc-55ae-b3ce-f11b5b4b6268",
+        "gameId": "love-and-deepspace",
+        "policySha256": "7513e5b6403ee3d797d72f38fe2a21f0504107c085ce191ae6561fd199af2f3f"
+      },
+      {
+        "sourceId": "755d462d-f22d-5d0a-bfb2-61f9ab8510ae",
+        "gameId": "gran-saga",
+        "policySha256": "e6f6972231afd90bc9a10cca4ef3f8b10ea8e75ef320194fcd4908e3773a2f4b"
+      },
+      {
+        "sourceId": "77c4b3c3-36dd-50c8-b0a2-a2af6c0f17dd",
+        "gameId": "honkai-impact-3rd",
+        "policySha256": "6bbacabff84786ff5140029cf105a401b7fe5c1dd5d46cf259a576883b3686c5"
+      },
+      {
+        "sourceId": "78cca58e-5bb6-5412-8f0d-2a8adb9b587e",
+        "gameId": "tower-of-fantasy",
+        "policySha256": "2779bfc5571b5f7d6b4a1dd7b9e05838d53bdf89490414873c396c3126fc8531"
+      },
+      {
+        "sourceId": "78f0df76-6ad4-5df8-a2e4-9111b6bc0758",
+        "gameId": "brown-dust-2",
+        "policySha256": "33641a4b8fa2a92ec87b8bdb0b0303437be5eac9e134508187dc9ec5a9a85081"
+      },
+      {
+        "sourceId": "7962eafd-9d30-51a1-b18f-0f9a4091762a",
+        "gameId": "action-taimanin",
+        "policySha256": "8f3a984add84717e9e856f1c188db289360576cdd9863a3ff6c79b64cb2194a5"
+      },
+      {
+        "sourceId": "7a68124c-e18e-5733-a0ef-6468b0228518",
+        "gameId": "seven-deadly-sins-origin",
+        "policySha256": "ed0e89a0a5040d85414d0e15a128d2c64d629ef01481a653243ca4bc49e39d1b"
+      },
+      {
+        "sourceId": "7d8f1e6f-b58d-5f6b-951c-f100e8ac625c",
+        "gameId": "seven-knights-rebirth",
+        "policySha256": "a80967d13c5f3154148ef5a354cb5bbfdb812928383a8c7a21190e273ea1d0ba"
+      },
+      {
+        "sourceId": "7e11ee12-d36d-593f-b17d-478a37f1f9e2",
+        "gameId": "princess-connect-redive",
+        "policySha256": "c429a5bfd46be020c98d141209339694906fe91b318b6b183f29b1b26c0cc6ed"
+      },
+      {
+        "sourceId": "7ed31480-6f21-51a0-90ca-ffa9cd43dfb9",
+        "gameId": "atelier-yumia",
+        "policySha256": "fcd768001d6cf7974ff8f025ac3e661251fc2cd9d3c0629f9f3cb9c664ef4cf6"
+      },
+      {
+        "sourceId": "7f1bb0b0-c976-58cd-a554-04f9607a1fbb",
+        "gameId": "closers",
+        "policySha256": "7a75bb5bce07f66b399a0770109d939dfc470782f0226a5c5e00c08c27ba3fbb"
+      },
+      {
+        "sourceId": "7f54cd7b-09cb-5cca-ae99-6504d08da239",
+        "gameId": "guns-girl-z",
+        "policySha256": "e21b7d96239342eb4fdecf8bdc798422cd6da28f45352cdba76bf7552ed33719"
+      },
+      {
+        "sourceId": "7f893d2e-5b56-5a01-9052-cee41cb2f18c",
+        "gameId": "magia-record",
+        "policySha256": "3a30b246325c577b32d20abb74523114cf09a7aa96316e9558681bb2247595ee"
+      },
+      {
+        "sourceId": "85d40a4d-2fba-512b-b179-379ba6199662",
+        "gameId": "blue-archive",
+        "policySha256": "253ac3155e32409ea23f207e6c57c7cabfebc406589c768a8ad20801895fecc0"
+      },
+      {
+        "sourceId": "85e3a903-7840-5707-a960-5919f5ac4c73",
+        "gameId": "guardian-tales",
+        "policySha256": "ac6c4f04ca006255b82284862a4ade255457d595e34bd19eb12e2ce706274b52"
+      },
+      {
+        "sourceId": "8782f1e1-7dab-5c8c-a3b8-e4e53ff26837",
+        "gameId": "crystal-of-atlan",
+        "policySha256": "7a8a5f49987632c2648c1511d212b970a5af2754c52e5ddcc38f38ac94448d1a"
+      },
+      {
+        "sourceId": "8919e2ca-507f-5129-be72-04c31a3fb549",
+        "gameId": "granblue-fantasy-relink",
+        "policySha256": "8b231740138cdc422cc0cbaf308cf3707369e8390132b935f7f1844fb347ac42"
+      },
+      {
+        "sourceId": "8a079815-decd-534e-b457-902ddb407e68",
+        "gameId": "wuthering-waves",
+        "policySha256": "98ce4cd2841710ebbdcb0c8f500f8f291386d23be216688590e7aa65f0572790"
+      },
+      {
+        "sourceId": "8a4e40a6-71ce-52af-8f79-f11c2968b590",
+        "gameId": "genshin-impact",
+        "policySha256": "0f9ca39303955e3ad244c82038633fc7edd4f90772cd5085ba710bd861b1dcd8"
+      },
+      {
+        "sourceId": "8df77313-3e24-509c-a47e-2553c901e9b2",
+        "gameId": "trickcal-revive",
+        "policySha256": "662c748890f30f382748e33ce0fadeff17b61a19df9f3155c6e3912b4760356f"
+      },
+      {
+        "sourceId": "8e1689ca-f8ea-591f-ad84-fde284f5b08e",
+        "gameId": "alchemia-story",
+        "policySha256": "006fe9957f87b9f7bcafb6217b8fd1250e9e75ce6e4167b1d7351cf2d936bf07"
+      },
+      {
+        "sourceId": "8e991648-cbff-59d8-8d1e-1774f69a2755",
+        "gameId": "world-flipper",
+        "policySha256": "f921373e1dc9e9140614290d869c53b358800e316aed884b0b83c877ac4f932e"
+      },
+      {
+        "sourceId": "9011f835-2fbb-5d57-b08f-b649c503283f",
+        "gameId": "girls-frontline",
+        "policySha256": "84243c7db0adfd1a0356684c349166f14bc94640b86da2ab1672a7d58f1d5db6"
+      },
+      {
+        "sourceId": "92a8726c-aa20-51ef-95e9-fb6a3a83c1fa",
+        "gameId": "seven-deadly-sins-origin",
+        "policySha256": "62a24b6a8423be2c2b63b674eac3c4fa4e15388296c7ea15676debcb06653010"
+      },
+      {
+        "sourceId": "9309f931-7068-57f3-a95a-d2c2ef888849",
+        "gameId": "elsword",
+        "policySha256": "74c8aa4f7f48016c8f608c4ea3cc708f3eae27d0692099015e38b1413ad3f23a"
+      },
+      {
+        "sourceId": "95778598-c2cd-5c1e-9575-5dd6fc73f9aa",
+        "gameId": "nier-replicant",
+        "policySha256": "633b5e36acfc7bdd2cab126619ecac819d0ae78f42c53390a67a682080111e68"
+      },
+      {
+        "sourceId": "9ad9ac6d-3292-58e2-a7c2-8af71c70a3cc",
+        "gameId": "love-live-school-idol-festival-all-stars",
+        "policySha256": "fa5489f199602b76e1b500bcb5cc7254f9802110f9492700d4af18f098987d1b"
+      },
+      {
+        "sourceId": "9e35b4d3-00b0-575d-9d13-eb72feb69f89",
+        "gameId": "tears-of-themis",
+        "policySha256": "eabc529c3afe3aa77770456084d09a7085418466eb515248c6343dcc2de02499"
+      },
+      {
+        "sourceId": "9e4803c0-f150-5e2a-802d-7a174d9abf38",
+        "gameId": "red-pride-of-eden",
+        "policySha256": "ce7670bfb93a2bb3706437e5b368b9291c6bcbc63c74f414aded18da2eb0dcd7"
+      },
+      {
+        "sourceId": "9fa2beff-c642-5c38-b056-831b29fb446e",
+        "gameId": "ananta",
+        "policySha256": "20f6fa6474bf095883d367a9e9d5815aa82c3d77b146c1f90d876b699f08dd02"
+      },
+      {
+        "sourceId": "a167dc97-27d8-52ce-8b18-e6c645363af3",
+        "gameId": "idoly-pride",
+        "policySha256": "25af417a47b336eecf21b59dc5a42ad645989ac60bd301a1dcfcdde48efa2584"
+      },
+      {
+        "sourceId": "a16ea39f-685b-580c-9bb3-7bc3cf2127f8",
+        "gameId": "scarlet-nexus",
+        "policySha256": "cf98d6182a4ffc44f4df6b764d6e2a8d891198019dbb3536f3b07fb8da447290"
+      },
+      {
+        "sourceId": "a45b00ea-fdcd-5f8e-bfc3-aa364ceca5a6",
+        "gameId": "neural-cloud",
+        "policySha256": "854db69fdc171d4875d92bb9da30ce54f41f64452f2e69534cd22056c862676e"
+      },
+      {
+        "sourceId": "a5744c19-3cb3-5c61-8c23-06105e538b6d",
+        "gameId": "eversoul",
+        "policySha256": "ce007548baa4ac2c108085d2505aabf6ec1c801f2b05bd1e9fcd712bf61a5a66"
+      },
+      {
+        "sourceId": "a61c6742-4784-5a0d-8abf-9b5cdfaef6d8",
+        "gameId": "granblue-fantasy",
+        "policySha256": "c1a1e7ac05aef6ef0aa2bdda76af397364cfb39016be91e7bc856e9085d4e959"
+      },
+      {
+        "sourceId": "a72940d2-8735-5e4b-89f5-95bf53778f0d",
+        "gameId": "counterside",
+        "policySha256": "05fe9307c70b249877a905fa2539623682a5bdea7d761c1519d5f24d736821a0"
+      },
+      {
+        "sourceId": "a7485622-3407-5a83-9e56-df44c9bba3dd",
+        "gameId": "atelier-yumia",
+        "policySha256": "599455150a17d09477993f2dda4957f11e88298c3d8acf81b3d87ad34fdd2ef7"
+      },
+      {
+        "sourceId": "a9f18c0f-4e87-5a20-b0f6-976edca2b61f",
+        "gameId": "love-live-school-idol-festival-2",
+        "policySha256": "5a77250f6a8a7b562b53b43134a01ef5e9d819659adf4b1798a9f5dcd4d7c33f"
+      },
+      {
+        "sourceId": "ac073d20-344b-567e-b70e-e6eaf693c5bd",
+        "gameId": "lord-of-heroes",
+        "policySha256": "088eac81b73c261dfe332294ff2dbf36fa84f64e9b0ccaf9088e1538acd651d3"
+      },
+      {
+        "sourceId": "ac32d17b-4591-5a3b-9185-bea1909425ba",
+        "gameId": "granblue-fantasy-versus-rising",
+        "policySha256": "123e092c1d32d354121c381ce388f72b9a55f7d798015a754b33c76d2c3a0ae9"
+      },
+      {
+        "sourceId": "ac3df1b2-af50-5a5c-b343-c22f7c4c2891",
+        "gameId": "final-gear",
+        "policySha256": "18be8f7923ea6d25b6b8b941d87301b091d57dcad3e1edb704037e9e251cb869"
+      },
+      {
+        "sourceId": "ad42b526-a8ed-55f4-94ec-ea8d5c73e763",
+        "gameId": "girls-frontline",
+        "policySha256": "932770e5ffff2918fc84b054886fce3607441e02d1b5dd52f48df06a21bd8645"
+      },
+      {
+        "sourceId": "ae4fad00-80f7-56b1-88aa-61114c62f03c",
+        "gameId": "touhou-lostword",
+        "policySha256": "c1cffc344a58a8a8a05eeba42505455cfb032b34c5da505f8f02e915e07aea92"
+      },
+      {
+        "sourceId": "b183382e-2d67-5c00-984b-b467f6e7d7cf",
+        "gameId": "d4dj-groovy-mix",
+        "policySha256": "322e71708d94ca5aa8a31e37f0533670ab65ad18c48bf72cab0c73febf8cd1bb"
+      },
+      {
+        "sourceId": "b34f15bd-8808-5f02-a6bc-a0d2639697bf",
+        "gameId": "stella-sora",
+        "policySha256": "facd54e284c6424dceea0ee58d867f0ca8d01bb898b4a5f2b34bc67116eb3314"
+      },
+      {
+        "sourceId": "b38f73a4-8c0b-5a4e-a10f-6902946bd45a",
+        "gameId": "atelier-resleriana-red-alchemist-white-guardian",
+        "policySha256": "646db55534fb7c935f8be148f833943cc9bdf3d2a86e8d45f5dc0221c2d1931c"
+      },
+      {
+        "sourceId": "b48aa5e3-39dc-5966-8819-5c163578a753",
+        "gameId": "idola-phantasy-star-saga",
+        "policySha256": "8759824ca825fadc5e7925278523d3d0a01e29a70992d06ccf62b5e8ea530d7d"
+      },
+      {
+        "sourceId": "b4e10291-098c-5bdd-a289-05952f083b81",
+        "gameId": "dolphin-wave",
+        "policySha256": "42a2e12d0dfa1a03026763de7fec003981da240316d301fa4f70029e273fd7e4"
+      },
+      {
+        "sourceId": "b73d495d-f9f0-515a-8796-fef116ea3310",
+        "gameId": "atelier-resleriana",
+        "policySha256": "ebc8aba2e855bff292c9d363add81c26f60ea4179b4e830a9b87d54ba5354406"
+      },
+      {
+        "sourceId": "ba2ac0c6-1324-5398-9cf2-f4e35aaa8181",
+        "gameId": "love-and-deepspace",
+        "policySha256": "f95fc663c91b318afdadb109a5918d1950b00392c7336e7563a689ee6befa8aa"
+      },
+      {
+        "sourceId": "ba850f7e-5880-57f7-b0cf-1fb7ac08a3d7",
+        "gameId": "senran-kagura-new-link",
+        "policySha256": "add690fb7d35b1160d6cd259e75bd7d6490958dbbb306cc12d1da3b94d31cd03"
+      },
+      {
+        "sourceId": "bb4f49e5-3785-58bb-b327-04cc90ca29a9",
+        "gameId": "neural-cloud",
+        "policySha256": "36f358c4c101c3d6ee37e70da8c881a3852f23cd052f2f31885ffe34a7245f26"
+      },
+      {
+        "sourceId": "bb7b0508-b065-5743-87d3-8fa6c4160755",
+        "gameId": "nikke",
+        "policySha256": "2a9c45fde8852694eda14fed9a26d928b96a3c4f60a6f02608c8773891137904"
+      },
+      {
+        "sourceId": "bf505235-3733-5144-934d-f8ee46bb73f0",
+        "gameId": "tales-of-berseria",
+        "policySha256": "2d0da9443c473968dc019738fee8e6f864c7244d7b2da1d621d2b054d08cdcbb"
+      },
+      {
+        "sourceId": "c246fa81-6c52-5d98-9697-0f1afb0fe234",
+        "gameId": "infinity-nikki",
+        "policySha256": "a39b2b21988338ec0b9746c79f6b3cebaf3b6d9fbbb4f82d457566b0e840df06"
+      },
+      {
+        "sourceId": "c3ddd163-5094-59ed-bf23-a26342f18bf4",
+        "gameId": "onmyoji",
+        "policySha256": "3ba5aa0c6e5a22ad296def11b18f33c03eb0974ccffad9a4e99f37dea796d1ac"
+      },
+      {
+        "sourceId": "c4a232ed-6e5d-5e10-bfc8-8db7bc93bbf7",
+        "gameId": "langrisser",
+        "policySha256": "bc454ddfd201013a11ea9fadde94caac7764b4026025495a5da317a552db8198"
+      },
+      {
+        "sourceId": "c4d2e1cc-d754-57f9-926c-c80c917a3357",
+        "gameId": "azur-promilia",
+        "policySha256": "e2870f6f1015db63339a6bd5eb04a26410e1100853d206954c58852c9bfff869"
+      },
+      {
+        "sourceId": "c6798fe0-b7e7-56fd-a244-5e70cf464462",
+        "gameId": "duet-night-abyss",
+        "policySha256": "e3bdc80d1c1bb3a29fb8e1486b761e0f615583406c636b632f27f744f60289bf"
+      },
+      {
+        "sourceId": "c8a6e905-cc5f-5519-914a-101b0b6ff697",
+        "gameId": "arknights",
+        "policySha256": "0584a06968374559906f75992d8c5ce44b3162413880be07ce43a5f652938019"
+      },
+      {
+        "sourceId": "ca57d684-7c4c-59a7-bbf7-68722ea2cd59",
+        "gameId": "fate-grand-order",
+        "policySha256": "1767d72a212daed5891b245fccb9da53eaa702ea44625c38fbc12081d681e84d"
+      },
+      {
+        "sourceId": "caba940f-4409-5cca-bf12-eb98a0469904",
+        "gameId": "seven-knights-idle-adventure",
+        "policySha256": "fbb232f5e75fdb4e13f27817515eb201f524b1036d3d1b6a624d570272d1ec58"
+      },
+      {
+        "sourceId": "cbfd0a79-dd47-5c4a-a9d6-2bfa6aa22584",
+        "gameId": "persona-3-reload",
+        "policySha256": "b4c14d9fc98d45ee7dfb2e3e577a60cc8c0fbb9b28d36dac944de87befa51fd1"
+      },
+      {
+        "sourceId": "cf7c64b9-662e-55f8-87b4-eb668d4909ed",
+        "gameId": "danmachi-battle-chronicle",
+        "policySha256": "61fec26cd8839970812b3b3ebf7c81e1db6d799acf7ab1ac64fd816cf628caf5"
+      },
+      {
+        "sourceId": "cf80f6db-9f56-5467-83fa-63aa309a6962",
+        "gameId": "sword-of-convallaria",
+        "policySha256": "de82dea2e0249c9494518c344c1e86f5adb1cf4bba4e586da5c6c5b668fd1f19"
+      },
+      {
+        "sourceId": "cfb53a5f-3825-5357-8670-dda91a7f2b44",
+        "gameId": "nier-automata",
+        "policySha256": "bf5c82cab02c33a37b8088ecfa62adbaf2df4970462d7f55f46c11c9812d46d5"
+      },
+      {
+        "sourceId": "d331acbc-f196-5824-a321-073990b32ed4",
+        "gameId": "bang-dream-girls-band-party",
+        "policySha256": "dd7bdd5d9786ffb7c24e2bba0acb993cb6403df1daba4b8119a6ad56219d93b0"
+      },
+      {
+        "sourceId": "d93175b7-6c50-53bd-88a5-154a0e1cfc6d",
+        "gameId": "crystal-of-atlan",
+        "policySha256": "5f76d73266b13df5868be93a0febd69cadc8e9d75a2f471a63f51951273a51ce"
+      },
+      {
+        "sourceId": "d995c4b9-a725-5b96-b7d3-6a8099f7f00d",
+        "gameId": "lost-sword",
+        "policySha256": "49bdff60544dc3f140a7485e07d9cc36f284a0641aa4f4c94a6712af0870b00a"
+      },
+      {
+        "sourceId": "d9b004d6-4112-550b-9f66-0d29c015d71a",
+        "gameId": "gate-of-nightmares",
+        "policySha256": "ec5cf0cef00675103f50182b7e7b4e03e89833ce0ed43a891e9dec7835e2389c"
+      },
+      {
+        "sourceId": "dad3e0ed-e7d9-5487-a36c-bb0b0bf41e6a",
+        "gameId": "ash-echoes",
+        "policySha256": "3aca5e997293ad64014ba00376edee16076cb473bb4a0b68627c6e7947f69111"
+      },
+      {
+        "sourceId": "db16c992-e757-5f95-88db-aa0b1a94f338",
+        "gameId": "action-taimanin",
+        "policySha256": "9996ed585a37889b4e72878cc05626e366d880f0e8fe743550adec7d7e867df0"
+      },
+      {
+        "sourceId": "dba5b496-113f-5d8d-b59c-7ee3b9a2cc5a",
+        "gameId": "girls-frontline-2",
+        "policySha256": "abff4ab2f23d361838427a7a3b6d756b439c1954a119a42d79009a6b89a80bd6"
+      },
+      {
+        "sourceId": "dbd2d66c-3b9a-5d69-abb6-ed50c3bf7760",
+        "gameId": "persona-5-the-phantom-x",
+        "policySha256": "27e903f9ab5201a1bc1ba68446944929a89cc50eb11ee5061c70f891f7c7fb91"
+      },
+      {
+        "sourceId": "dd1c8d34-b189-526b-9828-9e99ea2f0a6c",
+        "gameId": "danmachi-memoria-freese",
+        "policySha256": "aa998ce88762b2b7134940a6ea55615b1556acac58debe494117b4228ffe0cf8"
+      },
+      {
+        "sourceId": "df2e55af-813a-5736-90aa-a16437ddbb21",
+        "gameId": "duet-night-abyss",
+        "policySha256": "5be716d8513f0805164003849e9d868006b7dff74b1e39c805e4d0ed552dedd5"
+      },
+      {
+        "sourceId": "e489a28a-70d9-5ef7-a254-8448832c717d",
+        "gameId": "limbus-company",
+        "policySha256": "63032e99532f345da905cb2d11016eef2ebd41461d3e3af7c6bbe02d903cc840"
+      },
+      {
+        "sourceId": "e4c3ebb1-b042-56a1-848b-a2f7351bd291",
+        "gameId": "project-sekai",
+        "policySha256": "c91758316b9908cf962c086b8fd7ef1bbda928fffb46cc71607381876bfcac98"
+      },
+      {
+        "sourceId": "e64d3597-21df-5bb6-85d9-5ac6ebbb65f7",
+        "gameId": "blue-reflection-second-light",
+        "policySha256": "f0ecdb5c472181aa3fcb80885eecb843ad4e5fa0476c0f450df90c5cf80b0bd1"
+      },
+      {
+        "sourceId": "ecb3188b-458b-560c-8cb8-a9af2d7a3df0",
+        "gameId": "persona-5-tactica",
+        "policySha256": "7659ccf8921b0cdcefe0e7fa6f426f91232b87addb12d2a085de9a4ef79bb5c7"
+      },
+      {
+        "sourceId": "f167dc11-e1e9-5803-a2f5-ea3dc8eb298f",
+        "gameId": "onmyoji-the-card-game",
+        "policySha256": "26a44546e2e7bb4c4e7a61578064e22a0b3ecd8c1cae1b4022ccac4abe387445"
+      },
+      {
+        "sourceId": "f1d6c6cd-eb23-57c1-a997-8317e6f4167e",
+        "gameId": "umamusume-pretty-derby",
+        "policySha256": "0e2280f801aa74968ffb8b5e7f905208e589fd426bdadbf311452f03d1316c4c"
+      },
+      {
+        "sourceId": "f31c0564-dd5f-5516-b787-178ec93013a4",
+        "gameId": "sinoalice",
+        "policySha256": "c41bd10d28d52f1af3418a0f61df3bb2c3770561cf8e05d0fa8643b436e63235"
+      },
+      {
+        "sourceId": "f44bff22-35a3-5d95-9b72-fccdc5dc5fef",
+        "gameId": "sword-art-online-fractured-daydream",
+        "policySha256": "bfd134d813b419c50d3344b20f2a1fb58ffcf351d4b5792f6304c6203369936c"
+      },
+      {
+        "sourceId": "f463fd32-3b6e-50e8-9f41-e33c223585bc",
+        "gameId": "sword-art-online-integral-factor",
+        "policySha256": "0d84aee75a86c6f93a2949864b2b72d95102218a8602cd5d14e3c6356aa4ebd9"
+      },
+      {
+        "sourceId": "f82703b2-a337-5d26-a69d-c063dea4854c",
+        "gameId": "blue-protocol",
+        "policySha256": "e3eb6a613475d2f2dffc453bc4582b1e5e9ec12c1ccae9f29b3e6f6c820cd09a"
+      },
+      {
+        "sourceId": "f848a4aa-dd16-56ff-8151-56edf976c92d",
+        "gameId": "sword-art-online-last-recollection",
+        "policySha256": "2afde8698bd3e6c08d9c912617c2f4d589dc566fb2af543bc779fe3e973e5944"
+      },
+      {
+        "sourceId": "fac83649-5beb-5194-9062-1d1bb6219188",
+        "gameId": "blue-protocol-star-resonance",
+        "policySha256": "1563996ebd3466dbd12e3be981a651d6771f69d7c9f8b00ac99ac28886233d89"
+      },
+      {
+        "sourceId": "fc273a47-7eaf-5dfd-86df-0a2448777332",
+        "gameId": "disgaea-rpg",
+        "policySha256": "ff3bd9bd54bfb5e0bd450bb908fd65b3b382e46f9ce453939ef54074b2454554"
+      },
+      {
+        "sourceId": "fe41ac4f-29c1-5d63-aedf-875bcc203055",
+        "gameId": "fire-emblem-heroes",
+        "policySha256": "5006cbaa747afe14c5eb65e360dde809d2f72fcd1404fce0c036c9541648b46f"
+      }
+    ],
+    "knownEvents": [
+      {
+        "id": "0236c8e3c3f6be1f6e79c9c8a6ab76a3d3f38f47bddeeffcb1b7cd0050f21af7",
+        "sourceId": "d641c1f0-5226-58e7-b5d2-d26a85604d29",
+        "gameIds": [
+          "girls-frontline-2"
+        ],
+        "externalKey": "1846018067925601",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067925601"
+      },
+      {
+        "id": "032d0f298e09ef156e73359b8c305b37546129929486a34d96f4fa484d8329bc",
+        "sourceId": "0f87e4cd-a010-59fb-b8a0-7bd10b07026c",
+        "gameIds": [
+          "neverness-to-everness"
+        ],
+        "externalKey": "f0pUoOjsfSk",
+        "officialUrl": "https://www.youtube.com/watch?v=f0pUoOjsfSk"
+      },
+      {
+        "id": "034f1663c24dd3c57f693418b45ab1bbd0757f86c19b014f11de28dff41337e4",
+        "sourceId": "6fda6570-af94-5fb6-8489-96f724445557",
+        "gameIds": [
+          "girls-frontline-2"
+        ],
+        "externalKey": "https://prtimes.jp/main/html/rd/p/000000328.000050327.html",
+        "officialUrl": "https://prtimes.jp/main/html/rd/p/000000328.000050327.html"
+      },
+      {
+        "id": "0364bf774bcff49697a071b26127a772ad8ec6f5517c007ad43fca47dee04b80",
+        "sourceId": "bb7b0508-b065-5743-87d3-8fa6c4160755",
+        "gameIds": [
+          "nikke"
+        ],
+        "externalKey": "6gMlC4pZ4wU",
+        "officialUrl": "https://www.youtube.com/watch?v=6gMlC4pZ4wU"
+      },
+      {
+        "id": "06b1a2cd8d034a88700dcc7c1993f3464c9277dcd7d0c2f68c0fd20026874b3b",
+        "sourceId": "92a8726c-aa20-51ef-95e9-fb6a3a83c1fa",
+        "gameIds": [
+          "seven-deadly-sins-origin"
+        ],
+        "externalKey": "1846018067940197",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067940197"
+      },
+      {
+        "id": "07d68f2066f6646986cfa1e7c481bf340a1abab241b60124565e4bd796c95ef8",
+        "sourceId": "genshin-official-ko-cms",
+        "gameIds": [
+          "genshin-impact"
+        ],
+        "externalKey": "166634",
+        "officialUrl": "https://genshin.hoyoverse.com/ko/news/detail/166634"
+      },
+      {
+        "id": "09cf53c379ddd397f9ea4b210eef8768467a62f7b080abf2866c38e0c6bb9eab",
+        "sourceId": "9309f931-7068-57f3-a95a-d2c2ef888849",
+        "gameIds": [
+          "elsword"
+        ],
+        "externalKey": "1846651706679498",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706679498"
+      },
+      {
+        "id": "0c0e743310447ef8c117bb5ada32ce75ad63f1a4cb0dfd98b41233dc89e47659",
+        "sourceId": "0db970a9-d40e-5e4e-be0a-ba6481dfaba3",
+        "gameIds": [
+          "madoka-magica-magia-exedra"
+        ],
+        "externalKey": "1846651706683538",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706683538"
+      },
+      {
+        "id": "0d1d89e0af3a0b4a063e4ad1f8cb4de715764c5791f8058d6944a693c1b4c667",
+        "sourceId": "307110bc-1863-50d3-a4d4-9a84b816f70a",
+        "gameIds": [
+          "zenless-zone-zero"
+        ],
+        "externalKey": "wHxjO2Ut3Ic",
+        "officialUrl": "https://www.youtube.com/watch?v=wHxjO2Ut3Ic"
+      },
+      {
+        "id": "10691aef16647f1117dec42bc7b9dd47dced8e7c546a0d4de6b660aef08d5b0f",
+        "sourceId": "8782f1e1-7dab-5c8c-a3b8-e4e53ff26837",
+        "gameIds": [
+          "crystal-of-atlan"
+        ],
+        "externalKey": "1846651706694570",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706694570"
+      },
+      {
+        "id": "11653253af2a6cd9adb1a9a489aade4b1eb2a888960b7a29c81094451856e589",
+        "sourceId": "genshin-official-ko-cms",
+        "gameIds": [
+          "genshin-impact"
+        ],
+        "externalKey": "166650",
+        "officialUrl": "https://genshin.hoyoverse.com/ko/news/detail/166650"
+      },
+      {
+        "id": "16689b6376f3e47e8efbbc935398ae394355bd93cc5ea8692471c0041bb65522",
+        "sourceId": "63569706-da34-5b72-acb5-1e6503021b56",
+        "gameIds": [
+          "limbus-company"
+        ],
+        "externalKey": "1846018067940410",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067940410"
+      },
+      {
+        "id": "16b3ac782b60eb47f8399e1b84ea61ca21321d216aed58eab4feb249ed3ccf23",
+        "sourceId": "92a8726c-aa20-51ef-95e9-fb6a3a83c1fa",
+        "gameIds": [
+          "seven-deadly-sins-origin"
+        ],
+        "externalKey": "1846018067929244",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067929244"
+      },
+      {
+        "id": "17a2d2831d1dd3d609f3ddcb88dd5c46edf9b9ff63e7d01681e7affa051e7ec0",
+        "sourceId": "df2e55af-813a-5736-90aa-a16437ddbb21",
+        "gameIds": [
+          "duet-night-abyss"
+        ],
+        "externalKey": "Hu2FuoHaS_o",
+        "officialUrl": "https://www.youtube.com/watch?v=Hu2FuoHaS_o"
+      },
+      {
+        "id": "17b76a3032122a16b150ce65d1fe710a9689d4fa1f1dc9f721a717afb20f246b",
+        "sourceId": "a167dc97-27d8-52ce-8b18-e6c645363af3",
+        "gameIds": [
+          "idoly-pride"
+        ],
+        "externalKey": "BseN79yNoXQ",
+        "officialUrl": "https://www.youtube.com/watch?v=BseN79yNoXQ"
+      },
+      {
+        "id": "17ee30e9526bfa1efbca61991e4fb2a4bf8ef8a71cf0fe72ec1c9a765e3c822e",
+        "sourceId": "8e1689ca-f8ea-591f-ad84-fde284f5b08e",
+        "gameIds": [
+          "alchemia-story"
+        ],
+        "externalKey": "1846651706694135",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706694135"
+      },
+      {
+        "id": "189cf82576a8cc3c6b0c6ca3920c4145520717f48f36f4fc8b4682758680968d",
+        "sourceId": "22a268ae-6ba2-56b5-b625-101645edf678",
+        "gameIds": [
+          "infinity-nikki"
+        ],
+        "externalKey": "1846018067939851",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067939851"
+      },
+      {
+        "id": "18f545eaad32b85dcc8a7ea9a807ab4252a3517070eb6f329dcea12b54cf1ea7",
+        "sourceId": "ae4fad00-80f7-56b1-88aa-61114c62f03c",
+        "gameIds": [
+          "touhou-lostword"
+        ],
+        "externalKey": "https://touhoulostword.com/?p=229885",
+        "officialUrl": "https://touhoulostword.com/2026/10/14/229885/"
+      },
+      {
+        "id": "1981f0110ebeabcbbc414c73b0f950fd6085cb5907872a4f7f65fb243ea2ad86",
+        "sourceId": "63569706-da34-5b72-acb5-1e6503021b56",
+        "gameIds": [
+          "limbus-company"
+        ],
+        "externalKey": "1845383656381070",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656381070"
+      },
+      {
+        "id": "19a4c657ff7d8811637d831fc46306ae2f961ec2282405797531d8862023af4d",
+        "sourceId": "bb7b0508-b065-5743-87d3-8fa6c4160755",
+        "gameIds": [
+          "nikke"
+        ],
+        "externalKey": "a95cjFgW2NM",
+        "officialUrl": "https://www.youtube.com/watch?v=a95cjFgW2NM"
+      },
+      {
+        "id": "1a2e90040cdd9f4ecca1e647a691c910c846ac04483c5d18ac3d4189e95a8dbc",
+        "sourceId": "8a079815-decd-534e-b457-902ddb407e68",
+        "gameIds": [
+          "wuthering-waves"
+        ],
+        "externalKey": "7dxIizEBZaQ",
+        "officialUrl": "https://www.youtube.com/watch?v=7dxIizEBZaQ"
+      },
+      {
+        "id": "1a36041720c15285ceeb24a8432d213e737ce38de6f19c784f42427a16c72160",
+        "sourceId": "8a4e40a6-71ce-52af-8f79-f11c2968b590",
+        "gameIds": [
+          "genshin-impact"
+        ],
+        "externalKey": "y2pIcKZwDrc",
+        "officialUrl": "https://www.youtube.com/watch?v=y2pIcKZwDrc"
+      },
+      {
+        "id": "1a3f0adfa760d63ba1b43863f31dc4bce18ec0add2f418e5b7d561953c291136",
+        "sourceId": "f1d6c6cd-eb23-57c1-a997-8317e6f4167e",
+        "gameIds": [
+          "umamusume-pretty-derby"
+        ],
+        "externalKey": "1846651706696856",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706696856"
+      },
+      {
+        "id": "1a6142b6d9d25a9174f0c4c3ea1af4409a56df89a84f12eb0e8d8eded405943e",
+        "sourceId": null,
+        "gameIds": [
+          "girls-frontline-2"
+        ],
+        "externalKey": null,
+        "officialUrl": "https://gf2.haoplay.com/kr/"
+      },
+      {
+        "id": "1af37ee5e25fcaf53c464925c50b9353b16c3f99e9f88e1d59cc420a1ff63c18",
+        "sourceId": "0db970a9-d40e-5e4e-be0a-ba6481dfaba3",
+        "gameIds": [
+          "madoka-magica-magia-exedra"
+        ],
+        "externalKey": "1845383656392538",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656392538"
+      },
+      {
+        "id": "1b1e0e7e1f2164d8aa6d4261673f878dc84a6fb6df858fe4672e554558cd3333",
+        "sourceId": "2c01343f-655e-5de6-ac64-301eb2804f80",
+        "gameIds": [
+          "heaven-burns-red"
+        ],
+        "externalKey": "1846018067931929",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067931929"
+      },
+      {
+        "id": "1c2fcff4a868385c0828990479ce33d1865a2bbf7749f276ee1bd0e869b1c9d7",
+        "sourceId": "9309f931-7068-57f3-a95a-d2c2ef888849",
+        "gameIds": [
+          "elsword"
+        ],
+        "externalKey": "1847286114030566",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1847286114030566"
+      },
+      {
+        "id": "1c37a657453101e2f26c77f9f5148667a2723ca1c6ce61c3c504fa27157f0c43",
+        "sourceId": "85d40a4d-2fba-512b-b179-379ba6199662",
+        "gameIds": [
+          "blue-archive"
+        ],
+        "externalKey": "RbjUMWGIWAo",
+        "officialUrl": "https://www.youtube.com/watch?v=RbjUMWGIWAo"
+      },
+      {
+        "id": "1e91943950967e33376390fbf61308f60d2035259e3eff92e33511348c813e73",
+        "sourceId": "genshin-official-ko-cms",
+        "gameIds": [
+          "genshin-impact"
+        ],
+        "externalKey": "166634",
+        "officialUrl": "https://genshin.hoyoverse.com/ko/news/detail/166634"
+      },
+      {
+        "id": "1f1d807d025a66b60955c043055c3c53a945e47ae7745125ffe578e7bbc2bce3",
+        "sourceId": "85d40a4d-2fba-512b-b179-379ba6199662",
+        "gameIds": [
+          "blue-archive"
+        ],
+        "externalKey": "jtQykqoftXw",
+        "officialUrl": "https://www.youtube.com/watch?v=jtQykqoftXw"
+      },
+      {
+        "id": "1f33d8b5e35d59094791dc1b34bec4e17d84d5e8720f6a5663561dda3718a420",
+        "sourceId": "92a8726c-aa20-51ef-95e9-fb6a3a83c1fa",
+        "gameIds": [
+          "seven-deadly-sins-origin"
+        ],
+        "externalKey": "1845383656395914",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656395914"
+      },
+      {
+        "id": "20bb3e126349061fa6d42046c0d95c17d5400a1720654362a276fd8c341b1159",
+        "sourceId": "56c66cf1-f58b-514d-b043-17902be7165d",
+        "gameIds": [
+          "eminence-in-shadow-master-of-garden"
+        ],
+        "externalKey": "1846651706684716",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706684716"
+      },
+      {
+        "id": "274af0ac2b5d6d6c5576951bd7f541281640ddf24ff48257ecb266ff7d32e99b",
+        "sourceId": "d641c1f0-5226-58e7-b5d2-d26a85604d29",
+        "gameIds": [
+          "girls-frontline-2"
+        ],
+        "externalKey": "1846018067925601",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067925601"
+      },
+      {
+        "id": "279606747157a38ba6939bca3b5540fa2e008c9413df29d3de43ab19815aaaa3",
+        "sourceId": "56c66cf1-f58b-514d-b043-17902be7165d",
+        "gameIds": [
+          "eminence-in-shadow-master-of-garden"
+        ],
+        "externalKey": "1846018067932140",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067932140"
+      },
+      {
+        "id": "27a176620669d2f228c55d0d43571803321be8fd1d134b8057fa54316ae56f89",
+        "sourceId": "8a079815-decd-534e-b457-902ddb407e68",
+        "gameIds": [
+          "wuthering-waves"
+        ],
+        "externalKey": "3a0eUbptiwg",
+        "officialUrl": "https://www.youtube.com/watch?v=3a0eUbptiwg"
+      },
+      {
+        "id": "27b6d6e7f511c2a7dd4a73ce1358015cfb52e211a60b8d2e499460c891db72b5",
+        "sourceId": "56c66cf1-f58b-514d-b043-17902be7165d",
+        "gameIds": [
+          "eminence-in-shadow-master-of-garden"
+        ],
+        "externalKey": "1846018067940379",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067940379"
+      },
+      {
+        "id": "2af9edc22ddcde37737cf28babcd89184f04fc9ea523d8acadbc11385946c67f",
+        "sourceId": "b34f15bd-8808-5f02-a6bc-a0d2639697bf",
+        "gameIds": [
+          "stella-sora"
+        ],
+        "externalKey": "N79RCgjnJRM",
+        "officialUrl": "https://www.youtube.com/watch?v=N79RCgjnJRM"
+      },
+      {
+        "id": "2c6538146f00d43081f79a5439f300e623f7a4b6f5d51ddefeb7dfaaf44132c9",
+        "sourceId": "bb7b0508-b065-5743-87d3-8fa6c4160755",
+        "gameIds": [
+          "nikke"
+        ],
+        "externalKey": "c-FqIfzJsrw",
+        "officialUrl": "https://www.youtube.com/watch?v=c-FqIfzJsrw"
+      },
+      {
+        "id": "2ce97de9002cc922f255038adae30ceb9f80db59947542d5e9d1d8c950c7e995",
+        "sourceId": "dba5b496-113f-5d8d-b59c-7ee3b9a2cc5a",
+        "gameIds": [
+          "girls-frontline-2"
+        ],
+        "externalKey": "-IJ8a26Utls",
+        "officialUrl": "https://www.youtube.com/watch?v=-IJ8a26Utls"
+      },
+      {
+        "id": "2e285371de26233888c773a29198486f94f2e023bf24c2b2e9671368e134b033",
+        "sourceId": "70c381e2-8089-51aa-955a-c40c594e6c33",
+        "gameIds": [
+          "arknights-endfield"
+        ],
+        "externalKey": "1TPiuhgcEO8",
+        "officialUrl": "https://www.youtube.com/watch?v=1TPiuhgcEO8"
+      },
+      {
+        "id": "2f36b4f416cab96d71c09d2e922e65c576c99c01328f769f8257b8d83739367f",
+        "sourceId": "fac83649-5beb-5194-9062-1d1bb6219188",
+        "gameIds": [
+          "blue-protocol-star-resonance"
+        ],
+        "externalKey": "1845383656386246",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656386246"
+      },
+      {
+        "id": "3121aa2328a038195c64b8ee36e6cc58864642dec866a0178094335d1bf63f36",
+        "sourceId": "c6798fe0-b7e7-56fd-a244-5e70cf464462",
+        "gameIds": [
+          "duet-night-abyss"
+        ],
+        "externalKey": "1846651706693387",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706693387"
+      },
+      {
+        "id": "355526d7358ce9aca32e469b088902d2193c60f7e34ba8fa5a258d2f5b93cb5f",
+        "sourceId": "7962eafd-9d30-51a1-b18f-0f9a4091762a",
+        "gameIds": [
+          "action-taimanin"
+        ],
+        "externalKey": "1846651706693849",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706693849"
+      },
+      {
+        "id": "370b068b0e11135516d11945b8e9b8b34a4716359f0c7dc3fc817adef564c241",
+        "sourceId": "7962eafd-9d30-51a1-b18f-0f9a4091762a",
+        "gameIds": [
+          "action-taimanin"
+        ],
+        "externalKey": "1846018067942658",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067942658"
+      },
+      {
+        "id": "3b479f8ae2c0a3440518f472a677330e370b098dffe6d884180287e0d0f7cc61",
+        "sourceId": "dbd2d66c-3b9a-5d69-abb6-ed50c3bf7760",
+        "gameIds": [
+          "persona-5-the-phantom-x"
+        ],
+        "externalKey": "1846651706676582",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706676582"
+      },
+      {
+        "id": "3bffe57ab1d228d6a7b59f141a84eea5bd4e4141f3ab6bbea8424a858c3ad7cf",
+        "sourceId": "18566e76-dd68-562f-afd5-c443f38e6f5f",
+        "gameIds": [
+          "kings-raid-reverse"
+        ],
+        "externalKey": "1845383656395339",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656395339"
+      },
+      {
+        "id": "3e0296298bcae6dc7eb268851fd574c2ac07f7c66330d5045afda57e8d1cbd7e",
+        "sourceId": "92a8726c-aa20-51ef-95e9-fb6a3a83c1fa",
+        "gameIds": [
+          "seven-deadly-sins-origin"
+        ],
+        "externalKey": "1846651706694444",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706694444"
+      },
+      {
+        "id": "421a570b08a13ea00124334d8733c48cbc99cf52e48e88b0cda139e621335082",
+        "sourceId": "7962eafd-9d30-51a1-b18f-0f9a4091762a",
+        "gameIds": [
+          "action-taimanin"
+        ],
+        "externalKey": "1845383656392909",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656392909"
+      },
+      {
+        "id": "427042782d8b5b41cff65c911e1af65c730765eefb0873f93e47c65d90a1a89b",
+        "sourceId": "78f0df76-6ad4-5df8-a2e4-9111b6bc0758",
+        "gameIds": [
+          "brown-dust-2"
+        ],
+        "externalKey": "IIpGZE-GcuA",
+        "officialUrl": "https://www.youtube.com/watch?v=IIpGZE-GcuA"
+      },
+      {
+        "id": "437671d1c6236f072ce7a091e8b6351ea778c4922350d4707e598b30f96c1304",
+        "sourceId": "0db970a9-d40e-5e4e-be0a-ba6481dfaba3",
+        "gameIds": [
+          "madoka-magica-magia-exedra"
+        ],
+        "externalKey": "1847286114027396",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1847286114027396"
+      },
+      {
+        "id": "43da3c40783ea328cd863a2f8a257122d0f5b6b0fb1f0c561f37a660eb9d26a3",
+        "sourceId": "fc273a47-7eaf-5dfd-86df-0a2448777332",
+        "gameIds": [
+          "disgaea-rpg"
+        ],
+        "externalKey": "https://disgaea-app-news.com/?p=590",
+        "officialUrl": "https://disgaea-app-news.com/news/post-590/"
+      },
+      {
+        "id": "44eac70d7c6a9fab417773441df92386a0a2bcda54eec18765e3ea7bd960e50c",
+        "sourceId": "8a4e40a6-71ce-52af-8f79-f11c2968b590",
+        "gameIds": [
+          "genshin-impact"
+        ],
+        "externalKey": "vwvQDsL8I4U",
+        "officialUrl": "https://www.youtube.com/watch?v=vwvQDsL8I4U"
+      },
+      {
+        "id": "473d2db911270a0ee2c7e31fa9631cb6ecb0ef5383d4f20c42a24fb98af1e7a1",
+        "sourceId": "ae4fad00-80f7-56b1-88aa-61114c62f03c",
+        "gameIds": [
+          "touhou-lostword"
+        ],
+        "externalKey": "https://touhoulostword.com/?p=229817",
+        "officialUrl": "https://touhoulostword.com/2026/10/06/229817/"
+      },
+      {
+        "id": "4d511a7cf570ac3247095ea7bc074b2a1cdd53a1d3b558724b998ca954385b95",
+        "sourceId": "8a4e40a6-71ce-52af-8f79-f11c2968b590",
+        "gameIds": [
+          "genshin-impact"
+        ],
+        "externalKey": "IJk9dNAX6II",
+        "officialUrl": "https://www.youtube.com/watch?v=IJk9dNAX6II"
+      },
+      {
+        "id": "4d94755c59458bfc42c5b9a6548fb42b025b24a06098a88aea0c3b5d1b3f16f5",
+        "sourceId": "92a8726c-aa20-51ef-95e9-fb6a3a83c1fa",
+        "gameIds": [
+          "seven-deadly-sins-origin"
+        ],
+        "externalKey": "1846018067943286",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067943286"
+      },
+      {
+        "id": "4e0a7903cffe27a39e41c6139dc2db355eb7168173751ad39feeb6ff94a4a537",
+        "sourceId": "56c66cf1-f58b-514d-b043-17902be7165d",
+        "gameIds": [
+          "eminence-in-shadow-master-of-garden"
+        ],
+        "externalKey": "1847286114030874",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1847286114030874"
+      },
+      {
+        "id": "50d44a5c5a4e5730f6953514260c06fb2b76a677a696f65dec988fe804dc14d3",
+        "sourceId": "bb7b0508-b065-5743-87d3-8fa6c4160755",
+        "gameIds": [
+          "nikke"
+        ],
+        "externalKey": "CVidzzXcVbk",
+        "officialUrl": "https://www.youtube.com/watch?v=CVidzzXcVbk"
+      },
+      {
+        "id": "530212212a08c06ec92707e976c7e2a750c37fa66b4186f33e2ecb809490f9ed",
+        "sourceId": "fac83649-5beb-5194-9062-1d1bb6219188",
+        "gameIds": [
+          "blue-protocol-star-resonance"
+        ],
+        "externalKey": "1846018067929590",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067929590"
+      },
+      {
+        "id": "5433d671cad80750fa9074a07bb9588f53693a615c0df47dc6d96c327f6b3340",
+        "sourceId": "ae4fad00-80f7-56b1-88aa-61114c62f03c",
+        "gameIds": [
+          "touhou-lostword"
+        ],
+        "externalKey": "https://touhoulostword.com/?p=229916",
+        "officialUrl": "https://touhoulostword.com/2026/10/16/229916/"
+      },
+      {
+        "id": "54b4333a7a235cd9887ea1b66f18e462bfff5771abb7a777d21b810b13a2f059",
+        "sourceId": null,
+        "gameIds": [
+          "girls-frontline-2"
+        ],
+        "externalKey": null,
+        "officialUrl": "https://gf2.haoplay.com/kr/"
+      },
+      {
+        "id": "58afd5a82d29de83e260f9f1b96c9a44a6cd08ff36cde6b58d1cf2dec2e54bc9",
+        "sourceId": "d641c1f0-5226-58e7-b5d2-d26a85604d29",
+        "gameIds": [
+          "girls-frontline-2"
+        ],
+        "externalKey": "1846018067925601",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067925601"
+      },
+      {
+        "id": "5a069fc0a8bab7760af010b7ab786ebf0301567737f997883cc3c8a9e9172b1b",
+        "sourceId": "752e9335-51fc-55ae-b3ce-f11b5b4b6268",
+        "gameIds": [
+          "love-and-deepspace"
+        ],
+        "externalKey": "kiTE7IrPJIM",
+        "officialUrl": "https://www.youtube.com/watch?v=kiTE7IrPJIM"
+      },
+      {
+        "id": "5a4c366301e06132e09f99d49dd48633530955dedf11bd631c50be62b9803912",
+        "sourceId": "307110bc-1863-50d3-a4d4-9a84b816f70a",
+        "gameIds": [
+          "zenless-zone-zero"
+        ],
+        "externalKey": "eskKHxhmjCE",
+        "officialUrl": "https://www.youtube.com/watch?v=eskKHxhmjCE"
+      },
+      {
+        "id": "5a6894b01c4d5b358b0744ad271338319381738f7eeadc9038f34ea921c0671c",
+        "sourceId": "ae4fad00-80f7-56b1-88aa-61114c62f03c",
+        "gameIds": [
+          "touhou-lostword"
+        ],
+        "externalKey": "https://touhoulostword.com/?p=229962",
+        "officialUrl": "https://touhoulostword.com/2026/10/21/229962/"
+      },
+      {
+        "id": "5cac46803dd29e80ed2dbaa9c1636afbba423adca0f7076e4aa0bb6494492656",
+        "sourceId": null,
+        "gameIds": [
+          "genshin-impact"
+        ],
+        "externalKey": "hoyoverse:166634:global:asia-utc8",
+        "officialUrl": "https://genshin.hoyoverse.com/en/news/detail/166634"
+      },
+      {
+        "id": "6003a13eb885b1ee37090e6d7f425307cf39202ea595c8a7ddaff05c4d806d1f",
+        "sourceId": "dbeadd5f-98f1-59dc-854b-f2879d036867",
+        "gameIds": [
+          "girls-frontline-2"
+        ],
+        "externalKey": "68002",
+        "officialUrl": "https://cafe.naver.com/f-e/cafes/31038411/articles/68002"
+      },
+      {
+        "id": "6004993039f2d10e6316105be517e910bfc70a099dee08989002dd6e620627f9",
+        "sourceId": "56c66cf1-f58b-514d-b043-17902be7165d",
+        "gameIds": [
+          "eminence-in-shadow-master-of-garden"
+        ],
+        "externalKey": "1845383656392905",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656392905"
+      },
+      {
+        "id": "60083c3525422049a9787a98960bb83f14db6c9e592217587dd2e092d87c0211",
+        "sourceId": "d641c1f0-5226-58e7-b5d2-d26a85604d29",
+        "gameIds": [
+          "girls-frontline-2"
+        ],
+        "externalKey": "1846018067925601",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067925601"
+      },
+      {
+        "id": "60415dc224709780bd3c9cb0faa6767fa277fb8c1b2e1acea4f738c6a4221c2b",
+        "sourceId": "genshin-official-ko-cms",
+        "gameIds": [
+          "genshin-impact"
+        ],
+        "externalKey": "166634",
+        "officialUrl": "https://genshin.hoyoverse.com/ko/news/detail/166634"
+      },
+      {
+        "id": "609dd86e736cb42e5bc9e9b3f3881a8dee0adcfcc28dc98c3021e4ee66a566c8",
+        "sourceId": "0db970a9-d40e-5e4e-be0a-ba6481dfaba3",
+        "gameIds": [
+          "madoka-magica-magia-exedra"
+        ],
+        "externalKey": "1846651706679917",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706679917"
+      },
+      {
+        "id": "60dcb85ce8aeb2c611e9dc9853885cb95643c1d650dca2a3c6fb7a472d3a571c",
+        "sourceId": "ae4fad00-80f7-56b1-88aa-61114c62f03c",
+        "gameIds": [
+          "touhou-lostword"
+        ],
+        "externalKey": "https://touhoulostword.com/?p=229851",
+        "officialUrl": "https://touhoulostword.com/2026/10/08/229851/"
+      },
+      {
+        "id": "60e729b417cd5d12bd890e678887490cd6c4da4827a452766a862d1955ec8132",
+        "sourceId": "56c66cf1-f58b-514d-b043-17902be7165d",
+        "gameIds": [
+          "eminence-in-shadow-master-of-garden"
+        ],
+        "externalKey": "1845383656379693",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656379693"
+      },
+      {
+        "id": "61061664336a40a4e83cd22d77788a6886e1a1f9e9e5f84dcaaa4298444962fd",
+        "sourceId": "8a079815-decd-534e-b457-902ddb407e68",
+        "gameIds": [
+          "wuthering-waves"
+        ],
+        "externalKey": "l5ZL9Fo2-ow",
+        "officialUrl": "https://www.youtube.com/watch?v=l5ZL9Fo2-ow"
+      },
+      {
+        "id": "617b2bcd787f936a4b40d5d7d0f34a1b5b6a44990527b6167ae4842fe279e98b",
+        "sourceId": "c8a6e905-cc5f-5519-914a-101b0b6ff697",
+        "gameIds": [
+          "arknights"
+        ],
+        "externalKey": "MHfUQJypvls",
+        "officialUrl": "https://www.youtube.com/watch?v=MHfUQJypvls"
+      },
+      {
+        "id": "61c5eee4a92b839a2ba7c373aca3c76678d42ea76d83c9dc4ccfd95e21d114ab",
+        "sourceId": "2c01343f-655e-5de6-ac64-301eb2804f80",
+        "gameIds": [
+          "heaven-burns-red"
+        ],
+        "externalKey": "1846651706679826",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706679826"
+      },
+      {
+        "id": "6225e9d72b792682adb3c1ac55a19a9dbd69f8e4ed53d0b1a154f1c0608fb842",
+        "sourceId": "fac83649-5beb-5194-9062-1d1bb6219188",
+        "gameIds": [
+          "blue-protocol-star-resonance"
+        ],
+        "externalKey": "1845383656378394",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656378394"
+      },
+      {
+        "id": "625eac7ec3464922b1711b92a4cc81aaeeba5182126b68953b716c1cabe999f1",
+        "sourceId": "9309f931-7068-57f3-a95a-d2c2ef888849",
+        "gameIds": [
+          "elsword"
+        ],
+        "externalKey": "1846018067926912",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067926912"
+      },
+      {
+        "id": "641a399f753c8efb2f921b6da9cb8c4ddc3dc132b87ca8066d95ed87145cfc5f",
+        "sourceId": "63569706-da34-5b72-acb5-1e6503021b56",
+        "gameIds": [
+          "limbus-company"
+        ],
+        "externalKey": "1846651706676926",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706676926"
+      },
+      {
+        "id": "65642c0d3b0c5dafa0fd43b3e0eb00f5597006b849e8caa77c1805509cdba829",
+        "sourceId": "7962eafd-9d30-51a1-b18f-0f9a4091762a",
+        "gameIds": [
+          "action-taimanin"
+        ],
+        "externalKey": "1846018067925256",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067925256"
+      },
+      {
+        "id": "65a5b96046a4d1732a1086575b6547d25e854b7b7219fba4f6882b61278f8089",
+        "sourceId": "92a8726c-aa20-51ef-95e9-fb6a3a83c1fa",
+        "gameIds": [
+          "seven-deadly-sins-origin"
+        ],
+        "externalKey": "1845383656385984",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656385984"
+      },
+      {
+        "id": "65e151949d7fc4f937fec2ea29e71728c102f12408622591a66ffc8513642864",
+        "sourceId": "92a8726c-aa20-51ef-95e9-fb6a3a83c1fa",
+        "gameIds": [
+          "seven-deadly-sins-origin"
+        ],
+        "externalKey": "1846018067924759",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067924759"
+      },
+      {
+        "id": "673bd86dae8e7e6f54a8653c7c11f319f7c8055c06720904b73421eb78292cb1",
+        "sourceId": "d641c1f0-5226-58e7-b5d2-d26a85604d29",
+        "gameIds": [
+          "girls-frontline-2"
+        ],
+        "externalKey": "1846018067925601",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067925601"
+      },
+      {
+        "id": "68328f1dd8328a75aab71f6b9851f065283073f3accd905d4088f5b8632d8c34",
+        "sourceId": "ae4fad00-80f7-56b1-88aa-61114c62f03c",
+        "gameIds": [
+          "touhou-lostword"
+        ],
+        "externalKey": "https://touhoulostword.com/?p=229914",
+        "officialUrl": "https://touhoulostword.com/2026/10/16/229914/"
+      },
+      {
+        "id": "6acb3c5e6190791a51b1eea05e0c675806d0b63ca38b5a8262b8cc398e8e34bb",
+        "sourceId": "92a8726c-aa20-51ef-95e9-fb6a3a83c1fa",
+        "gameIds": [
+          "seven-deadly-sins-origin"
+        ],
+        "externalKey": "1846018067929109",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067929109"
+      },
+      {
+        "id": "6c09d690fec43cd43ccb4a1be357e902574f19c61b49a183ba67ffae3c260507",
+        "sourceId": "22a268ae-6ba2-56b5-b625-101645edf678",
+        "gameIds": [
+          "infinity-nikki"
+        ],
+        "externalKey": "1846018067938074",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067938074"
+      },
+      {
+        "id": "6c9db8e005d693b1abd817dd3ebf66b43eb8e0618fb9daed8300a79439833184",
+        "sourceId": "8a079815-decd-534e-b457-902ddb407e68",
+        "gameIds": [
+          "wuthering-waves"
+        ],
+        "externalKey": "OHEJ4NyW6-g",
+        "officialUrl": "https://www.youtube.com/watch?v=OHEJ4NyW6-g"
+      },
+      {
+        "id": "6d88f217cc2290dc5a07af5e94002069aafbefb0ff4d28f834259282ecbeb929",
+        "sourceId": "85d40a4d-2fba-512b-b179-379ba6199662",
+        "gameIds": [
+          "blue-archive"
+        ],
+        "externalKey": "ev5zaxkpsGI",
+        "officialUrl": "https://www.youtube.com/watch?v=ev5zaxkpsGI"
+      },
+      {
+        "id": "6f1f36bc8d0212d821c0abbd72006562ea59a26fcf99ac27c43cc6edb39148ce",
+        "sourceId": "56c66cf1-f58b-514d-b043-17902be7165d",
+        "gameIds": [
+          "eminence-in-shadow-master-of-garden"
+        ],
+        "externalKey": "1845383656381309",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656381309"
+      },
+      {
+        "id": "6f7395fe8df3d04c030b3c317aa247e0aca806c9d8db247c14574fbfb6ea1f58",
+        "sourceId": "dba5b496-113f-5d8d-b59c-7ee3b9a2cc5a",
+        "gameIds": [
+          "girls-frontline-2"
+        ],
+        "externalKey": "c8OvvELEcxQ",
+        "officialUrl": "https://www.youtube.com/watch?v=c8OvvELEcxQ"
+      },
+      {
+        "id": "6f75b556dfc22ec5c9af2eee7772bd43d15e0c702423e1d07b85747b9fe87fbe",
+        "sourceId": "8a079815-decd-534e-b457-902ddb407e68",
+        "gameIds": [
+          "wuthering-waves"
+        ],
+        "externalKey": "gknmYfbX57g",
+        "officialUrl": "https://www.youtube.com/watch?v=gknmYfbX57g"
+      },
+      {
+        "id": "6fd6726ebf5952d3efc857d8b9d7ebaa07892b7ba2a46fc55d395952c8362316",
+        "sourceId": "8e1689ca-f8ea-591f-ad84-fde284f5b08e",
+        "gameIds": [
+          "alchemia-story"
+        ],
+        "externalKey": "1846018067925307",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067925307"
+      },
+      {
+        "id": "71536b159bc3c217afb6f2faef48191c883d7b95eb89d92161148c8c3758151d",
+        "sourceId": "63569706-da34-5b72-acb5-1e6503021b56",
+        "gameIds": [
+          "limbus-company"
+        ],
+        "externalKey": "1846018067928133",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067928133"
+      },
+      {
+        "id": "71b7f874de29bd024df09e76ef7d9745cefe64c6e32393ccd64b040a7c4f4411",
+        "sourceId": "ae4fad00-80f7-56b1-88aa-61114c62f03c",
+        "gameIds": [
+          "touhou-lostword"
+        ],
+        "externalKey": "https://touhoulostword.com/?p=229918",
+        "officialUrl": "https://touhoulostword.com/2026/10/16/229918/"
+      },
+      {
+        "id": "737200511736a79235540285ff5cda60a48515cba12d8c3666978fc58c3a867e",
+        "sourceId": "8e1689ca-f8ea-591f-ad84-fde284f5b08e",
+        "gameIds": [
+          "alchemia-story"
+        ],
+        "externalKey": "1846018067943262",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067943262"
+      },
+      {
+        "id": "73be9bfad4e6c7337ee695a20b9d2865434af6f6613d787a7e79ed007f0bb69e",
+        "sourceId": "8782f1e1-7dab-5c8c-a3b8-e4e53ff26837",
+        "gameIds": [
+          "crystal-of-atlan"
+        ],
+        "externalKey": "1846651706672973",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706672973"
+      },
+      {
+        "id": "7674ec75124478a1e2986a58028751c5af439e0b8c873e9a77e66e880ce90963",
+        "sourceId": "7962eafd-9d30-51a1-b18f-0f9a4091762a",
+        "gameIds": [
+          "action-taimanin"
+        ],
+        "externalKey": "1846651706693968",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706693968"
+      },
+      {
+        "id": "77ab98a9dd015f99a76d104ccd817ebb17e3bab2862460cd9ca14d7c5e7a459b",
+        "sourceId": "fac83649-5beb-5194-9062-1d1bb6219188",
+        "gameIds": [
+          "blue-protocol-star-resonance"
+        ],
+        "externalKey": "1845383656382322",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656382322"
+      },
+      {
+        "id": "77b494d4a10aa28f347b52b29a69b43e13095bfc04e92ca3d79cbccd1fc0cdd6",
+        "sourceId": "8a079815-decd-534e-b457-902ddb407e68",
+        "gameIds": [
+          "wuthering-waves"
+        ],
+        "externalKey": "ErMQJo9jqJQ",
+        "officialUrl": "https://www.youtube.com/watch?v=ErMQJo9jqJQ"
+      },
+      {
+        "id": "7a2763e33a7970850604848cdf0a28c7d2628f8f3edbff9d84b74adf2099a0ee",
+        "sourceId": "7962eafd-9d30-51a1-b18f-0f9a4091762a",
+        "gameIds": [
+          "action-taimanin"
+        ],
+        "externalKey": "1846018067940003",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067940003"
+      },
+      {
+        "id": "7c2b1b76a3c792767a1e248c272cf410f0df9c81f95ba1bfefe7082d0576cf0f",
+        "sourceId": "bb7b0508-b065-5743-87d3-8fa6c4160755",
+        "gameIds": [
+          "nikke"
+        ],
+        "externalKey": "yxwOMk5RRQY",
+        "officialUrl": "https://www.youtube.com/watch?v=yxwOMk5RRQY"
+      },
+      {
+        "id": "7cf627aaf3212e48d2371cd2b6044858750a2432f1eb807f5d90bf155f2883b7",
+        "sourceId": "752e9335-51fc-55ae-b3ce-f11b5b4b6268",
+        "gameIds": [
+          "love-and-deepspace"
+        ],
+        "externalKey": "qQYlxCuu0QU",
+        "officialUrl": "https://www.youtube.com/watch?v=qQYlxCuu0QU"
+      },
+      {
+        "id": "7d30e680da18278be915b4173a8abad634130449c6498ea44f872de70303b1b6",
+        "sourceId": "63569706-da34-5b72-acb5-1e6503021b56",
+        "gameIds": [
+          "limbus-company"
+        ],
+        "externalKey": "1845383656395565",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656395565"
+      },
+      {
+        "id": "7d598f8be0a73f8ab268721b541f48ecf93c5d2852395a09bc868ffbdaab0ae7",
+        "sourceId": "85d40a4d-2fba-512b-b179-379ba6199662",
+        "gameIds": [
+          "blue-archive"
+        ],
+        "externalKey": "sU5lCCp-_PU",
+        "officialUrl": "https://www.youtube.com/watch?v=sU5lCCp-_PU"
+      },
+      {
+        "id": "838e9c6d16f74c75b2de1663508382c95d85aee6e0fe6d94641d84d30c25a34f",
+        "sourceId": "85d40a4d-2fba-512b-b179-379ba6199662",
+        "gameIds": [
+          "blue-archive"
+        ],
+        "externalKey": "Un3hDLLejWY",
+        "officialUrl": "https://www.youtube.com/watch?v=Un3hDLLejWY"
+      },
+      {
+        "id": "83b6fa5abe2e5d482d941d751030ae7b0ad57b90781d8553eb4e993505d3850c",
+        "sourceId": "56c66cf1-f58b-514d-b043-17902be7165d",
+        "gameIds": [
+          "eminence-in-shadow-master-of-garden"
+        ],
+        "externalKey": "1845383656379711",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656379711"
+      },
+      {
+        "id": "83dc4f01ac984be615fec3e80a400aad4d7e4c3e2db5bb03d1f970de8a1436c8",
+        "sourceId": "8a4e40a6-71ce-52af-8f79-f11c2968b590",
+        "gameIds": [
+          "genshin-impact"
+        ],
+        "externalKey": "Kx2YN8nXQ6k",
+        "officialUrl": "https://www.youtube.com/watch?v=Kx2YN8nXQ6k"
+      },
+      {
+        "id": "8438fe8d7028495758a611bb0a6dc2d4437d8a6c609374ee0cc83e34b1681a94",
+        "sourceId": "7962eafd-9d30-51a1-b18f-0f9a4091762a",
+        "gameIds": [
+          "action-taimanin"
+        ],
+        "externalKey": "1846651706689346",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706689346"
+      },
+      {
+        "id": "872acb94a90faaf935d58f1f072b1187d1004bce862797ab07c2a28a237f7cae",
+        "sourceId": "92a8726c-aa20-51ef-95e9-fb6a3a83c1fa",
+        "gameIds": [
+          "seven-deadly-sins-origin"
+        ],
+        "externalKey": "1846018067925590",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067925590"
+      },
+      {
+        "id": "897a4a92c18a4fe6b536d416bad8476bddf006df87511cbfaf66418b8750e7e2",
+        "sourceId": "63569706-da34-5b72-acb5-1e6503021b56",
+        "gameIds": [
+          "limbus-company"
+        ],
+        "externalKey": "1846018067940411",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067940411"
+      },
+      {
+        "id": "89ee505b9e384b25525d1c78c8daaf44d1d0a72d9218df596d53f783e090480b",
+        "sourceId": "4e5745cf-deae-5bdb-8413-75e94447e380",
+        "gameIds": [
+          "assault-lily-last-bullet"
+        ],
+        "externalKey": "UCmGSBaOaLU",
+        "officialUrl": "https://www.youtube.com/watch?v=UCmGSBaOaLU"
+      },
+      {
+        "id": "8a78a8d6d437eebe00444cad9e430a84670b8c5bf1ea1d1dbfff984b362ba6f6",
+        "sourceId": "0db970a9-d40e-5e4e-be0a-ba6481dfaba3",
+        "gameIds": [
+          "madoka-magica-magia-exedra"
+        ],
+        "externalKey": "1846651706676165",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706676165"
+      },
+      {
+        "id": "8bedce06354061a0ddcaf00419d7ff9cccb62024cb24397ecbbb286491a198f0",
+        "sourceId": "ae4fad00-80f7-56b1-88aa-61114c62f03c",
+        "gameIds": [
+          "touhou-lostword"
+        ],
+        "externalKey": "https://touhoulostword.com/?p=229891",
+        "officialUrl": "https://touhoulostword.com/2026/10/14/229891/"
+      },
+      {
+        "id": "8c4993cde25bcd4074846233996816c41495a23b06615f2d0cae70030eee1be4",
+        "sourceId": "7a68124c-e18e-5733-a0ef-6468b0228518",
+        "gameIds": [
+          "seven-deadly-sins-origin"
+        ],
+        "externalKey": "yd53w8QyOz0",
+        "officialUrl": "https://www.youtube.com/watch?v=yd53w8QyOz0"
+      },
+      {
+        "id": "8d2dd28ac4c3045ecabdd3afb8a250f446e57d70c2f62eaabbc2e023f325ad75",
+        "sourceId": "50e604b7-3d9f-51c6-9e3d-e49ff153db8f",
+        "gameIds": [
+          "tower-of-fantasy"
+        ],
+        "externalKey": "1846651706689027",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706689027"
+      },
+      {
+        "id": "8f0624193687592af52048d66eff2e5b33c6d9d190447f876f33a93692242c35",
+        "sourceId": "d641c1f0-5226-58e7-b5d2-d26a85604d29",
+        "gameIds": [
+          "girls-frontline-2"
+        ],
+        "externalKey": "1846018067925601",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067925601"
+      },
+      {
+        "id": "9133de271b1630e908d65c764eac505689c5b11930e1b98184530b0967c8850f",
+        "sourceId": "bb7b0508-b065-5743-87d3-8fa6c4160755",
+        "gameIds": [
+          "nikke"
+        ],
+        "externalKey": "h-ynRE1v12c",
+        "officialUrl": "https://www.youtube.com/watch?v=h-ynRE1v12c"
+      },
+      {
+        "id": "9499684ffe47a8aac1ca37d367c79a8cfb6f0cb5ccfcb222c22fd7e700b023bf",
+        "sourceId": "fac83649-5beb-5194-9062-1d1bb6219188",
+        "gameIds": [
+          "blue-protocol-star-resonance"
+        ],
+        "externalKey": "1845383656381430",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656381430"
+      },
+      {
+        "id": "952c5ff8b3a431747cbd497749de41b75135e40dd2f6aee6699db5147b56bf35",
+        "sourceId": "dba5b496-113f-5d8d-b59c-7ee3b9a2cc5a",
+        "gameIds": [
+          "girls-frontline-2"
+        ],
+        "externalKey": "CQHeGya9IIU",
+        "officialUrl": "https://www.youtube.com/watch?v=CQHeGya9IIU"
+      },
+      {
+        "id": "97d2cbef8141487866ec521d3474141428fd670d0c63c0b99c524fabe09488ba",
+        "sourceId": "0cc9db33-144f-5b84-bc59-d0cfc43d0892",
+        "gameIds": [
+          "phantasy-star-online-2-new-genesis"
+        ],
+        "externalKey": "1845383656395736",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656395736"
+      },
+      {
+        "id": "98bb020899f226aa8bd1444011d0c91b9057419e49335c3d84af7509450af6ff",
+        "sourceId": "0d022546-230b-5dd4-9212-91c47879d731",
+        "gameIds": [
+          "chaos-zero-nightmare"
+        ],
+        "externalKey": "CxnnlMLWYSU",
+        "officialUrl": "https://www.youtube.com/watch?v=CxnnlMLWYSU"
+      },
+      {
+        "id": "9969ee0dbbe4bf2f03bf34640976b3436705ccdf19d8edb29b10626d0e6a09c0",
+        "sourceId": "ae4fad00-80f7-56b1-88aa-61114c62f03c",
+        "gameIds": [
+          "touhou-lostword"
+        ],
+        "externalKey": "https://touhoulostword.com/?p=229910",
+        "officialUrl": "https://touhoulostword.com/2026/10/16/229910/"
+      },
+      {
+        "id": "9a613dcc2aaae20108b9be3e6c6d1d84bdb58d28fb2a43828932e285a30186ec",
+        "sourceId": "56c66cf1-f58b-514d-b043-17902be7165d",
+        "gameIds": [
+          "eminence-in-shadow-master-of-garden"
+        ],
+        "externalKey": "1846018067938675",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067938675"
+      },
+      {
+        "id": "9b185cdd86a9ca8f559919f6fc874765d6c2cc1ff5843870d82aa156df0c57c6",
+        "sourceId": "8a079815-decd-534e-b457-902ddb407e68",
+        "gameIds": [
+          "wuthering-waves"
+        ],
+        "externalKey": "LX8jcUStRgc",
+        "officialUrl": "https://www.youtube.com/watch?v=LX8jcUStRgc"
+      },
+      {
+        "id": "9b39ca3f9fe1c2ddb3fd008654e695182af142b07ffa26aa7610cb7e06bfb358",
+        "sourceId": "d641c1f0-5226-58e7-b5d2-d26a85604d29",
+        "gameIds": [
+          "girls-frontline-2"
+        ],
+        "externalKey": "1846018067925601",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067925601"
+      },
+      {
+        "id": "9f852d8b51982585469e76cd53c09a4e85adebb91270bdaff61aebfbb016f18f",
+        "sourceId": "7d8f1e6f-b58d-5f6b-951c-f100e8ac625c",
+        "gameIds": [
+          "seven-knights-rebirth"
+        ],
+        "externalKey": "OW9Txn_VjCs",
+        "officialUrl": "https://www.youtube.com/watch?v=OW9Txn_VjCs"
+      },
+      {
+        "id": "9fb26d6940b6eece2fe6b39d153b4547b17ca6eb1b13a2d3e13a858b357a1f23",
+        "sourceId": "d641c1f0-5226-58e7-b5d2-d26a85604d29",
+        "gameIds": [
+          "girls-frontline-2"
+        ],
+        "externalKey": "1846018067925601",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067925601"
+      },
+      {
+        "id": "a1f5646b7b03bcb4f3acab85a261d2ec5e265fa6552322da0c781b8f4b39a3f1",
+        "sourceId": "9309f931-7068-57f3-a95a-d2c2ef888849",
+        "gameIds": [
+          "elsword"
+        ],
+        "externalKey": "1846651706692436",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706692436"
+      },
+      {
+        "id": "a3216fb14561a8cd4b6abff8088d0356b0296ced635e1a1f7d5a36b8df8e3f1f",
+        "sourceId": "d641c1f0-5226-58e7-b5d2-d26a85604d29",
+        "gameIds": [
+          "girls-frontline-2"
+        ],
+        "externalKey": "1846018067925601",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067925601"
+      },
+      {
+        "id": "a3ed8267e14f6cb800a6ea8f2a978157c98fd42281c2a3b2a6b4d17c14275535",
+        "sourceId": "bb7b0508-b065-5743-87d3-8fa6c4160755",
+        "gameIds": [
+          "nikke"
+        ],
+        "externalKey": "sXC-uH44brc",
+        "officialUrl": "https://www.youtube.com/watch?v=sXC-uH44brc"
+      },
+      {
+        "id": "a402ecae7c9af912832e9e78e28f6d9f4596363985f7ac2713ca64a0ab2fdf8f",
+        "sourceId": "bb7b0508-b065-5743-87d3-8fa6c4160755",
+        "gameIds": [
+          "nikke"
+        ],
+        "externalKey": "gNGCGu-LjgE",
+        "officialUrl": "https://www.youtube.com/watch?v=gNGCGu-LjgE"
+      },
+      {
+        "id": "a475090f2164b9bbafb33293e08b104e3fb4edffd1b31c3537ed296c946ec695",
+        "sourceId": "85d40a4d-2fba-512b-b179-379ba6199662",
+        "gameIds": [
+          "blue-archive"
+        ],
+        "externalKey": "l4UL35Das1g",
+        "officialUrl": "https://www.youtube.com/watch?v=l4UL35Das1g"
+      },
+      {
+        "id": "a58d01e0f0f0e82d4447f702bf152b50efaa45c7a5ea804e8defcf27d96f1642",
+        "sourceId": "63569706-da34-5b72-acb5-1e6503021b56",
+        "gameIds": [
+          "limbus-company"
+        ],
+        "externalKey": "1845383656379995",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656379995"
+      },
+      {
+        "id": "aa81b69b5263227d7e0d1dc89e0ffd6fa3aa7d59faa6ad58d76d974af7c269b4",
+        "sourceId": "3044c335-21a4-53ba-b28f-49d23a6b3d8d",
+        "gameIds": [
+          "blue-archive"
+        ],
+        "externalKey": "518",
+        "officialUrl": "https://www.nexongames.co.kr/bbs/board.php?bo_table=media_event&wr_id=518"
+      },
+      {
+        "id": "aba331f8a22462de2bd82bc440bde37270516527f06f64d869d81287b5e96433",
+        "sourceId": "2c01343f-655e-5de6-ac64-301eb2804f80",
+        "gameIds": [
+          "heaven-burns-red"
+        ],
+        "externalKey": "1845383656384650",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656384650"
+      },
+      {
+        "id": "ac499a54201ea680d6519c29ac98b8a70d86ec2d3259c14d1d9bb392ac2952d2",
+        "sourceId": "56c66cf1-f58b-514d-b043-17902be7165d",
+        "gameIds": [
+          "eminence-in-shadow-master-of-garden"
+        ],
+        "externalKey": "1846651706689344",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706689344"
+      },
+      {
+        "id": "acb700c0f927aa55ebee57b2c5549ed8fc2cce5135b7b6e5c1d54c89c5fc95d9",
+        "sourceId": "63569706-da34-5b72-acb5-1e6503021b56",
+        "gameIds": [
+          "limbus-company"
+        ],
+        "externalKey": "1846018067932619",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067932619"
+      },
+      {
+        "id": "ae5895e872ae235abc3f6de371381a44d8e2dacf333d966434dce6e281a5451f",
+        "sourceId": "b4e10291-098c-5bdd-a289-05952f083b81",
+        "gameIds": [
+          "dolphin-wave"
+        ],
+        "externalKey": "ccsSVBqZK3Q",
+        "officialUrl": "https://www.youtube.com/watch?v=ccsSVBqZK3Q"
+      },
+      {
+        "id": "ae91fa03601228978dea862b06eeddc3602951de954a797b44198f48a2b2f3e4",
+        "sourceId": "63569706-da34-5b72-acb5-1e6503021b56",
+        "gameIds": [
+          "limbus-company"
+        ],
+        "externalKey": "1846018067940553",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067940553"
+      },
+      {
+        "id": "b1997d35cb7ae70484b3183cbe6fcdf4d49eb64729a0c8755b4ea55857ecaa1f",
+        "sourceId": "63569706-da34-5b72-acb5-1e6503021b56",
+        "gameIds": [
+          "limbus-company"
+        ],
+        "externalKey": "1845383656379502",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656379502"
+      },
+      {
+        "id": "b37017f9061b1b8674a78e27f670379eeffee3f94f43b16b107f67b67b5563b9",
+        "sourceId": "fac83649-5beb-5194-9062-1d1bb6219188",
+        "gameIds": [
+          "blue-protocol-star-resonance"
+        ],
+        "externalKey": "1846651706690368",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706690368"
+      },
+      {
+        "id": "b6f9baa03975aaee5fdba889fd40942f6f939ba236c8955974b8a567bef320e5",
+        "sourceId": "7962eafd-9d30-51a1-b18f-0f9a4091762a",
+        "gameIds": [
+          "action-taimanin"
+        ],
+        "externalKey": "1845383656395419",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656395419"
+      },
+      {
+        "id": "b85189f39d2587013f18bdf509aa0ad89d297a4343e5bf3e8a0ace63a48d6da4",
+        "sourceId": "d641c1f0-5226-58e7-b5d2-d26a85604d29",
+        "gameIds": [
+          "girls-frontline-2"
+        ],
+        "externalKey": "1846018067925601",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067925601"
+      },
+      {
+        "id": "ba1878af48a3f03bb366732e8ea0c4e123b146305ed364ff93954c5506947789",
+        "sourceId": "63569706-da34-5b72-acb5-1e6503021b56",
+        "gameIds": [
+          "limbus-company"
+        ],
+        "externalKey": "1845383656384599",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656384599"
+      },
+      {
+        "id": "ba7891ff980db03ee5d4997ed4bde30bc651b0b134bb09e8e2418719f2b7ccc3",
+        "sourceId": "8e1689ca-f8ea-591f-ad84-fde284f5b08e",
+        "gameIds": [
+          "alchemia-story"
+        ],
+        "externalKey": "1845383656395563",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656395563"
+      },
+      {
+        "id": "baa3439a846afe978682b806052a2c93e0aba9fbf5990d6c86204a0d02b130f7",
+        "sourceId": "fac83649-5beb-5194-9062-1d1bb6219188",
+        "gameIds": [
+          "blue-protocol-star-resonance"
+        ],
+        "externalKey": "1846651706691373",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706691373"
+      },
+      {
+        "id": "baf5cdc257e9ad71d0e5f0d1b50d05e6598d5aac2aa7c03ae50ff275745e5313",
+        "sourceId": "ae4fad00-80f7-56b1-88aa-61114c62f03c",
+        "gameIds": [
+          "touhou-lostword"
+        ],
+        "externalKey": "https://touhoulostword.com/?p=229843",
+        "officialUrl": "https://touhoulostword.com/2026/10/08/229843/"
+      },
+      {
+        "id": "bb97e5070809fa27dfa00fe67e9f59edcc12c5cb152d6ff794c1eec5f23b0f24",
+        "sourceId": "64609ae3-274e-559d-b10d-80868656421e",
+        "gameIds": [
+          "afk-journey"
+        ],
+        "externalKey": "BnZdy7oJvSM",
+        "officialUrl": "https://www.youtube.com/watch?v=BnZdy7oJvSM"
+      },
+      {
+        "id": "bd5beea83c8b65980692b774487441934c3e07062df6bb692d25ab912ca7c834",
+        "sourceId": "8a4e40a6-71ce-52af-8f79-f11c2968b590",
+        "gameIds": [
+          "genshin-impact"
+        ],
+        "externalKey": "hErRF3_uu5s",
+        "officialUrl": "https://www.youtube.com/watch?v=hErRF3_uu5s"
+      },
+      {
+        "id": "bf1086aeb21c1e28dbb1da7f90a9500b63cb2a7ed1cc33418422a1925060dbee",
+        "sourceId": "c0e332db-9be2-5241-a6d1-3ddb763cf300",
+        "gameIds": [
+          "wuthering-waves"
+        ],
+        "externalKey": "8258609",
+        "officialUrl": "https://game.naver.com/lounge/WutheringWaves/board/detail/8258609"
+      },
+      {
+        "id": "bf32c0ee3e7154f0d8f42b8f7ef36bfffb2665791a7cee0d8a40c6ee1c53a0f7",
+        "sourceId": "3044c335-21a4-53ba-b28f-49d23a6b3d8d",
+        "gameIds": [
+          "blue-archive"
+        ],
+        "externalKey": "518",
+        "officialUrl": "https://www.nexongames.co.kr/bbs/board.php?bo_table=media_event&wr_id=518"
+      },
+      {
+        "id": "bfdc1d2b3b57092c38d1ca05a7bb4ecea2993a1f6a8a9cfba66d9d758efdb0b8",
+        "sourceId": "9309f931-7068-57f3-a95a-d2c2ef888849",
+        "gameIds": [
+          "elsword"
+        ],
+        "externalKey": "1846018067941913",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067941913"
+      },
+      {
+        "id": "c000237818e3bf1190ce796bea4cbe00f745ee00a0138a36ed7e01eaf4cbd71f",
+        "sourceId": "92a8726c-aa20-51ef-95e9-fb6a3a83c1fa",
+        "gameIds": [
+          "seven-deadly-sins-origin"
+        ],
+        "externalKey": "1846018067929509",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067929509"
+      },
+      {
+        "id": "c0e69736d225420a15f11feb9e576026d5be7d17852a9e5bb1aeec8606b2582b",
+        "sourceId": "8782f1e1-7dab-5c8c-a3b8-e4e53ff26837",
+        "gameIds": [
+          "crystal-of-atlan"
+        ],
+        "externalKey": "1846018067928100",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067928100"
+      },
+      {
+        "id": "c0f3f68d4c91a015818fc5bb5f2f4d6204cdf3133bda73a1b51c39e575fc6d21",
+        "sourceId": "bb7b0508-b065-5743-87d3-8fa6c4160755",
+        "gameIds": [
+          "nikke"
+        ],
+        "externalKey": "hVn6vZKpq28",
+        "officialUrl": "https://www.youtube.com/watch?v=hVn6vZKpq28"
+      },
+      {
+        "id": "c6e1dbd3975474088963efce4a0160946055f0265ebdbd07a53ef25a5333d7c9",
+        "sourceId": "56c66cf1-f58b-514d-b043-17902be7165d",
+        "gameIds": [
+          "eminence-in-shadow-master-of-garden"
+        ],
+        "externalKey": "1846651706676521",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706676521"
+      },
+      {
+        "id": "c8c2915be0c0967159a6d0e6a3a72ef8f7f7ed5c1b38f85b3fac341792b6885f",
+        "sourceId": "8e1689ca-f8ea-591f-ad84-fde284f5b08e",
+        "gameIds": [
+          "alchemia-story"
+        ],
+        "externalKey": "1846018067925305",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067925305"
+      },
+      {
+        "id": "c96012cccd7079a1e0cdcfebbc4870240dbd4d559ac3a22898bd6215395ddbe1",
+        "sourceId": "fc273a47-7eaf-5dfd-86df-0a2448777332",
+        "gameIds": [
+          "disgaea-rpg"
+        ],
+        "externalKey": "https://disgaea-app-news.com/?p=595",
+        "officialUrl": "https://disgaea-app-news.com/news/post-595/"
+      },
+      {
+        "id": "cb2e4b8a5a789311bb8b5046d24696cd3c2470f230d357adcf586075fa77570c",
+        "sourceId": "8a079815-decd-534e-b457-902ddb407e68",
+        "gameIds": [
+          "wuthering-waves"
+        ],
+        "externalKey": "CfbmMKj1KXA",
+        "officialUrl": "https://www.youtube.com/watch?v=CfbmMKj1KXA"
+      },
+      {
+        "id": "cbff2298b83e0dbfef8dd0c2f2ad446ad1a3ebebac5cfa6eb58d08bfa31f07d6",
+        "sourceId": "d641c1f0-5226-58e7-b5d2-d26a85604d29",
+        "gameIds": [
+          "girls-frontline-2"
+        ],
+        "externalKey": "1846018067925601",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067925601"
+      },
+      {
+        "id": "cd841322d4dd085321af763179eb736984aa61dff96e7c1a4b766e19d6c2598d",
+        "sourceId": "d641c1f0-5226-58e7-b5d2-d26a85604d29",
+        "gameIds": [
+          "girls-frontline-2"
+        ],
+        "externalKey": "1846018067925601",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067925601"
+      },
+      {
+        "id": "ce3ab03bbe7fb7f53ba6008572e83707c18329568e5b00beb19a8e0bcdfe9c48",
+        "sourceId": "92a8726c-aa20-51ef-95e9-fb6a3a83c1fa",
+        "gameIds": [
+          "seven-deadly-sins-origin"
+        ],
+        "externalKey": "1846018067925988",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067925988"
+      },
+      {
+        "id": "cf2520fbf5058c5fe6a2809fd422df929694471d6d99131c358f55ded6a7491e",
+        "sourceId": "56c66cf1-f58b-514d-b043-17902be7165d",
+        "gameIds": [
+          "eminence-in-shadow-master-of-garden"
+        ],
+        "externalKey": "1846018067928259",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067928259"
+      },
+      {
+        "id": "d07b2045e5b7a2858baf6ad4f6f2edb9229f826019a51c32625a8ead133b0c87",
+        "sourceId": "63569706-da34-5b72-acb5-1e6503021b56",
+        "gameIds": [
+          "limbus-company"
+        ],
+        "externalKey": "1845383656380507",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656380507"
+      },
+      {
+        "id": "d1839bcb5c95804ee245eb65546355e98d70d2e949a6d6932912752258629e58",
+        "sourceId": "63569706-da34-5b72-acb5-1e6503021b56",
+        "gameIds": [
+          "limbus-company"
+        ],
+        "externalKey": "1845383656385887",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656385887"
+      },
+      {
+        "id": "d18ae802cdbdb20c606cb5352557969f6e3cc507165d44403e9ae569fb22bedc",
+        "sourceId": "63569706-da34-5b72-acb5-1e6503021b56",
+        "gameIds": [
+          "limbus-company"
+        ],
+        "externalKey": "1846651706689336",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706689336"
+      },
+      {
+        "id": "d213d66093aff6e6ef99ca07ad7f1f14fa8836c8b799d1169c10512a67b9a590",
+        "sourceId": "9309f931-7068-57f3-a95a-d2c2ef888849",
+        "gameIds": [
+          "elsword"
+        ],
+        "externalKey": "1845383656394397",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656394397"
+      },
+      {
+        "id": "d253a9d679e758e5db4e76638f1ba642a340288e0aadcd0dddc458f7ac1854a2",
+        "sourceId": "8a4e40a6-71ce-52af-8f79-f11c2968b590",
+        "gameIds": [
+          "genshin-impact"
+        ],
+        "externalKey": "YBmq4onRVho",
+        "officialUrl": "https://www.youtube.com/watch?v=YBmq4onRVho"
+      },
+      {
+        "id": "d3ac8bae232669dfa08505e5bea9faa0ffc7aaf8322ada73874871caa0046c24",
+        "sourceId": "25262c30-8ed4-5dae-9c14-a964dcc915d3",
+        "gameIds": [
+          "tales-of-arise"
+        ],
+        "externalKey": "1846651706689775",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706689775"
+      },
+      {
+        "id": "d6009004f734690ed4414c4b191d04412c4d713c7cc4305d6a13dd464f19f971",
+        "sourceId": "8a4e40a6-71ce-52af-8f79-f11c2968b590",
+        "gameIds": [
+          "genshin-impact"
+        ],
+        "externalKey": "4LbKrQsWU4E",
+        "officialUrl": "https://www.youtube.com/watch?v=4LbKrQsWU4E"
+      },
+      {
+        "id": "d63ac3b96855442b6d5a3a810303f3c09edf211f84e509ea4523c010ac8a77fc",
+        "sourceId": "3044c335-21a4-53ba-b28f-49d23a6b3d8d",
+        "gameIds": [
+          "blue-archive"
+        ],
+        "externalKey": "519",
+        "officialUrl": "https://www.nexongames.co.kr/bbs/board.php?bo_table=media_event&wr_id=519"
+      },
+      {
+        "id": "d765798c88bfcd52a57a1a6879626ac62807b27028c07fec972008d9853d6dab",
+        "sourceId": "bb7b0508-b065-5743-87d3-8fa6c4160755",
+        "gameIds": [
+          "nikke"
+        ],
+        "externalKey": "RryUozHkaSQ",
+        "officialUrl": "https://www.youtube.com/watch?v=RryUozHkaSQ"
+      },
+      {
+        "id": "d7ca998e6dcb7b57c934368503e5c57bd535adaf4041c0e11d0eb03592fea611",
+        "sourceId": "d641c1f0-5226-58e7-b5d2-d26a85604d29",
+        "gameIds": [
+          "girls-frontline-2"
+        ],
+        "externalKey": "1846018067925601",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067925601"
+      },
+      {
+        "id": "d8447edd3c46b133a74c06bd3b944eec288d15e7bf1cd5d1ce9ffe1fefd06486",
+        "sourceId": "85d40a4d-2fba-512b-b179-379ba6199662",
+        "gameIds": [
+          "blue-archive"
+        ],
+        "externalKey": "uLO9srs8CG4",
+        "officialUrl": "https://www.youtube.com/watch?v=uLO9srs8CG4"
+      },
+      {
+        "id": "d977807d51299e585d55924c72ba56ff5644027ceb5363f696306c56acf972e2",
+        "sourceId": "ae4fad00-80f7-56b1-88aa-61114c62f03c",
+        "gameIds": [
+          "touhou-lostword"
+        ],
+        "externalKey": "https://touhoulostword.com/?p=229819",
+        "officialUrl": "https://touhoulostword.com/2026/10/06/229819/"
+      },
+      {
+        "id": "db05c371656c980573408829c4c77e7be4b885c6d579ab021a64f65676cd128c",
+        "sourceId": "ae4fad00-80f7-56b1-88aa-61114c62f03c",
+        "gameIds": [
+          "touhou-lostword"
+        ],
+        "externalKey": "https://touhoulostword.com/?p=229845",
+        "officialUrl": "https://touhoulostword.com/2026/10/08/229845/"
+      },
+      {
+        "id": "dd33408902f7d8dd9a76bf32fbfc43bf157a990709a8d58bdcf9722470575a1e",
+        "sourceId": "fac83649-5beb-5194-9062-1d1bb6219188",
+        "gameIds": [
+          "blue-protocol-star-resonance"
+        ],
+        "externalKey": "1845383656387197",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656387197"
+      },
+      {
+        "id": "dd551ff20f8afd994481167970ed28318c76e0dc0ae90b06516497b07a305f0d",
+        "sourceId": "36ad1c11-c288-5aa9-9d6e-d81878b1387c",
+        "gameIds": [
+          "soulworker"
+        ],
+        "externalKey": "1846651706673910",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706673910"
+      },
+      {
+        "id": "df1051a90d338c248159c3c1325e5e72197b5a2de39e4f1237dbfbc8892e6f18",
+        "sourceId": "ae4fad00-80f7-56b1-88aa-61114c62f03c",
+        "gameIds": [
+          "touhou-lostword"
+        ],
+        "externalKey": "https://touhoulostword.com/?p=229908",
+        "officialUrl": "https://touhoulostword.com/2026/10/16/229908/"
+      },
+      {
+        "id": "e0d7629cd9bbc3d3cd8d8237349d6440ec2a048b38be635bf5fd2d76b015643d",
+        "sourceId": "8a4e40a6-71ce-52af-8f79-f11c2968b590",
+        "gameIds": [
+          "genshin-impact"
+        ],
+        "externalKey": "G7pDGqcCs2M",
+        "officialUrl": "https://www.youtube.com/watch?v=G7pDGqcCs2M"
+      },
+      {
+        "id": "e246e5ad92b57db1e60f4d9ef5dfddcd3255ed0c158204fa4fba6dccdcfb27f2",
+        "sourceId": "56c66cf1-f58b-514d-b043-17902be7165d",
+        "gameIds": [
+          "eminence-in-shadow-master-of-garden"
+        ],
+        "externalKey": "1847286114031117",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1847286114031117"
+      },
+      {
+        "id": "e4139bec7c2fe7d7cbcd5d2b1ea09b0c9214021885687e481d573b02b2b09be1",
+        "sourceId": "b34f15bd-8808-5f02-a6bc-a0d2639697bf",
+        "gameIds": [
+          "stella-sora"
+        ],
+        "externalKey": "1mDUgyR2tOE",
+        "officialUrl": "https://www.youtube.com/watch?v=1mDUgyR2tOE"
+      },
+      {
+        "id": "e42758340186ad88f8e3ee7cc9ce4567f00408bbd44725e70e8fc094dd29cdb1",
+        "sourceId": "63569706-da34-5b72-acb5-1e6503021b56",
+        "gameIds": [
+          "limbus-company"
+        ],
+        "externalKey": "1845383656392899",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656392899"
+      },
+      {
+        "id": "e5d1d24e05cd65c86f922939df99a90efd0faf2390ab7887b16801b07f06ad77",
+        "sourceId": "ae4fad00-80f7-56b1-88aa-61114c62f03c",
+        "gameIds": [
+          "touhou-lostword"
+        ],
+        "externalKey": "https://touhoulostword.com/?p=229906",
+        "officialUrl": "https://touhoulostword.com/2026/10/16/229906/"
+      },
+      {
+        "id": "e82467a01674661ff7ec3ed3a8e6b97633d3cc2d4cab65eac919aa6ddfe2bcc0",
+        "sourceId": "8a4e40a6-71ce-52af-8f79-f11c2968b590",
+        "gameIds": [
+          "genshin-impact"
+        ],
+        "externalKey": "RxR1QSJLOdw",
+        "officialUrl": "https://www.youtube.com/watch?v=RxR1QSJLOdw"
+      },
+      {
+        "id": "e86ff17053b802baf9639c93c891e7dc8eff3dc78614b07eb2acad4fb10c8ed4",
+        "sourceId": "ae4fad00-80f7-56b1-88aa-61114c62f03c",
+        "gameIds": [
+          "touhou-lostword"
+        ],
+        "externalKey": "https://touhoulostword.com/?p=229912",
+        "officialUrl": "https://touhoulostword.com/2026/10/16/229912/"
+      },
+      {
+        "id": "e9194356c7cf615dd0e1d40edc32427807453b52af8de9fcc0d499cd574d6110",
+        "sourceId": "8e1689ca-f8ea-591f-ad84-fde284f5b08e",
+        "gameIds": [
+          "alchemia-story"
+        ],
+        "externalKey": "1847286114027931",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1847286114027931"
+      },
+      {
+        "id": "eb1502d0a417043863ab6e213b50e1db1d2deb0fb7f5732d0646ac320a49509e",
+        "sourceId": "7962eafd-9d30-51a1-b18f-0f9a4091762a",
+        "gameIds": [
+          "action-taimanin"
+        ],
+        "externalKey": "1846018067940374",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067940374"
+      },
+      {
+        "id": "eb6505ede1ada76686304d6c97f37fcf6fe61126bce5f420d3ee78492702bbbc",
+        "sourceId": "fac83649-5beb-5194-9062-1d1bb6219188",
+        "gameIds": [
+          "blue-protocol-star-resonance"
+        ],
+        "externalKey": "1846651706694838",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706694838"
+      },
+      {
+        "id": "ec087a33ced55ac44ca2add60dcb204c0bea97300cead58cec4e035d4f803eb0",
+        "sourceId": "d641c1f0-5226-58e7-b5d2-d26a85604d29",
+        "gameIds": [
+          "girls-frontline-2"
+        ],
+        "externalKey": "1846018067925601",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067925601"
+      },
+      {
+        "id": "ed103263450c9fdd3759f977c9c402ba7e9a6abbb1e8ec8d633dc863410d7d20",
+        "sourceId": "63569706-da34-5b72-acb5-1e6503021b56",
+        "gameIds": [
+          "limbus-company"
+        ],
+        "externalKey": "1845383656380691",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656380691"
+      },
+      {
+        "id": "f0a47a973e47077528a1e88d9637509f97a520d19bfa92ac294a18db230fa5eb",
+        "sourceId": "ae4fad00-80f7-56b1-88aa-61114c62f03c",
+        "gameIds": [
+          "touhou-lostword"
+        ],
+        "externalKey": "https://touhoulostword.com/?p=229956",
+        "officialUrl": "https://touhoulostword.com/2026/10/21/229956/"
+      },
+      {
+        "id": "f0e76aff4117250daf571c3a777282d1f8b1045ee36b1e35380c8d493178e37c",
+        "sourceId": "8e1689ca-f8ea-591f-ad84-fde284f5b08e",
+        "gameIds": [
+          "alchemia-story"
+        ],
+        "externalKey": "1847286114027930",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1847286114027930"
+      },
+      {
+        "id": "f28928a880a66c169442ef4d0090e399ee6ef0ca59d6a3b6445a526c75dc4909",
+        "sourceId": "85d40a4d-2fba-512b-b179-379ba6199662",
+        "gameIds": [
+          "blue-archive"
+        ],
+        "externalKey": "Ri6BpfQNOsc",
+        "officialUrl": "https://www.youtube.com/watch?v=Ri6BpfQNOsc"
+      },
+      {
+        "id": "f2b2ce0e9420934f83ef3af88068993e81adc2d59ebafa6e84c2eac1207dbfa1",
+        "sourceId": "8919e2ca-507f-5129-be72-04c31a3fb549",
+        "gameIds": [
+          "granblue-fantasy-relink"
+        ],
+        "externalKey": "1847286114031019",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1847286114031019"
+      },
+      {
+        "id": "f323543d14cb4289d18a8f6c4daf5c4bc1591415650e879dc6c4340dfc669583",
+        "sourceId": "8e1689ca-f8ea-591f-ad84-fde284f5b08e",
+        "gameIds": [
+          "alchemia-story"
+        ],
+        "externalKey": "1845383656395564",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656395564"
+      },
+      {
+        "id": "f6e3f7070fcd6cfe087db25fc52853b1efba9a0beff658a2318155b35045b247",
+        "sourceId": "8a4e40a6-71ce-52af-8f79-f11c2968b590",
+        "gameIds": [
+          "genshin-impact"
+        ],
+        "externalKey": "Xexrcb7HLnE",
+        "officialUrl": "https://www.youtube.com/watch?v=Xexrcb7HLnE"
+      },
+      {
+        "id": "f75ff84af9f33998839cd67874da63769b97437071cc4d89e927c941bf693520",
+        "sourceId": "2f4ab89b-3dc4-51f6-ae5d-83cad7ca1b30",
+        "gameIds": [
+          "heaven-burns-red"
+        ],
+        "externalKey": "q-nuslMtCk0",
+        "officialUrl": "https://www.youtube.com/watch?v=q-nuslMtCk0"
+      },
+      {
+        "id": "f94ba9cc30ce4d8759dd9036afa37cd017a62aac5f3b974a7cc85ad6081c820f",
+        "sourceId": "2f4ab89b-3dc4-51f6-ae5d-83cad7ca1b30",
+        "gameIds": [
+          "heaven-burns-red"
+        ],
+        "externalKey": "AsQyeXB0zjA",
+        "officialUrl": "https://www.youtube.com/watch?v=AsQyeXB0zjA"
+      },
+      {
+        "id": "fb44ae1510096223aa1d0b0c319b0435a6ed33993e74329094f4963bca3b4fb4",
+        "sourceId": "d641c1f0-5226-58e7-b5d2-d26a85604d29",
+        "gameIds": [
+          "girls-frontline-2"
+        ],
+        "externalKey": "1846018067925601",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067925601"
+      },
+      {
+        "id": "fc84f4f4f023defced6505ff13247da75de969ab69e08c5bc333222df12b8287",
+        "sourceId": "2e6c6a25-f13f-5dbf-92b1-50c415139156",
+        "gameIds": [
+          "girls-frontline-2"
+        ],
+        "externalKey": "68003",
+        "officialUrl": "https://cafe.naver.com/f-e/cafes/31038411/articles/68003"
+      },
+      {
+        "id": "fd15f9c80a35aad161c2e3cf829d91a82171925f63336b9aa14a90b302dbe81a",
+        "sourceId": "ae4fad00-80f7-56b1-88aa-61114c62f03c",
+        "gameIds": [
+          "touhou-lostword"
+        ],
+        "externalKey": "https://touhoulostword.com/?p=229848",
+        "officialUrl": "https://touhoulostword.com/2026/10/08/229848/"
+      },
+      {
+        "id": "ff4748ddeb15e3f9d4be73445e07c42e63a2d84aff7c0f3bd56fd3714724a1bc",
+        "sourceId": "92a8726c-aa20-51ef-95e9-fb6a3a83c1fa",
+        "gameIds": [
+          "seven-deadly-sins-origin"
+        ],
+        "externalKey": "1846651706689250",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846651706689250"
+      },
+      {
+        "id": "ff5fa3c62c052e701a82f8a8e453b87cbd034ba6e92c3309f6f121eeeaaca291",
+        "sourceId": "f44bff22-35a3-5d95-9b72-fccdc5dc5fef",
+        "gameIds": [
+          "sword-art-online-fractured-daydream"
+        ],
+        "externalKey": "1846018067928506",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1846018067928506"
+      },
+      {
+        "id": "ffdcbd9a658d93827f3854e8db9d4de4d928e5a5601eb5d59ed2ffe0f4ed06a9",
+        "sourceId": "63569706-da34-5b72-acb5-1e6503021b56",
+        "gameIds": [
+          "limbus-company"
+        ],
+        "externalKey": "1845383656386308",
+        "officialUrl": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1845383656386308"
+      },
+      {
+        "id": "243fd591c8ad0115a86131772a003a77a8edfe0a2d9fd3c6e36d2e531a30a4ce",
+        "sourceId": "genshin-official-ko-cms",
+        "gameIds": [
+          "genshin-impact"
+        ],
+        "externalKey": "167007",
+        "officialUrl": "https://genshin.hoyoverse.com/ko/news/detail/167007"
+      }
+    ],
+    "rotationAfterSourceId": null
   }
 }
