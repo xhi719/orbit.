@@ -50,7 +50,26 @@ jobs:
           MODE=incremental
           if [[ "${{ github.event.schedule }}" == '53 4 * * *' ]]; then MODE=reverify; fi
           if [[ "${{ github.event_name }}" == 'workflow_dispatch' ]]; then MODE='${{ inputs.mode }}'; fi
-          python services/firebase/collector.py --mode "$MODE" --hours 72 --live --apply
+          python services/firebase/collector.py --mode "$MODE" --hours 72 --max-sources 100 --pages-per-source 3 --live --apply --report reports/firebase-collector.json
+      - name: Report publication and holding outcomes
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path("reports/firebase-collector.json")
+          if not path.exists():
+              print(json.dumps({"publicationPipeline": "NO_COLLECTION_REPORT", "instruction": "Inspect the collection step failure", "fullSourceCoverageVerified": False}))
+          else:
+              report = json.loads(path.read_text(encoding="utf-8"))
+              results = report.get("results", [])
+              summary = {key: report.get(key) for key in ["status", "backend", "recordedAt", "sourceAttempts", "registeredSourcesConsidered", "unattemptedSources", "newsOutcome", "quotaPolicy", "fullSourceCoverageVerified"]}
+              summary["createdDocuments"] = sum(row.get("metrics", {}).get("created", 0) for row in results)
+              summary["updatedDocuments"] = sum(row.get("metrics", {}).get("updated", 0) for row in results)
+              summary["sourceOutcomes"] = {status: sum(row.get("status") == status for row in results) for status in sorted({row.get("status", "UNKNOWN") for row in results})}
+              print(json.dumps({"publicationPipeline": summary}, ensure_ascii=False))
+          PY
       - name: Dispatch enabled FCM notifications
         run: python services/firebase/notifications.py --apply
     # No artifact upload/cache/billing attachment, Functions, Cloud Run, Cloud
